@@ -259,6 +259,39 @@ body {
   box-shadow: 0 0 16px rgba(0, 212, 255, 0.2);
 }
 
+/* Yellow/Gold hover theme variants */
+.btn-gold-hover {
+  transition: all 0.3s ease;
+}
+
+.btn-gold-hover:hover {
+  border-color: rgba(255, 215, 0, 0.6) !important;
+  background: rgba(255, 215, 0, 0.08) !important;
+  box-shadow: 0 0 20px rgba(255, 215, 0, 0.15) !important;
+  transform: translateY(-1px);
+}
+
+.card-gold-hover {
+  transition: all 0.3s ease;
+}
+
+.card-gold-hover:hover {
+  border-color: rgba(255, 215, 0, 0.4) !important;
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.3), 
+    0 0 20px rgba(255, 215, 0, 0.15) !important;
+  transform: translateY(-2px);
+}
+
+.icon-gold-hover {
+  transition: all 0.3s ease;
+}
+
+.icon-gold-hover:hover {
+  color: #ffd700 !important;
+  filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.4));
+}
+
 /* Refined card components */
 .card-refined {
   background: rgba(0, 0, 0, 0.4);

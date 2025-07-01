@@ -33,13 +33,14 @@ import DungeonRunner from './components/DungeonRunner'
 import TokenManager from './components/TokenManager'
 import ROMOverview from './components/ROMOverview'
 
-// Refined minimal button component
-const RefinedButton = ({ children, onClick, variant = 'primary', className = '', disabled = false }: {
+// Refined minimal button component with gold hover theme
+const RefinedButton = ({ children, onClick, variant = 'primary', className = '', disabled = false, goldHover = false }: {
   children: React.ReactNode
   onClick?: () => void
   variant?: 'primary' | 'secondary' | 'danger' | 'success'
   className?: string
   disabled?: boolean
+  goldHover?: boolean
 }) => {
   const variants = {
     primary: 'btn-primary',
@@ -57,6 +58,7 @@ const RefinedButton = ({ children, onClick, variant = 'primary', className = '',
       className={`
         btn-refined text-refined
         ${variants[variant]}
+        ${goldHover ? 'btn-gold-hover' : ''}
         ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
         ${className}
       `}
@@ -117,7 +119,7 @@ const RefinedBackground = () => {
   )
 }
 
-// Station component
+// Station component with gold hover theme
 const Station = ({ icon: Icon, title, description, color, onClick }: {
   icon: any
   title: string
@@ -126,17 +128,17 @@ const Station = ({ icon: Icon, title, description, color, onClick }: {
   onClick: () => void
 }) => {
   return (
-    <RefinedCard glowColor={color} className="p-6 cursor-pointer group" onClick={onClick}>
+    <RefinedCard glowColor={color} className="p-6 cursor-pointer group card-gold-hover" onClick={onClick}>
       <motion.div
         whileHover={{ scale: 1.01 }}
         className="flex flex-col items-center text-center space-refined-sm"
       >
-        <div className={`p-4 rounded-full bg-${color}-400/10 border-2 border-${color}-400/30 group-hover:border-${color}-400/60 transition-colors`}>
-          <Icon className={`w-8 h-8 text-${color}-400`} />
+        <div className={`p-4 rounded-full bg-${color}-400/10 border-2 border-${color}-400/30 group-hover:border-yellow-400/60 transition-all duration-300`}>
+          <Icon className={`w-8 h-8 text-${color}-400 icon-gold-hover`} />
         </div>
         <div>
-          <h3 className={`text-xl font-semibold text-${color}-400 text-display`}>{title}</h3>
-          <p className="text-gray-400 text-sm mt-2 text-mono-refined">{description}</p>
+          <h3 className={`text-xl font-semibold text-${color}-400 text-display group-hover:text-yellow-400 transition-colors duration-300`}>{title}</h3>
+          <p className="text-gray-400 text-sm mt-2 text-mono-refined group-hover:text-gray-300 transition-colors duration-300">{description}</p>
         </div>
       </motion.div>
     </RefinedCard>
@@ -198,9 +200,13 @@ const ROMProductionSummary = ({ setShowROMOverview }: { setShowROMOverview: (sho
   }
 
   return (
-    <RefinedCard glowColor="yellow" className="p-6">
+    <RefinedCard 
+      glowColor="yellow" 
+      className="p-6 cursor-pointer card-gold-hover" 
+      onClick={() => setShowROMOverview(true)}
+    >
       <h3 className="text-yellow-400 font-mono font-bold text-lg mb-4 flex items-center">
-        <Gem className="w-5 h-5 mr-2" />
+        <Gem className="w-5 h-5 mr-2 icon-gold-hover" />
         ROM PRODUCTION
       </h3>
       {loading ? (
@@ -332,14 +338,14 @@ const GameModeSelector = () => {
               transition-all duration-300 flex items-center space-x-3
               ${selectedMode === mode.id 
                 ? `border-${mode.color}-400 text-${mode.color}-400 bg-${mode.color}-400/10 shadow-${mode.color}-400/30` 
-                : `border-gray-600 text-gray-400 hover:border-${mode.color}-400/50 hover:text-${mode.color}-400`
+                : `border-gray-600 text-gray-400 hover:border-yellow-400/60 hover:text-yellow-400 hover:bg-yellow-400/5`
               }
             `}
             style={{
               clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)'
             }}
           >
-            <mode.icon className="w-5 h-5" />
+            <mode.icon className="w-5 h-5 icon-gold-hover" />
             <span>{mode.name}</span>
             {selectedMode === mode.id && (
               <motion.div
@@ -499,6 +505,7 @@ export default function GigaverseDashboard() {
               onClick={() => setShowTokenManager(true)}
               variant="secondary"
               className="text-sm"
+              goldHover={true}
             >
               <Key className="w-4 h-4 mr-2" />
               TOKEN
@@ -512,6 +519,7 @@ export default function GigaverseDashboard() {
               }}
               variant="secondary"
               className="text-sm"
+              goldHover={true}
             >
               <Package className="w-4 h-4 mr-2" />
               INVENTORY
@@ -520,6 +528,7 @@ export default function GigaverseDashboard() {
               onClick={() => setShowDungeonRunner(true)}
               variant="danger" 
               className="text-sm"
+              goldHover={true}
             >
               <Target className="w-4 h-4 mr-2" />
               DUNGEON BOT
@@ -537,6 +546,7 @@ export default function GigaverseDashboard() {
             <RefinedButton
               onClick={() => setIsGameRunning(!isGameRunning)}
               variant={isGameRunning ? 'danger' : 'success'}
+              goldHover={true}
             >
               {isGameRunning ? <Pause className="w-4 h-4 mr-2" /> : <Play className="w-4 h-4 mr-2" />}
               {isGameRunning ? 'PAUSE' : 'START'}
@@ -609,7 +619,7 @@ export default function GigaverseDashboard() {
           transition={{ delay: 0.5 }}
           className="fixed bottom-6 right-6 z-20"
         >
-          <RefinedCard glowColor="cyan" className="p-4">
+          <RefinedCard glowColor="cyan" className="p-4 card-gold-hover">
             <div className="flex items-center space-x-4">
               <motion.div
                 animate={{ scale: [1, 1.1, 1] }}
