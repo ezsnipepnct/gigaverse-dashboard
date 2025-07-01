@@ -490,9 +490,9 @@ export default function GigaverseDashboard() {
             </motion.div>
             <div>
               <h1 className="text-3xl font-bold font-mono tracking-wider text-cyan-400">
-                GIGAVERSE
+                GIGA PILOT
               </h1>
-              <p className="text-cyan-300/70 font-mono text-sm">DIGITAL REALM INTERFACE</p>
+              <p className="text-cyan-300/70 font-mono text-sm">⚡ Gigaverse on Autopilot</p>
             </div>
           </div>
           
@@ -511,46 +511,14 @@ export default function GigaverseDashboard() {
               TOKEN
             </RefinedButton>
             
-            {/* Quick Inventory Access */}
-            <RefinedButton
-              onClick={() => {
-                setShowInventory(true)
-                fetchPlayerBalances()
-              }}
-              variant="secondary"
-              className="text-sm"
-              goldHover={true}
-            >
-              <Package className="w-4 h-4 mr-2" />
-              INVENTORY
-            </RefinedButton>
-            <RefinedButton 
-              onClick={() => setShowDungeonRunner(true)}
-              variant="danger" 
-              className="text-sm"
-              goldHover={true}
-            >
-              <Target className="w-4 h-4 mr-2" />
-              DUNGEON BOT
-            </RefinedButton>
-            
             <motion.div
               animate={{ opacity: [0.5, 1, 0.5] }}
               transition={{ duration: 2, repeat: Infinity }}
               className="flex items-center space-x-2 text-green-400 font-mono"
             >
               <div className="w-2 h-2 bg-green-400 rounded-full" />
-              <span>SYSTEM ONLINE</span>
+              <span>AUTOPILOT ACTIVE</span>
             </motion.div>
-            
-            <RefinedButton
-              onClick={() => setIsGameRunning(!isGameRunning)}
-              variant={isGameRunning ? 'danger' : 'success'}
-              goldHover={true}
-            >
-              {isGameRunning ? <Pause className="w-4 h-4 mr-2" /> : <Play className="w-4 h-4 mr-2" />}
-              {isGameRunning ? 'PAUSE' : 'START'}
-            </RefinedButton>
           </div>
         </div>
       </motion.header>
