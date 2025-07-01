@@ -1,0 +1,412 @@
+{
+  "enemies": {
+    "floor_1": {
+      "room_1": {
+        "health": 4,
+        "shield": 2,
+        "moves": {
+          "rock": {
+            "damage": 4,
+            "shield": 0
+          },
+          "paper": {
+            "damage": 0,
+            "shield": 4
+          },
+          "scissor": {
+            "damage": 2,
+            "shield": 2
+          }
+        }
+      },
+      "room_2": {
+        "health": 2,
+        "shield": 5,
+        "moves": {
+          "rock": {
+            "damage": 4,
+            "shield": 2
+          },
+          "paper": {
+            "damage": 2,
+            "shield": 4
+          },
+          "scissor": {
+            "damage": 2,
+            "shield": 3
+          }
+        }
+      },
+      "room_3": {
+        "health": 6,
+        "shield": 4,
+        "moves": {
+          "rock": {
+            "damage": 4,
+            "shield": 2
+          },
+          "paper": {
+            "damage": 2,
+            "shield": 4
+          },
+          "scissor": {
+            "damage": 5,
+            "shield": 2
+          }
+        }
+      },
+      "room_4": {
+        "health": 9,
+        "shield": 6,
+        "moves": {
+          "rock": {
+            "damage": 4,
+            "shield": 2
+          },
+          "paper": {
+            "damage": 7,
+            "shield": 2
+          },
+          "scissor": {
+            "damage": 2,
+            "shield": 4
+          }
+        }
+      }
+    },
+    "floor_2": {
+      "room_1": {
+        "health": 12,
+        "shield": 8,
+        "moves": {
+          "rock": {
+            "damage": 2,
+            "shield": 3
+          },
+          "paper": {
+            "damage": 7,
+            "shield": 5
+          },
+          "scissor": {
+            "damage": 3,
+            "shield": 4
+          }
+        }
+      },
+      "room_2": {
+        "health": 14,
+        "shield": 5,
+        "moves": {
+          "rock": {
+            "damage": 7,
+            "shield": 6
+          },
+          "paper": {
+            "damage": 5,
+            "shield": 6
+          },
+          "scissor": {
+            "damage": 5,
+            "shield": 6
+          }
+        }
+      },
+      "room_3": {
+        "health": 15,
+        "shield": 5,
+        "moves": {
+          "rock": {
+            "damage": 5,
+            "shield": 4
+          },
+          "paper": {
+            "damage": 4,
+            "shield": 5
+          },
+          "scissor": {
+            "damage": 10,
+            "shield": 5
+          }
+        }
+      },
+      "room_4": {
+        "health": 10,
+        "shield": 15,
+        "moves": {
+          "rock": {
+            "damage": 7,
+            "shield": 4
+          },
+          "paper": {
+            "damage": 11,
+            "shield": 7
+          },
+          "scissor": {
+            "damage": 5,
+            "shield": 6
+          }
+        }
+      }
+    },
+    "floor_3": {
+      "room_1": {
+        "health": 17,
+        "shield": 10,
+        "moves": {
+          "rock": {
+            "damage": 9,
+            "shield": 6
+          },
+          "paper": {
+            "damage": 7,
+            "shield": 7
+          },
+          "scissor": {
+            "damage": 11,
+            "shield": 4
+          }
+        }
+      },
+      "room_2": {
+        "health": 18,
+        "shield": 14,
+        "moves": {
+          "rock": {
+            "damage": 15,
+            "shield": 3
+          },
+          "paper": {
+            "damage": 13,
+            "shield": 12
+          },
+          "scissor": {
+            "damage": 12,
+            "shield": 6
+          }
+        }
+      },
+      "room_3": {
+        "health": 22,
+        "shield": 15,
+        "moves": {
+          "rock": {
+            "damage": 12,
+            "shield": 5
+          },
+          "paper": {
+            "damage": 6,
+            "shield": 12
+          },
+          "scissor": {
+            "damage": 18,
+            "shield": 8
+          }
+        }
+      },
+      "room_4": {
+        "health": 26,
+        "shield": 18,
+        "moves": {
+          "rock": {
+            "damage": 14,
+            "shield": 10
+          },
+          "paper": {
+            "damage": 19,
+            "shield": 4
+          },
+          "scissor": {
+            "damage": 8,
+            "shield": 12
+          }
+        }
+      }
+    },
+    "floor_4": {
+      "room_1": {
+        "health": 30,
+        "shield": 20,
+        "moves": {
+          "rock": {
+            "damage": 21,
+            "shield": 0
+          },
+          "paper": {
+            "damage": 10,
+            "shield": 5
+          },
+          "scissor": {
+            "damage": 7,
+            "shield": 5
+          }
+        }
+      },
+      "room_2": {
+        "health": 30,
+        "shield": 20,
+        "moves": {
+          "rock": {
+            "damage": 10,
+            "shield": 5
+          },
+          "paper": {
+            "damage": 21,
+            "shield": 0
+          },
+          "scissor": {
+            "damage": 8,
+            "shield": 12
+          }
+        }
+      },
+      "room_3": {
+        "health": 30,
+        "shield": 20,
+        "moves": {
+          "rock": {
+            "damage": 10,
+            "shield": 10
+          },
+          "paper": {
+            "damage": 12,
+            "shield": 4
+          },
+          "scissor": {
+            "damage": 21,
+            "shield": 0
+          }
+        }
+      },
+      "room_4": {
+        "health": 40,
+        "shield": 28,
+        "moves": {
+          "rock": {
+            "damage": 20,
+            "shield": 10
+          },
+          "paper": {
+            "damage": 20,
+            "shield": 10
+          },
+          "scissor": {
+            "damage": 20,
+            "shield": 10
+          }
+        }
+      }
+    },
+    "floor_5": {
+      "room_1": {
+        "health": 40,
+        "shield": 28,
+        "moves": {
+          "rock": {
+            "damage": 20,
+            "shield": 10
+          },
+          "paper": {
+            "damage": 20,
+            "shield": 10
+          },
+          "scissor": {
+            "damage": 20,
+            "shield": 10
+          }
+        }
+      },
+      "room_2": {
+        "health": 40,
+        "shield": 28,
+        "moves": {
+          "rock": {
+            "damage": 20,
+            "shield": 10
+          },
+          "paper": {
+            "damage": 20,
+            "shield": 10
+          },
+          "scissor": {
+            "damage": 20,
+            "shield": 10
+          }
+        }
+      },
+      "room_3": {
+        "health": 40,
+        "shield": 28,
+        "moves": {
+          "rock": {
+            "damage": 20,
+            "shield": 10
+          },
+          "paper": {
+            "damage": 20,
+            "shield": 10
+          },
+          "scissor": {
+            "damage": 20,
+            "shield": 10
+          }
+        }
+      },
+      "room_4": {
+        "health": 40,
+        "shield": 28,
+        "moves": {
+          "rock": {
+            "damage": 20,
+            "shield": 10
+          },
+          "paper": {
+            "damage": 20,
+            "shield": 10
+          },
+          "scissor": {
+            "damage": 20,
+            "shield": 10
+          }
+        }
+      }
+    },
+    "floor_6": {
+      "room_1": {
+        "health": 40,
+        "shield": 28,
+        "moves": {
+          "rock": {
+            "damage": 20,
+            "shield": 10
+          },
+          "paper": {
+            "damage": 20,
+            "shield": 10
+          },
+          "scissor": {
+            "damage": 20,
+            "shield": 10
+          }
+        }
+      },
+      "room_2": {
+        "health": 40,
+        "shield": 28,
+        "moves": {
+          "rock": {
+            "damage": 20,
+            "shield": 10
+          },
+          "paper": {
+            "damage": 20,
+            "shield": 10
+          },
+          "scissor": {
+            "damage": 20,
+            "shield": 10
+          }
+        }
+      }
+    }
+  }
+}
