@@ -574,14 +574,36 @@ export default function GigaverseDashboard() {
                 GIGA ⚡ PILOT
               </h1>
               <p className="text-cyan-300/70 font-mono text-sm">Gigaverse on Autopilot</p>
+              
+              {/* Moved AUTOPILOT ACTIVE below GIGA PILOT */}
+              <motion.div
+                animate={{ opacity: [0.5, 1, 0.5] }}
+                transition={{ duration: 2, repeat: Infinity }}
+                className="flex items-center space-x-2 text-green-400 font-mono text-xs mt-2"
+              >
+                <div className="w-2 h-2 bg-green-400 rounded-full" />
+                <span>AUTOPILOT ACTIVE</span>
+              </motion.div>
             </div>
           </div>
           
-          <div className="flex items-center space-x-6">
-            {/* Enhanced Energy Display */}
-            <div className="flex-1 max-w-lg">
-              <div className="bg-black/60 border border-cyan-400/30 rounded-lg p-3 backdrop-blur-sm">
-                <div className="flex items-center justify-between mb-2">
+          {/* Right side: Token Manager and Energy Display (swapped and pushed to right) */}
+          <div className="flex items-center space-x-6 ml-auto">
+            {/* JWT Token Manager (moved to first position) */}
+            <RefinedButton
+              onClick={() => setShowTokenManager(true)}
+              variant="secondary"
+              className="text-sm"
+              goldHover={true}
+            >
+              <Key className="w-4 h-4 mr-2" />
+              TOKEN
+            </RefinedButton>
+            
+            {/* Enhanced Energy Display (moved to second position) */}
+            <div className="max-w-2xl"> {/* Reduced from max-w-3xl to max-w-2xl since it's now on the right */}
+              <div className="bg-black/60 border border-cyan-400/30 rounded-lg p-5 backdrop-blur-sm">
+                <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center space-x-2">
                     <motion.div
                       animate={{ scale: [1, 1.1, 1] }}
@@ -602,7 +624,7 @@ export default function GigaverseDashboard() {
                 </div>
                 
                 {/* Progress Bar */}
-                <div className="relative h-3 bg-gray-800 rounded-full overflow-hidden border border-cyan-400/20">
+                <div className="relative h-4 bg-gray-800 rounded-full overflow-hidden border border-cyan-400/20 mb-4">
                   {/* Background grid effect */}
                   <div className="absolute inset-0 opacity-20">
                     <div className="grid grid-cols-20 h-full">
@@ -612,9 +634,20 @@ export default function GigaverseDashboard() {
                     </div>
                   </div>
                   
-                  {/* Energy fill */}
+                  {/* Energy fill with dynamic gradient */}
                   <motion.div
-                    className="absolute left-0 top-0 h-full bg-gradient-to-r from-cyan-500 via-cyan-400 to-yellow-400 rounded-full"
+                    className={`absolute left-0 top-0 h-full rounded-full ${(() => {
+                      const percentage = energyData ? (energyData.currentEnergy / energyData.maxEnergy) * 100 : 0;
+                      if (percentage < 25) {
+                        return 'bg-gradient-to-r from-red-600 via-red-500 to-red-400';
+                      } else if (percentage < 50) {
+                        return 'bg-gradient-to-r from-red-500 via-orange-500 to-yellow-500';
+                      } else if (percentage < 75) {
+                        return 'bg-gradient-to-r from-yellow-500 via-yellow-400 to-green-400';
+                      } else {
+                        return 'bg-gradient-to-r from-green-500 via-cyan-400 to-cyan-300';
+                      }
+                    })()}`}
                     initial={{ width: 0 }}
                     animate={{ 
                       width: energyData ? `${(energyData.currentEnergy / energyData.maxEnergy) * 100}%` : '0%'
@@ -650,45 +683,37 @@ export default function GigaverseDashboard() {
                   )}
                 </div>
                 
-                {/* Status indicators */}
-                <div className="flex justify-between items-center mt-2 text-xs font-mono">
-                  <div className="text-gray-400">
+                {/* Status indicators with better layout */}
+                <div className="grid grid-cols-2 gap-8 text-xs font-mono">
+                  <div className="flex justify-start">
                     {energyData?.isPlayerJuiced ? (
-                      <span className="text-yellow-400">⚡ JUICED</span>
+                      <span className="text-yellow-400 font-semibold">⚡ JUICED</span>
                     ) : (
-                      <span>STANDARD</span>
+                      <span className="text-gray-400">STANDARD</span>
                     )}
                   </div>
-                  <div className="text-gray-400">
+                  <div className="flex justify-end">
                     {energyData && energyData.currentEnergy < energyData.maxEnergy ? (
-                      <span>TIME TO FULL: {Math.round((energyData.maxEnergy - energyData.currentEnergy) / (energyData.regenerationRate / 60))}min</span>
+                      <span className="text-gray-400">
+                        <span className="text-cyan-400">TIME TO FULL:</span> {(() => {
+                          const totalMinutes = Math.round((energyData.maxEnergy - energyData.currentEnergy) / (energyData.regenerationRate / 60));
+                          const hours = Math.floor(totalMinutes / 60);
+                          const minutes = totalMinutes % 60;
+                          
+                          if (hours > 0) {
+                            return `${hours}h ${minutes}m`;
+                          } else {
+                            return `${minutes}m`;
+                          }
+                        })()}
+                      </span>
                     ) : (
-                      <span className="text-green-400">FULL</span>
+                      <span className="text-green-400 font-semibold">⚡ FULL</span>
                     )}
                   </div>
                 </div>
               </div>
             </div>
-            
-            {/* JWT Token Manager */}
-            <RefinedButton
-              onClick={() => setShowTokenManager(true)}
-              variant="secondary"
-              className="text-sm"
-              goldHover={true}
-            >
-              <Key className="w-4 h-4 mr-2" />
-              TOKEN
-            </RefinedButton>
-            
-            <motion.div
-              animate={{ opacity: [0.5, 1, 0.5] }}
-              transition={{ duration: 2, repeat: Infinity }}
-              className="flex items-center space-x-2 text-green-400 font-mono"
-            >
-              <div className="w-2 h-2 bg-green-400 rounded-full" />
-              <span>AUTOPILOT ACTIVE</span>
-            </motion.div>
           </div>
         </div>
       </motion.header>
