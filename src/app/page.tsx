@@ -33,8 +33,8 @@ import DungeonRunner from './components/DungeonRunner'
 import TokenManager from './components/TokenManager'
 import ROMOverview from './components/ROMOverview'
 
-// Tron-style glowing button component
-const TronButton = ({ children, onClick, variant = 'primary', className = '', disabled = false }: {
+// Refined minimal button component
+const RefinedButton = ({ children, onClick, variant = 'primary', className = '', disabled = false }: {
   children: React.ReactNode
   onClick?: () => void
   variant?: 'primary' | 'secondary' | 'danger' | 'success'
@@ -42,91 +42,76 @@ const TronButton = ({ children, onClick, variant = 'primary', className = '', di
   disabled?: boolean
 }) => {
   const variants = {
-    primary: 'border-cyan-400 text-cyan-400 hover:bg-cyan-400/10 hover:shadow-cyan-400/50',
-    secondary: 'border-purple-400 text-purple-400 hover:bg-purple-400/10 hover:shadow-purple-400/50',
-    danger: 'border-red-400 text-red-400 hover:bg-red-400/10 hover:shadow-red-400/50',
-    success: 'border-green-400 text-green-400 hover:bg-green-400/10 hover:shadow-green-400/50'
+    primary: 'btn-primary',
+    secondary: 'btn-secondary border-cyan-400/60 text-cyan-400 hover:bg-cyan-400/10',
+    danger: 'btn-secondary border-red-400/60 text-red-400 hover:bg-red-400/10',
+    success: 'btn-secondary border-green-400/60 text-green-400 hover:bg-green-400/10'
   }
 
   return (
     <motion.button
-      whileHover={{ scale: 1.05 }}
-      whileTap={{ scale: 0.95 }}
+      whileHover={{ scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
       onClick={onClick}
       disabled={disabled}
       className={`
-        relative px-6 py-3 border-2 bg-black/50 backdrop-blur-sm
-        transition-all duration-300 font-mono font-bold tracking-wider
+        btn-refined text-refined
         ${variants[variant]}
-        ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-lg'}
+        ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
         ${className}
       `}
-      style={{
-        clipPath: 'polygon(10px 0%, 100% 0%, calc(100% - 10px) 100%, 0% 100%)'
-      }}
     >
-      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-500" />
+      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300" />
       {children}
     </motion.button>
   )
 }
 
-// Tron-style card component
-const TronCard = ({ children, className = '', glowColor = 'cyan', onClick }: {
+// Refined minimal card component
+const RefinedCard = ({ children, className = '', glowColor = 'cyan', onClick }: {
   children: React.ReactNode
   className?: string
   glowColor?: string
   onClick?: () => void
 }) => {
   const glowColors = {
-    cyan: 'shadow-cyan-400/20 border-cyan-400/30',
-    purple: 'shadow-purple-400/20 border-purple-400/30',
-    green: 'shadow-green-400/20 border-green-400/30',
-    red: 'shadow-red-400/20 border-red-400/30',
-    yellow: 'shadow-yellow-400/20 border-yellow-400/30'
+    cyan: 'border-cyan-400/30 hover:border-cyan-400/50',
+    purple: 'border-purple-400/30 hover:border-purple-400/50',
+    green: 'border-green-400/30 hover:border-green-400/50',
+    red: 'border-red-400/30 hover:border-red-400/50',
+    yellow: 'border-yellow-400/30 hover:border-yellow-400/50'
   }
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
+      whileHover={{ y: -2 }}
       onClick={onClick}
       className={`
-        relative bg-black/40 backdrop-blur-sm border-2 
+        card-refined
         ${glowColors[glowColor as keyof typeof glowColors]}
-        shadow-lg transition-all duration-300 hover:shadow-xl
+        ${onClick ? 'cursor-pointer' : ''}
         ${className}
       `}
-      style={{
-        clipPath: 'polygon(15px 0%, 100% 0%, calc(100% - 15px) 100%, 0% 100%)'
-      }}
     >
-      <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent" />
+      <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
       {children}
     </motion.div>
   )
 }
 
-// Animated grid background
-const GridBackground = () => {
+// Refined minimal background
+const RefinedBackground = () => {
   return (
     <div className="fixed inset-0 overflow-hidden pointer-events-none">
-      <div className="absolute inset-0 bg-gradient-to-br from-black via-gray-900 to-black" />
-      <div 
-        className="absolute inset-0 opacity-20"
-        style={{
-          backgroundImage: `
-            linear-gradient(rgba(0, 255, 255, 0.1) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(0, 255, 255, 0.1) 1px, transparent 1px)
-          `,
-          backgroundSize: '50px 50px'
-        }}
-      />
-      {/* Animated scanning lines */}
+      <div className="absolute inset-0 refined-gradient-bg" />
+      <div className="absolute inset-0 minimal-circuit-pattern opacity-40" />
+      {/* Subtle scanning effect */}
       <motion.div
-        className="absolute inset-0 bg-gradient-to-b from-transparent via-cyan-400/10 to-transparent h-2"
+        className="absolute inset-0 bg-gradient-to-b from-transparent via-cyan-400/5 to-transparent h-1"
         animate={{ y: ['0vh', '100vh'] }}
-        transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
+        transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
       />
     </div>
   )
@@ -141,20 +126,20 @@ const Station = ({ icon: Icon, title, description, color, onClick }: {
   onClick: () => void
 }) => {
   return (
-    <TronCard glowColor={color} className="p-6 cursor-pointer group" onClick={onClick}>
+    <RefinedCard glowColor={color} className="p-6 cursor-pointer group" onClick={onClick}>
       <motion.div
-        whileHover={{ scale: 1.02 }}
-        className="flex flex-col items-center text-center space-y-4"
+        whileHover={{ scale: 1.01 }}
+        className="flex flex-col items-center text-center space-refined-sm"
       >
         <div className={`p-4 rounded-full bg-${color}-400/10 border-2 border-${color}-400/30 group-hover:border-${color}-400/60 transition-colors`}>
           <Icon className={`w-8 h-8 text-${color}-400`} />
         </div>
         <div>
-          <h3 className={`text-xl font-bold text-${color}-400 font-mono tracking-wider`}>{title}</h3>
-          <p className="text-gray-400 text-sm mt-2 font-mono">{description}</p>
+          <h3 className={`text-xl font-semibold text-${color}-400 text-display`}>{title}</h3>
+          <p className="text-gray-400 text-sm mt-2 text-mono-refined">{description}</p>
         </div>
       </motion.div>
-    </TronCard>
+    </RefinedCard>
   )
 }
 
@@ -213,7 +198,7 @@ const ROMProductionSummary = ({ setShowROMOverview }: { setShowROMOverview: (sho
   }
 
   return (
-    <TronCard glowColor="yellow" className="p-6">
+    <RefinedCard glowColor="yellow" className="p-6">
       <h3 className="text-yellow-400 font-mono font-bold text-lg mb-4 flex items-center">
         <Gem className="w-5 h-5 mr-2" />
         ROM PRODUCTION
@@ -315,7 +300,7 @@ const ROMProductionSummary = ({ setShowROMOverview }: { setShowROMOverview: (sho
           No ROM data available
         </div>
       )}
-    </TronCard>
+    </RefinedCard>
   )
 }
 
@@ -330,7 +315,7 @@ const GameModeSelector = () => {
   ]
 
   return (
-    <TronCard glowColor="purple" className="p-6">
+    <RefinedCard glowColor="purple" className="p-6">
       <h3 className="text-purple-400 font-mono font-bold text-lg mb-4 flex items-center">
         <Gamepad2 className="w-5 h-5 mr-2" />
         GAME MODE
@@ -366,7 +351,7 @@ const GameModeSelector = () => {
           </motion.button>
         ))}
       </div>
-    </TronCard>
+    </RefinedCard>
   )
 }
 
@@ -501,7 +486,7 @@ export default function GigaverseDashboard() {
 
   return (
     <div className="min-h-screen bg-black text-white relative overflow-hidden">
-      <GridBackground />
+      <RefinedBackground />
       
       {/* Header */}
       <motion.header
@@ -531,17 +516,17 @@ export default function GigaverseDashboard() {
             <EnergyDisplay size="md" showLabel={true} />
             
             {/* JWT Token Manager */}
-            <TronButton
+            <RefinedButton
               onClick={() => setShowTokenManager(true)}
               variant="secondary"
               className="text-sm"
             >
               <Key className="w-4 h-4 mr-2" />
               TOKEN
-            </TronButton>
+            </RefinedButton>
             
             {/* Quick Inventory Access */}
-            <TronButton
+            <RefinedButton
               onClick={() => {
                 setShowInventory(true)
                 fetchPlayerBalances()
@@ -551,15 +536,15 @@ export default function GigaverseDashboard() {
             >
               <Package className="w-4 h-4 mr-2" />
               INVENTORY
-            </TronButton>
-            <TronButton 
+            </RefinedButton>
+            <RefinedButton 
               onClick={() => setShowDungeonRunner(true)}
               variant="danger" 
               className="text-sm"
             >
               <Target className="w-4 h-4 mr-2" />
               DUNGEON BOT
-            </TronButton>
+            </RefinedButton>
             
             <motion.div
               animate={{ opacity: [0.5, 1, 0.5] }}
@@ -570,13 +555,13 @@ export default function GigaverseDashboard() {
               <span>SYSTEM ONLINE</span>
             </motion.div>
             
-            <TronButton
+            <RefinedButton
               onClick={() => setIsGameRunning(!isGameRunning)}
               variant={isGameRunning ? 'danger' : 'success'}
             >
               {isGameRunning ? <Pause className="w-4 h-4 mr-2" /> : <Play className="w-4 h-4 mr-2" />}
               {isGameRunning ? 'PAUSE' : 'START'}
-            </TronButton>
+            </RefinedButton>
           </div>
         </div>
       </motion.header>
@@ -589,7 +574,7 @@ export default function GigaverseDashboard() {
             <ROMProductionSummary setShowROMOverview={setShowROMOverview} />
             
             {/* ROM Collection Access Card - Separate from production stats */}
-            <TronCard glowColor="yellow" className="p-6">
+            <RefinedCard glowColor="yellow" className="p-6">
               <h3 className="text-yellow-400 font-mono font-bold text-lg mb-4 flex items-center">
                 <Gem className="w-5 h-5 mr-2" />
                 ROM COLLECTION
@@ -615,7 +600,7 @@ export default function GigaverseDashboard() {
                   <Sparkles className="w-4 h-4" />
                 </div>
               </button>
-            </TronCard>
+            </RefinedCard>
             
             <GameModeSelector />
           </div>
@@ -675,7 +660,7 @@ export default function GigaverseDashboard() {
           transition={{ delay: 0.5 }}
           className="fixed bottom-6 right-6 z-20"
         >
-          <TronCard glowColor="cyan" className="p-4">
+          <RefinedCard glowColor="cyan" className="p-4">
             <div className="flex items-center space-x-4">
               <motion.div
                 animate={{ scale: [1, 1.1, 1] }}
@@ -686,7 +671,7 @@ export default function GigaverseDashboard() {
                 {isGameRunning ? 'GAME ACTIVE' : 'AWAITING INPUT'}
               </span>
             </div>
-          </TronCard>
+          </RefinedCard>
         </motion.div>
 
                 {/* Enhanced Particle Effects */}
