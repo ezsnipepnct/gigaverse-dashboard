@@ -27,138 +27,234 @@ import {
 } from 'lucide-react'
 import CraftingStation from './components/CraftingStation'
 import Gigamarket from './components/Gigamarket'
-import EnergyDisplay from './components/EnergyDisplay'
+import ElegantEnergyDisplay from './components/EnergyDisplay'
 import InventoryModal from './components/InventoryModal'
 import DungeonRunner from './components/DungeonRunner'
 import TokenManager from './components/TokenManager'
 import ROMOverview from './components/ROMOverview'
 
-// Tron-style glowing button component
-const TronButton = ({ children, onClick, variant = 'primary', className = '', disabled = false }: {
+// Elegant Tron-style button component
+const ElegantButton = ({ 
+  children, 
+  onClick, 
+  variant = 'primary', 
+  className = '', 
+  disabled = false,
+  size = 'md'
+}: {
   children: React.ReactNode
   onClick?: () => void
   variant?: 'primary' | 'secondary' | 'danger' | 'success'
   className?: string
   disabled?: boolean
+  size?: 'sm' | 'md' | 'lg'
 }) => {
   const variants = {
-    primary: 'border-cyan-400 text-cyan-400 hover:bg-cyan-400/10 hover:shadow-cyan-400/50',
-    secondary: 'border-purple-400 text-purple-400 hover:bg-purple-400/10 hover:shadow-purple-400/50',
-    danger: 'border-red-400 text-red-400 hover:bg-red-400/10 hover:shadow-red-400/50',
-    success: 'border-green-400 text-green-400 hover:bg-green-400/10 hover:shadow-green-400/50'
+    primary: 'border-cyan-400/50 text-cyan-400 hover:border-cyan-400 hover:shadow-cyan-400/30',
+    secondary: 'border-amber-500/50 text-amber-500 hover:border-amber-500 hover:shadow-amber-500/30',
+    danger: 'border-red-400/50 text-red-400 hover:border-red-400 hover:shadow-red-400/30',
+    success: 'border-cyan-400/50 text-cyan-400 hover:border-cyan-400 hover:shadow-cyan-400/30'
+  }
+
+  const sizes = {
+    sm: 'px-4 py-2 text-sm',
+    md: 'px-6 py-3 text-base',
+    lg: 'px-8 py-4 text-lg'
   }
 
   return (
     <motion.button
-      whileHover={{ scale: 1.05 }}
-      whileTap={{ scale: 0.95 }}
+      whileHover={{ scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
       onClick={onClick}
       disabled={disabled}
       className={`
-        relative px-6 py-3 border-2 bg-black/50 backdrop-blur-sm
-        transition-all duration-300 font-mono font-bold tracking-wider
+        button-elegant relative border-2 glass-elegant
+        transition-all duration-300 text-body font-medium tracking-wide
         ${variants[variant]}
-        ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-lg'}
+        ${sizes[size]}
+        ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-lg hover-lift'}
         ${className}
       `}
-      style={{
-        clipPath: 'polygon(10px 0%, 100% 0%, calc(100% - 10px) 100%, 0% 100%)'
-      }}
     >
-      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-500" />
       {children}
     </motion.button>
   )
 }
 
-// Tron-style card component
-const TronCard = ({ children, className = '', glowColor = 'cyan', onClick }: {
+// Refined card component
+const ElegantCard = ({ 
+  children, 
+  className = '', 
+  glowColor = 'cyan', 
+  onClick,
+  elevation = 'base'
+}: {
   children: React.ReactNode
   className?: string
-  glowColor?: string
+  glowColor?: 'cyan' | 'amber' | 'red' | 'green'
   onClick?: () => void
+  elevation?: 'base' | 'elevated'
 }) => {
   const glowColors = {
-    cyan: 'shadow-cyan-400/20 border-cyan-400/30',
-    purple: 'shadow-purple-400/20 border-purple-400/30',
-    green: 'shadow-green-400/20 border-green-400/30',
-    red: 'shadow-red-400/20 border-red-400/30',
-    yellow: 'shadow-yellow-400/20 border-yellow-400/30'
+    cyan: 'border-cyan-400/30 hover:border-cyan-400/60',
+    amber: 'border-amber-500/30 hover:border-amber-500/60',
+    red: 'border-red-400/30 hover:border-red-400/60',
+    green: 'border-green-400/30 hover:border-green-400/60'
+  }
+
+  const elevationClasses = {
+    base: 'glass-elegant',
+    elevated: 'glass-elevated'
   }
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
+      whileHover={{ y: -2 }}
       onClick={onClick}
       className={`
-        relative bg-black/40 backdrop-blur-sm border-2 
-        ${glowColors[glowColor as keyof typeof glowColors]}
-        shadow-lg transition-all duration-300 hover:shadow-xl
+        relative border-2 transition-all duration-300
+        ${elevationClasses[elevation]}
+        ${glowColors[glowColor]}
+        ${onClick ? 'cursor-pointer hover-glow' : ''}
         ${className}
       `}
       style={{
-        clipPath: 'polygon(15px 0%, 100% 0%, calc(100% - 15px) 100%, 0% 100%)'
+        clipPath: 'polygon(12px 0%, 100% 0%, calc(100% - 12px) 100%, 0% 100%)',
+        borderRadius: '8px'
       }}
     >
-      <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent" />
+      <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
       {children}
     </motion.div>
   )
 }
 
-// Animated grid background
-const GridBackground = () => {
+// Refined background with subtle animations
+const ElegantBackground = () => {
   return (
     <div className="fixed inset-0 overflow-hidden pointer-events-none">
+      {/* Base gradient */}
       <div className="absolute inset-0 bg-gradient-to-br from-black via-gray-900 to-black" />
-      <div 
-        className="absolute inset-0 opacity-20"
-        style={{
-          backgroundImage: `
-            linear-gradient(rgba(0, 255, 255, 0.1) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(0, 255, 255, 0.1) 1px, transparent 1px)
-          `,
-          backgroundSize: '50px 50px'
-        }}
-      />
-      {/* Animated scanning lines */}
+      
+      {/* Refined grid pattern */}
+      <div className="absolute inset-0 refined-grid" />
+      
+      {/* Subtle circuit pattern */}
+      <div className="absolute inset-0 subtle-circuit" />
+      
+      {/* Gentle scanning effect - less frequent */}
       <motion.div
-        className="absolute inset-0 bg-gradient-to-b from-transparent via-cyan-400/10 to-transparent h-2"
+        className="absolute inset-0 bg-gradient-to-b from-transparent via-cyan-400/5 to-transparent h-1"
         animate={{ y: ['0vh', '100vh'] }}
-        transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
+        transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
       />
     </div>
   )
 }
 
-// Station component
-const Station = ({ icon: Icon, title, description, color, onClick }: {
+// Refined station component
+const ElegantStation = ({ 
+  icon: Icon, 
+  title, 
+  description, 
+  color, 
+  onClick,
+  status
+}: {
   icon: any
   title: string
   description: string
-  color: string
+  color: 'cyan' | 'amber'
   onClick: () => void
+  status?: 'online' | 'warning' | 'error'
 }) => {
+  const colorStyles = {
+    cyan: 'text-cyan-400 border-cyan-400/30',
+    amber: 'text-amber-500 border-amber-500/30'
+  }
+
   return (
-    <TronCard glowColor={color} className="p-6 cursor-pointer group" onClick={onClick}>
-      <motion.div
-        whileHover={{ scale: 1.02 }}
-        className="flex flex-col items-center text-center space-y-4"
-      >
-        <div className={`p-4 rounded-full bg-${color}-400/10 border-2 border-${color}-400/30 group-hover:border-${color}-400/60 transition-colors`}>
-          <Icon className={`w-8 h-8 text-${color}-400`} />
+    <ElegantCard 
+      glowColor={color} 
+      className="p-8 cursor-pointer group" 
+      onClick={onClick}
+    >
+      <div className="flex flex-col items-center text-center space-y-6">
+        {/* Icon with status indicator */}
+        <div className="relative">
+          <div className={`p-6 rounded-full bg-black/50 border-2 group-hover:scale-105 transition-transform duration-300 ${colorStyles[color]}`}>
+            <Icon className="w-10 h-10" />
+          </div>
+          {status && (
+            <div className={`absolute -top-1 -right-1 status-dot status-${status}`} />
+          )}
         </div>
-        <div>
-          <h3 className={`text-xl font-bold text-${color}-400 font-mono tracking-wider`}>{title}</h3>
-          <p className="text-gray-400 text-sm mt-2 font-mono">{description}</p>
+        
+        {/* Content */}
+        <div className="space-y-3">
+          <h3 className={`text-2xl font-bold text-heading tracking-wide ${colorStyles[color].split(' ')[0]}`}>
+            {title}
+          </h3>
+          <p className="text-gray-400 text-sm text-body leading-relaxed max-w-sm">
+            {description}
+          </p>
         </div>
-      </motion.div>
-    </TronCard>
+      </div>
+    </ElegantCard>
   )
 }
 
-// ROM Production Summary component
+// Status bar component
+const StatusBar = ({ playerBalances }: { playerBalances: any }) => {
+  return (
+    <motion.div 
+      initial={{ opacity: 0, y: -20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="mb-8"
+    >
+      <ElegantCard className="p-6" elevation="elevated">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-8">
+            {/* Energy Display */}
+            <div className="flex items-center space-x-3">
+              <div className="flex items-center space-x-2">
+                <div className="status-dot status-online" />
+                <span className="text-body text-gray-300 text-sm">ENERGY</span>
+              </div>
+              <ElegantEnergyDisplay size="sm" />
+            </div>
+            
+            {/* Player Stats */}
+            <div className="flex items-center space-x-6 text-body text-sm">
+              <div className="flex items-center space-x-2">
+                <Package className="w-4 h-4 text-amber-500" />
+                <span className="text-gray-300">Items:</span>
+                <span className="text-amber-500 font-medium">
+                  {Object.keys(playerBalances).length}
+                </span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Activity className="w-4 h-4 text-cyan-400" />
+                <span className="text-gray-300">Status:</span>
+                <span className="text-cyan-400 font-medium">ONLINE</span>
+              </div>
+            </div>
+          </div>
+          
+          {/* System Time */}
+          <div className="text-body text-gray-400 text-sm">
+            {new Date().toLocaleTimeString()}
+          </div>
+        </div>
+      </ElegantCard>
+    </motion.div>
+  )
+}
+
+// ROM Production Summary component with refined design
 const ROMProductionSummary = ({ setShowROMOverview }: { setShowROMOverview: (show: boolean) => void }) => {
   const [romSummary, setRomSummary] = useState<any>(null)
   const [loading, setLoading] = useState(false)
@@ -212,161 +308,98 @@ const ROMProductionSummary = ({ setShowROMOverview }: { setShowROMOverview: (sho
     return num.toLocaleString()
   }
 
-  return (
-    <TronCard glowColor="yellow" className="p-6">
-      <h3 className="text-yellow-400 font-mono font-bold text-lg mb-4 flex items-center">
-        <Gem className="w-5 h-5 mr-2" />
-        ROM PRODUCTION
-      </h3>
-      {loading ? (
-        <div className="flex items-center justify-center h-24">
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
-            className="w-8 h-8 border-2 border-yellow-400/30 border-t-yellow-400 rounded-full"
-          />
-        </div>
-      ) : romSummary ? (
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4 text-center">
+  if (loading || !romSummary) {
+    return (
+      <ElegantCard className="p-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <Gem className="w-6 h-6 text-cyan-400" />
             <div>
-              <div className="text-2xl font-bold text-yellow-400 font-mono">
-                {romSummary.totalRoms}
-              </div>
-              <div className="text-xs text-gray-400 font-mono">TOTAL ROMS</div>
+              <h3 className="text-heading text-cyan-400 font-medium">ROM PRODUCTION</h3>
+              <p className="text-body text-gray-400 text-sm">Loading...</p>
             </div>
-            <div>
-              <div className="text-2xl font-bold text-green-400 font-mono">
+          </div>
+          <div className="loading-shimmer w-16 h-6 rounded" />
+        </div>
+      </ElegantCard>
+    )
+  }
+
+  return (
+    <ElegantCard 
+      className="p-6 cursor-pointer group" 
+      onClick={() => setShowROMOverview(true)}
+      glowColor="cyan"
+    >
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-4">
+          <div className="p-3 bg-cyan-400/10 border border-cyan-400/30 rounded-lg">
+            <Gem className="w-8 h-8 text-cyan-400" />
+          </div>
+          <div>
+            <h3 className="text-heading text-cyan-400 font-medium text-lg">ROM PRODUCTION</h3>
+            <p className="text-body text-gray-400 text-sm">
+              {romSummary.totalRoms} active ROMs generating resources
+            </p>
+          </div>
+        </div>
+        
+        <div className="text-right space-y-1">
+          <div className="flex items-center space-x-4">
+            <div className="text-center">
+              <div className="text-cyan-400 font-bold text-lg text-code">
                 {formatNumber(romSummary.totalClaimable?.energy || 0)}
               </div>
-              <div className="text-xs text-gray-400 font-mono">CLAIMABLE ⚡</div>
+              <div className="text-gray-400 text-xs text-body">ENERGY</div>
             </div>
-          </div>
-          
-          {/* Production Stats Section */}
-          <div className="space-y-3 border-t border-cyan-400/20 pt-4">
-            <div className="text-cyan-400/80 font-mono text-xs font-bold">DAILY PRODUCTION</div>
-            
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <Zap className="w-4 h-4 text-yellow-400/70" />
-                <span className="text-yellow-400/70 font-mono text-xs">DAILY ENERGY</span>
+            <div className="text-center">
+              <div className="text-amber-500 font-bold text-lg text-code">
+                {formatNumber(romSummary.totalClaimable?.shards || 0)}
               </div>
-              <span className="text-yellow-400/70 font-mono font-bold text-xs">
-                {formatNumber(romSummary.dailyProduction?.energy || 0)}
-              </span>
-            </div>
-            
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <Gem className="w-4 h-4 text-blue-400/70" />
-                <span className="text-blue-400/70 font-mono text-xs">DAILY SHARDS</span>
-              </div>
-              <span className="text-blue-400/70 font-mono font-bold text-xs">
-                {formatNumber(romSummary.dailyProduction?.shards || 0)}
-              </span>
-            </div>
-            
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <Sparkles className="w-4 h-4 text-purple-400/70" />
-                <span className="text-purple-400/70 font-mono text-xs">DAILY DUST</span>
-              </div>
-              <span className="text-purple-400/70 font-mono font-bold text-xs">
-                {formatNumber(romSummary.dailyProduction?.dust || 0)}
-              </span>
-            </div>
-            
-            <div className="text-cyan-400/80 font-mono text-xs font-bold mt-4">WEEKLY PRODUCTION</div>
-            
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <Zap className="w-4 h-4 text-yellow-400/70" />
-                <span className="text-yellow-400/70 font-mono text-xs">WEEKLY ENERGY</span>
-              </div>
-              <span className="text-yellow-400/70 font-mono font-bold text-xs">
-                {formatNumber(romSummary.totalWeeklyProduction?.energy || 0)}
-              </span>
-            </div>
-            
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <Gem className="w-4 h-4 text-blue-400/70" />
-                <span className="text-blue-400/70 font-mono text-xs">WEEKLY SHARDS</span>
-              </div>
-              <span className="text-blue-400/70 font-mono font-bold text-xs">
-                {formatNumber(romSummary.totalWeeklyProduction?.shards || 0)}
-              </span>
-            </div>
-            
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <Sparkles className="w-4 h-4 text-purple-400/70" />
-                <span className="text-purple-400/70 font-mono text-xs">WEEKLY DUST</span>
-              </div>
-              <span className="text-purple-400/70 font-mono font-bold text-xs">
-                {formatNumber(romSummary.totalWeeklyProduction?.dust || 0)}
-              </span>
+              <div className="text-gray-400 text-xs text-body">SHARDS</div>
             </div>
           </div>
         </div>
-      ) : (
-        <div className="text-center text-gray-400 font-mono text-sm">
-          No ROM data available
-        </div>
-      )}
-    </TronCard>
+      </div>
+    </ElegantCard>
   )
 }
 
-// Game mode selector
+// Game Mode Selector with refined design
 const GameModeSelector = () => {
-  const [selectedMode, setSelectedMode] = useState('normal')
-
-  const modes = [
-    { id: 'normal', name: 'NORMAL', color: 'cyan', icon: Target },
-    { id: 'gigus', name: 'GIGUS', color: 'purple', icon: Flame },
-    { id: 'underhaul', name: 'UNDERHAUL', color: 'red', icon: Bolt }
-  ]
+  const [activeMode, setActiveMode] = useState<'standard' | 'gigus'>('standard')
 
   return (
-    <TronCard glowColor="purple" className="p-6">
-      <h3 className="text-purple-400 font-mono font-bold text-lg mb-4 flex items-center">
-        <Gamepad2 className="w-5 h-5 mr-2" />
-        GAME MODE
-      </h3>
-      <div className="grid grid-cols-1 gap-3">
-        {modes.map((mode) => (
-          <motion.button
-            key={mode.id}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => setSelectedMode(mode.id)}
-            className={`
-              p-3 border-2 bg-black/30 backdrop-blur-sm font-mono font-bold
-              transition-all duration-300 flex items-center space-x-3
-              ${selectedMode === mode.id 
-                ? `border-${mode.color}-400 text-${mode.color}-400 bg-${mode.color}-400/10 shadow-${mode.color}-400/30` 
-                : `border-gray-600 text-gray-400 hover:border-${mode.color}-400/50 hover:text-${mode.color}-400`
-              }
-            `}
-            style={{
-              clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)'
-            }}
+    <ElegantCard className="p-6 mb-8">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-4">
+          <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+            <Gamepad2 className="w-8 h-8 text-amber-500" />
+          </div>
+          <div>
+            <h3 className="text-heading text-amber-500 font-medium text-lg">GAME MODE</h3>
+            <p className="text-body text-gray-400 text-sm">Select your preferred automation mode</p>
+          </div>
+        </div>
+        
+        <div className="flex space-x-3">
+          <ElegantButton
+            variant={activeMode === 'standard' ? 'primary' : 'secondary'}
+            size="sm"
+            onClick={() => setActiveMode('standard')}
           >
-            <mode.icon className="w-5 h-5" />
-            <span>{mode.name}</span>
-            {selectedMode === mode.id && (
-              <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                className={`ml-auto w-2 h-2 bg-${mode.color}-400 rounded-full animate-pulse`}
-              />
-            )}
-          </motion.button>
-        ))}
+            STANDARD
+          </ElegantButton>
+          <ElegantButton
+            variant={activeMode === 'gigus' ? 'primary' : 'secondary'}
+            size="sm"
+            onClick={() => setActiveMode('gigus')}
+          >
+            GIGUS MODE
+          </ElegantButton>
+        </div>
       </div>
-    </TronCard>
+    </ElegantCard>
   )
 }
 
@@ -389,7 +422,7 @@ export default function GigaverseDashboard() {
 
   // JWT Token management
   const getJWTToken = () => {
-    const hardcodedToken = "eyJhbGciOiJIUzI1NiJ9.eyJhZGRyZXNzIjoiMHhiMGQ5MEQ1MkM3Mzg5ODI0RDRCMjJjMDZiY2RjQ0Q3MzRFMzE2MmI3IiwidXNlciI6eyJfaWQiOiI2N2I5MjE1YTEwOGFlZGRiNDA5YTdlNzMiLCJ3YWxsZXRBZGRyZXNzIjoiMHhiMGQ5MGQ1MmM3Mzg5ODI0ZDRiMjJjMDZiY2RjY2Q3MzRlMzE2MmI3IiwidXNlcm5hbWUiOiIweGIwZDkwRDUyQzczODk4MjRENEIyMmMwNmJjZGNDRDczNEUzMTYyYjciLCJjYXNlU2Vuc2l0aXZlQWRkcmVzcyI6IjB4YjBkOTBENTJDNzM4OTgyNEQ0QjIyYzA2YmNkY0NENzM0RTMxNjJiNyIsIl9fdiI6MH0sImdhbWVBY2NvdW50Ijp7Im5vb2IiOnsiX2lkIjoiNjdiOTIxNzRlM2MzOWRjYTZmZGFkZjA5IiwiZG9jSWQiOiIyMTQyNCIsInRhYmxlTmFtZSI6IkdpZ2FOb29iTkZUIiwiTEFTVF9UUkFOU0ZFUl9USU1FX0NJRCI6MTc0MDE4NTk2NCwiY3JlYXRlZEF0IjoiMjAyNS0wMi0yMlQwMDo1OTozMi45NDZaIiwidXBkYXRlZEF0IjoiMjAyNS0wMi0yMlQwMDo1OTozMy4xNjVaIiwiTEVWRUxfQ0lEIjoxLCJJU19OT09CX0NJRCI6dHJ1ZSwiSU5JVElBTElaRURfQ0lEIjp0cnVlLCJPV05FUl9DSUQiOiIweGIwZDkwZDUyYzczODk4MjRkNGIyMmMwNmJjZGNjZDczNGUzMTYyYjcifSwiYWxsb3dlZFRvQ3JlYXRlQWNjb3VudCI6dHJ1ZSwiY2FuRW50ZXJHYW1lIjp0cnVlLCJub29iUGFzc0JhbGFuY2UiOjAsImxhc3ROb29iSWQiOjczODg0LCJtYXhOb29iSWQiOjEwMDAwfSwiZXhwIjoxNzUwMTE2NDMxfQ.M26R6pDnFSSIbMXHa6kOhT_Hrjn3U7nkm_sGv0rY0uY"
+    const hardcodedToken = "eyJhbGciOiJIUzI1NiJ9.eyJhZGRyZXNzIjoiMHhiMGQ5MEQ1MkM3Mzg5ODI0RDRCMjJjMDZiY2RjQ0Q3MzRFMzE2MmI3IiwidXNlciI6eyJfaWQiOiI2N2I5MjE1YTEwOGFlZGRiNDA5YTdlNzMiLCJ3YWxsZXRBZGRyZXNzIjoiMHhiMGQ5MGQ1MmM3Mzg5ODI0ZDRiMjJjMDZiY2RjY2Q3MzRlMzE2MmI3IiwidXNlcm5hbWUiOiIweGIwZDkwRDUyQzczODk4MjRENEIyMmMwNmJjZGNjRDczNEUzMTYyYjciLCJjYXNlU2Vuc2l0aXZlQWRkcmVzcyI6IjB4YjBkOTBENTJDNzM4OTgyNEQ0QjIyYzA2YmNkY0NENzM0RTMxNjJiNyIsIl9fdiI6MH0sImdhbWVBY2NvdW50Ijp7Im5vb2IiOnsiX2lkIjoiNjdiOTIxNzRlM2MzOWRjYTZmZGFkZjA5IiwiZG9jSWQiOiIyMTQyNCIsInRhYmxlTmFtZSI6IkdpZ2FOb29iTkZUIiwiTEFTVF9UUkFOU0ZFUl9USU1FX0NJRCI6MTc0MDE4NTk2NCwiY3JlYXRlZEF0IjoiMjAyNS0wMi0yMlQwMDo1OTozMi45NDZaIiwidXBkYXRlZEF0IjoiMjAyNS0wMi0yMlQwMDo1OTozMy4xNjVaIiwiTEVWRUxfQ0lEIjoxLCJJU19OT09CX0NJRCI6dHJ1ZSwiSU5JVElBTElaRURfQ0lEIjp0cnVlLCJPV05FUl9DSUQiOiIweGIwZDkwZDUyYzczODk4MjRkNGIyMmMwNmJjZGNjZDczNGUzMTYyYjciLCJhbGxvd2VkVG9DcmVhdGVBY2NvdW50Ijp0cnVlLCJjYW5FbnRlckdhbWUiOnRydWUsIm5vb2JQYXNzQmFsYW5jZSI6MCwibGFzdE5vb2JJZCI6NzM4ODQsIm1heE5vb2JJZCI6MTAwMDB9LCJleHAiOjE3NTAxMTY0MzF9.M26R6pDnFSSIbMXHa6kOhT_Hrjn3U7nkm_sGv0rY0uY"
     
     if (hardcodedToken) {
       return hardcodedToken
@@ -439,69 +472,69 @@ export default function GigaverseDashboard() {
       icon: Wrench,
       title: 'CRAFTING STATION',
       description: 'Forge powerful weapons and armor',
-      color: 'cyan'
+      color: 'cyan' as const
     },
     {
       id: 'inventory',
       icon: Package,
       title: 'INVENTORY',
       description: 'Manage your items and materials',
-      color: 'green'
+      color: 'amber' as const
     },
     {
       id: 'repair',
       icon: Settings,
       title: 'REPAIR BAY',
       description: 'Restore damaged equipment',
-      color: 'green'
+      color: 'cyan' as const
     },
     {
       id: 'gear',
       icon: Shield,
       title: 'GEAR STATION',
       description: 'Upgrade and modify gear',
-      color: 'purple'
+      color: 'amber' as const
     },
     {
       id: 'alchemy',
       icon: Beaker,
       title: 'ALCHEMY BENCH',
       description: 'Brew potions and elixirs',
-      color: 'red'
+      color: 'cyan' as const
     },
     {
       id: 'gigamarket',
       icon: ShoppingCart,
       title: 'GIGAMARKET',
       description: 'Trade digital assets on the blockchain',
-      color: 'purple'
+      color: 'amber' as const
     },
     {
       id: 'dungeon',
       icon: Target,
       title: 'DUNGEON RUNNER',
       description: 'AI-powered dungeon bot',
-      color: 'red'
+      color: 'cyan' as const
     },
     {
       id: 'roms',
       icon: Gem,
       title: 'ROM COLLECTION',
       description: 'NFT resource generators',
-      color: 'yellow'
+      color: 'amber' as const
     },
     {
       id: 'combat',
       icon: Sword,
       title: 'COMBAT SIM',
       description: 'Train combat abilities',
-      color: 'red'
+      color: 'cyan' as const
     }
   ]
 
   return (
     <div className="min-h-screen bg-black text-white relative overflow-hidden">
-      <GridBackground />
+      <ElegantBackground />
       
       {/* Header */}
       <motion.header
@@ -528,20 +561,20 @@ export default function GigaverseDashboard() {
           
           <div className="flex items-center space-x-4">
             {/* Energy Display */}
-            <EnergyDisplay size="md" showLabel={true} />
+            <ElegantEnergyDisplay size="md" showLabel={true} />
             
             {/* JWT Token Manager */}
-            <TronButton
+            <ElegantButton
               onClick={() => setShowTokenManager(true)}
               variant="secondary"
               className="text-sm"
             >
               <Key className="w-4 h-4 mr-2" />
               TOKEN
-            </TronButton>
+            </ElegantButton>
             
             {/* Quick Inventory Access */}
-            <TronButton
+            <ElegantButton
               onClick={() => {
                 setShowInventory(true)
                 fetchPlayerBalances()
@@ -551,15 +584,15 @@ export default function GigaverseDashboard() {
             >
               <Package className="w-4 h-4 mr-2" />
               INVENTORY
-            </TronButton>
-            <TronButton 
+            </ElegantButton>
+            <ElegantButton 
               onClick={() => setShowDungeonRunner(true)}
               variant="danger" 
               className="text-sm"
             >
               <Target className="w-4 h-4 mr-2" />
               DUNGEON BOT
-            </TronButton>
+            </ElegantButton>
             
             <motion.div
               animate={{ opacity: [0.5, 1, 0.5] }}
@@ -570,13 +603,13 @@ export default function GigaverseDashboard() {
               <span>SYSTEM ONLINE</span>
             </motion.div>
             
-            <TronButton
+            <ElegantButton
               onClick={() => setIsGameRunning(!isGameRunning)}
               variant={isGameRunning ? 'danger' : 'success'}
             >
               {isGameRunning ? <Pause className="w-4 h-4 mr-2" /> : <Play className="w-4 h-4 mr-2" />}
               {isGameRunning ? 'PAUSE' : 'START'}
-            </TronButton>
+            </ElegantButton>
           </div>
         </div>
       </motion.header>
@@ -589,33 +622,24 @@ export default function GigaverseDashboard() {
             <ROMProductionSummary setShowROMOverview={setShowROMOverview} />
             
             {/* ROM Collection Access Card - Separate from production stats */}
-            <TronCard glowColor="yellow" className="p-6">
-              <h3 className="text-yellow-400 font-mono font-bold text-lg mb-4 flex items-center">
+            <ElegantCard glowColor="amber" className="p-6">
+              <h3 className="text-amber-500 font-mono font-bold text-lg mb-4 flex items-center">
                 <Gem className="w-5 h-5 mr-2" />
                 ROM COLLECTION
               </h3>
-              
-              <p className="text-gray-300 font-mono text-sm mb-4">
-                Access your NFT resource generators and claim energy rewards
-              </p>
-              
-              <button
-                onClick={() => {
-                  console.log('🟢 ROM COLLECTION ACCESS BUTTON CLICKED!')
-                  setShowROMOverview(true)
-                }}
-                className="w-full px-4 py-3 bg-yellow-400/20 border border-yellow-400/50 rounded text-yellow-400 hover:bg-yellow-400/30 transition-all duration-300 font-mono text-sm font-bold hover:shadow-lg hover:shadow-yellow-400/20"
-                style={{
-                  clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)'
-                }}
-              >
-                <div className="flex items-center justify-center space-x-2">
-                  <Package className="w-4 h-4" />
-                  <span>VIEW COLLECTION</span>
-                  <Sparkles className="w-4 h-4" />
-                </div>
-              </button>
-            </TronCard>
+              <div className="text-center">
+                <button
+                  onClick={() => setShowROMOverview(true)}
+                  className="w-full p-4 bg-amber-500/10 border-2 border-amber-500/30 hover:border-amber-500/60 transition-colors font-mono text-amber-500"
+                  style={{
+                    clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)'
+                  }}
+                >
+                  <div className="text-2xl font-bold mb-2">VIEW ALL ROMS</div>
+                  <div className="text-sm opacity-80">Manage your complete ROM collection</div>
+                </button>
+              </div>
+            </ElegantCard>
             
             <GameModeSelector />
           </div>
@@ -640,7 +664,7 @@ export default function GigaverseDashboard() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.1 }}
                   >
-                                         <Station
+                                         <ElegantStation
                        icon={station.icon}
                        title={station.title}
                        description={station.description}
@@ -675,7 +699,7 @@ export default function GigaverseDashboard() {
           transition={{ delay: 0.5 }}
           className="fixed bottom-6 right-6 z-20"
         >
-          <TronCard glowColor="cyan" className="p-4">
+          <ElegantCard glowColor="cyan" className="p-4">
             <div className="flex items-center space-x-4">
               <motion.div
                 animate={{ scale: [1, 1.1, 1] }}
@@ -686,7 +710,7 @@ export default function GigaverseDashboard() {
                 {isGameRunning ? 'GAME ACTIVE' : 'AWAITING INPUT'}
               </span>
             </div>
-          </TronCard>
+          </ElegantCard>
         </motion.div>
 
                 {/* Enhanced Particle Effects */}
