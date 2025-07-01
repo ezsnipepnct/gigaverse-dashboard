@@ -23,7 +23,8 @@ import {
   Bolt,
   ShoppingCart,
   Package,
-  Key
+  Key,
+  Battery
 } from 'lucide-react'
 import CraftingStation from './components/CraftingStation'
 import Gigamarket from './components/Gigamarket'
@@ -373,10 +374,25 @@ export default function GigaverseDashboard() {
   const [playerBalances, setPlayerBalances] = useState<Record<string, number>>({})
   const [balancesLoading, setBalancesLoading] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [energyData, setEnergyData] = useState<{
+    currentEnergy: number
+    maxEnergy: number
+    regenerationRate: number
+    isPlayerJuiced: boolean
+  } | null>(null)
 
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  // Fetch energy data
+  useEffect(() => {
+    if (mounted) {
+      fetchEnergyData()
+      const interval = setInterval(fetchEnergyData, 30000) // Update every 30 seconds
+      return () => clearInterval(interval)
+    }
+  }, [mounted])
 
   // JWT Token management
   const getJWTToken = () => {
@@ -421,6 +437,48 @@ export default function GigaverseDashboard() {
       console.error('Error fetching player balances:', error)
     } finally {
       setBalancesLoading(false)
+    }
+  }
+
+  const fetchEnergyData = async () => {
+    try {
+      const jwtToken = getJWTToken()
+      if (!jwtToken) {
+        console.error('No JWT token for energy fetch')
+        return
+      }
+
+      const response = await fetch('/api/player/energy', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${jwtToken}`,
+        }
+      })
+
+      if (!response.ok) {
+        console.error('Failed to fetch energy:', response.status)
+        return
+      }
+
+      const data = await response.json()
+      console.log('Energy API response:', data)
+
+      // Use the parsed data from the API response
+      const entity = data.entities?.[0]
+      if (entity && entity.parsedData) {
+        const parsed = entity.parsedData
+        setEnergyData({
+          currentEnergy: parsed.energyValue || 0,
+          maxEnergy: parsed.maxEnergy || 420,
+          regenerationRate: parsed.regenPerHour || 18,
+          isPlayerJuiced: parsed.isPlayerJuiced || false
+        })
+      } else {
+        console.error('Invalid energy data format:', data)
+      }
+
+    } catch (error) {
+      console.error('Failed to fetch energy:', error)
     }
   }
 
@@ -482,23 +540,135 @@ export default function GigaverseDashboard() {
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
-              className="w-12 h-12 border-2 border-cyan-400 rounded-full flex items-center justify-center bg-cyan-400/10"
+              className="w-12 h-12 relative"
             >
-              <Cpu className="w-6 h-6 text-cyan-400" />
+              {/* Radar base circles */}
+              <div className="absolute inset-0 border-2 border-cyan-400/30 rounded-full" />
+              <div className="absolute inset-1 border border-cyan-400/20 rounded-full" />
+              <div className="absolute inset-2 border border-cyan-400/10 rounded-full" />
+              
+              {/* Radar sweep line */}
+              <motion.div
+                className="absolute inset-0 rounded-full overflow-hidden"
+                animate={{ rotate: 360 }}
+                transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
+              >
+                <div 
+                  className="absolute top-1/2 left-1/2 w-6 h-0.5 bg-gradient-to-r from-cyan-400 to-transparent origin-left"
+                  style={{ transform: 'translate(-50%, -50%)' }}
+                />
+              </motion.div>
+              
+              {/* Center dot */}
+              <div className="absolute top-1/2 left-1/2 w-1 h-1 bg-cyan-400 rounded-full transform -translate-x-1/2 -translate-y-1/2" />
+              
+              {/* Pulse effect */}
+              <motion.div
+                className="absolute inset-0 border border-cyan-400/40 rounded-full"
+                animate={{ scale: [1, 1.2, 1], opacity: [0.6, 0, 0.6] }}
+                transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+              />
             </motion.div>
             <div>
               <h1 className="text-3xl font-bold font-mono tracking-wider text-cyan-400">
-                GIGA PILOT
+                GIGA ⚡ PILOT
               </h1>
-              <p className="text-cyan-300/70 font-mono text-sm">⚡ Gigaverse on Autopilot</p>
+              <p className="text-cyan-300/70 font-mono text-sm">Gigaverse on Autopilot</p>
             </div>
           </div>
           
-          <div className="flex items-center space-x-4">
-            {/* Energy Display */}
-            <EnergyDisplay size="md" showLabel={true} />
+          <div className="flex items-center space-x-6">
+            {/* Enhanced Energy Display */}
+            <div className="flex-1 max-w-lg">
+              <div className="bg-black/60 border border-cyan-400/30 rounded-lg p-3 backdrop-blur-sm">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center space-x-2">
+                    <motion.div
+                      animate={{ scale: [1, 1.1, 1] }}
+                      transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                    >
+                      <Battery className="w-4 h-4 text-cyan-400" />
+                    </motion.div>
+                    <span className="text-cyan-400 font-mono text-sm font-semibold">ENERGY</span>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-cyan-400 font-mono text-sm font-bold">
+                      {energyData ? `${Math.round(energyData.currentEnergy)}/${energyData.maxEnergy}` : '--/--'}
+                    </div>
+                    <div className="text-yellow-400 font-mono text-xs">
+                      +{energyData?.regenerationRate || 0}/hr
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Progress Bar */}
+                <div className="relative h-3 bg-gray-800 rounded-full overflow-hidden border border-cyan-400/20">
+                  {/* Background grid effect */}
+                  <div className="absolute inset-0 opacity-20">
+                    <div className="grid grid-cols-20 h-full">
+                      {Array.from({ length: 20 }).map((_, i) => (
+                        <div key={i} className="border-r border-cyan-400/10 h-full" />
+                      ))}
+                    </div>
+                  </div>
+                  
+                  {/* Energy fill */}
+                  <motion.div
+                    className="absolute left-0 top-0 h-full bg-gradient-to-r from-cyan-500 via-cyan-400 to-yellow-400 rounded-full"
+                    initial={{ width: 0 }}
+                    animate={{ 
+                      width: energyData ? `${(energyData.currentEnergy / energyData.maxEnergy) * 100}%` : '0%'
+                    }}
+                    transition={{ duration: 1, ease: 'easeOut' }}
+                  />
+                  
+                  {/* Animated pulse overlay */}
+                  <motion.div
+                    className="absolute left-0 top-0 h-full bg-gradient-to-r from-transparent via-white/20 to-transparent rounded-full"
+                    animate={{ 
+                      x: energyData ? `${(energyData.currentEnergy / energyData.maxEnergy) * 100}%` : '-100%',
+                      opacity: [0, 1, 0]
+                    }}
+                    transition={{ 
+                      duration: 2, 
+                      repeat: Infinity, 
+                      ease: 'easeInOut'
+                    }}
+                    style={{ 
+                      width: '40px',
+                      transform: 'translateX(-20px)'
+                    }}
+                  />
+                  
+                  {/* Critical energy warning */}
+                  {energyData && energyData.currentEnergy < 100 && (
+                    <motion.div
+                      className="absolute inset-0 bg-red-400/20 rounded-full"
+                      animate={{ opacity: [0.2, 0.8, 0.2] }}
+                      transition={{ duration: 1, repeat: Infinity }}
+                    />
+                  )}
+                </div>
+                
+                {/* Status indicators */}
+                <div className="flex justify-between items-center mt-2 text-xs font-mono">
+                  <div className="text-gray-400">
+                    {energyData?.isPlayerJuiced ? (
+                      <span className="text-yellow-400">⚡ JUICED</span>
+                    ) : (
+                      <span>STANDARD</span>
+                    )}
+                  </div>
+                  <div className="text-gray-400">
+                    {energyData && energyData.currentEnergy < energyData.maxEnergy ? (
+                      <span>TIME TO FULL: {Math.round((energyData.maxEnergy - energyData.currentEnergy) / (energyData.regenerationRate / 60))}min</span>
+                    ) : (
+                      <span className="text-green-400">FULL</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
             
             {/* JWT Token Manager */}
             <RefinedButton
