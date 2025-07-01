@@ -234,7 +234,7 @@ const ROMProductionSummary = ({ setShowROMOverview }: { setShowROMOverview: (sho
             
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
-                <Zap className="w-4 h-4 text-yellow-400/70" />
+                <Zap className="w-4 h-4 text-yellow-400" />
                 <span className="text-yellow-400/70 font-mono text-xs">DAILY ENERGY</span>
               </div>
               <span className="text-yellow-400/70 font-mono font-bold text-xs">
@@ -244,7 +244,7 @@ const ROMProductionSummary = ({ setShowROMOverview }: { setShowROMOverview: (sho
             
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
-                <Gem className="w-4 h-4 text-blue-400/70" />
+                <Gem className="w-4 h-4 text-yellow-400" />
                 <span className="text-blue-400/70 font-mono text-xs">DAILY SHARDS</span>
               </div>
               <span className="text-blue-400/70 font-mono font-bold text-xs">
@@ -254,7 +254,7 @@ const ROMProductionSummary = ({ setShowROMOverview }: { setShowROMOverview: (sho
             
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
-                <Sparkles className="w-4 h-4 text-purple-400/70" />
+                <Sparkles className="w-4 h-4 text-yellow-400" />
                 <span className="text-purple-400/70 font-mono text-xs">DAILY DUST</span>
               </div>
               <span className="text-purple-400/70 font-mono font-bold text-xs">
@@ -266,7 +266,7 @@ const ROMProductionSummary = ({ setShowROMOverview }: { setShowROMOverview: (sho
             
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
-                <Zap className="w-4 h-4 text-yellow-400/70" />
+                <Zap className="w-4 h-4 text-yellow-400" />
                 <span className="text-yellow-400/70 font-mono text-xs">WEEKLY ENERGY</span>
               </div>
               <span className="text-yellow-400/70 font-mono font-bold text-xs">
@@ -276,7 +276,7 @@ const ROMProductionSummary = ({ setShowROMOverview }: { setShowROMOverview: (sho
             
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
-                <Gem className="w-4 h-4 text-blue-400/70" />
+                <Gem className="w-4 h-4 text-yellow-400" />
                 <span className="text-blue-400/70 font-mono text-xs">WEEKLY SHARDS</span>
               </div>
               <span className="text-blue-400/70 font-mono font-bold text-xs">
@@ -286,7 +286,7 @@ const ROMProductionSummary = ({ setShowROMOverview }: { setShowROMOverview: (sho
             
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
-                <Sparkles className="w-4 h-4 text-purple-400/70" />
+                <Sparkles className="w-4 h-4 text-yellow-400" />
                 <span className="text-purple-400/70 font-mono text-xs">WEEKLY DUST</span>
               </div>
               <span className="text-purple-400/70 font-mono font-bold text-xs">
@@ -431,56 +431,35 @@ export default function GigaverseDashboard() {
       icon: Package,
       title: 'INVENTORY',
       description: 'Manage your items and materials',
-      color: 'green'
-    },
-    {
-      id: 'repair',
-      icon: Settings,
-      title: 'REPAIR BAY',
-      description: 'Restore damaged equipment',
-      color: 'green'
+      color: 'cyan'
     },
     {
       id: 'gear',
       icon: Shield,
       title: 'GEAR STATION',
       description: 'Upgrade and modify gear',
-      color: 'purple'
-    },
-    {
-      id: 'alchemy',
-      icon: Beaker,
-      title: 'ALCHEMY BENCH',
-      description: 'Brew potions and elixirs',
-      color: 'red'
+      color: 'cyan'
     },
     {
       id: 'gigamarket',
       icon: ShoppingCart,
       title: 'GIGAMARKET',
       description: 'Trade digital assets on the blockchain',
-      color: 'purple'
+      color: 'cyan'
+    },
+    {
+      id: 'roms',
+      icon: Cpu,
+      title: 'ROM COLLECTION',
+      description: 'View and manage your ROM NFTs',
+      color: 'cyan'
     },
     {
       id: 'dungeon',
       icon: Target,
       title: 'DUNGEON RUNNER',
       description: 'AI-powered dungeon bot',
-      color: 'red'
-    },
-    {
-      id: 'roms',
-      icon: Gem,
-      title: 'ROM COLLECTION',
-      description: 'NFT resource generators',
-      color: 'yellow'
-    },
-    {
-      id: 'combat',
-      icon: Sword,
-      title: 'COMBAT SIM',
-      description: 'Train combat abilities',
-      color: 'red'
+      color: 'cyan'
     }
   ]
 
@@ -572,36 +551,6 @@ export default function GigaverseDashboard() {
           {/* Left Sidebar */}
           <div className="lg:col-span-1 space-y-6">
             <ROMProductionSummary setShowROMOverview={setShowROMOverview} />
-            
-            {/* ROM Collection Access Card - Separate from production stats */}
-            <RefinedCard glowColor="yellow" className="p-6">
-              <h3 className="text-yellow-400 font-mono font-bold text-lg mb-4 flex items-center">
-                <Gem className="w-5 h-5 mr-2" />
-                ROM COLLECTION
-              </h3>
-              
-              <p className="text-gray-300 font-mono text-sm mb-4">
-                Access your NFT resource generators and claim energy rewards
-              </p>
-              
-              <button
-                onClick={() => {
-                  console.log('🟢 ROM COLLECTION ACCESS BUTTON CLICKED!')
-                  setShowROMOverview(true)
-                }}
-                className="w-full px-4 py-3 bg-yellow-400/20 border border-yellow-400/50 rounded text-yellow-400 hover:bg-yellow-400/30 transition-all duration-300 font-mono text-sm font-bold hover:shadow-lg hover:shadow-yellow-400/20"
-                style={{
-                  clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)'
-                }}
-              >
-                <div className="flex items-center justify-center space-x-2">
-                  <Package className="w-4 h-4" />
-                  <span>VIEW COLLECTION</span>
-                  <Sparkles className="w-4 h-4" />
-                </div>
-              </button>
-            </RefinedCard>
-            
             <GameModeSelector />
           </div>
 
@@ -630,21 +579,21 @@ export default function GigaverseDashboard() {
                        title={station.title}
                        description={station.description}
                        color={station.color}
-                                                onClick={() => {
-                           setActiveStation(station.id)
-                           if (station.id === 'crafting') {
-                             setShowCraftingStation(true)
-                           } else if (station.id === 'gigamarket') {
-                             setShowGigamarket(true)
-                           } else if (station.id === 'inventory') {
-                             setShowInventory(true)
-                             fetchPlayerBalances()
-                           } else if (station.id === 'dungeon') {
-                             setShowDungeonRunner(true)
-                           } else if (station.id === 'roms') {
-                             setShowROMOverview(true)
-                           }
-                         }}
+                                                                        onClick={() => {
+                          setActiveStation(station.id)
+                          if (station.id === 'crafting') {
+                            setShowCraftingStation(true)
+                          } else if (station.id === 'gigamarket') {
+                            setShowGigamarket(true)
+                          } else if (station.id === 'inventory') {
+                            setShowInventory(true)
+                            fetchPlayerBalances()
+                          } else if (station.id === 'roms') {
+                            setShowROMOverview(true)
+                          } else if (station.id === 'dungeon') {
+                            setShowDungeonRunner(true)
+                          }
+                        }}
                      />
                   </motion.div>
                 ))}
