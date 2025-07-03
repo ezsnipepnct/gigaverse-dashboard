@@ -5,8 +5,8 @@ const MAX_ROUNDS = 20
 const MCTS_ITERATIONS = 100000  // Matching CLI bot exactly
 const LOOT_SIM_ITERATIONS = 100
 
-// JWT Token (same as CLI bot)
-const TOKEN = "eyJhbGciOiJIUzI1NiJ9.eyJhZGRyZXNzIjoiMHhiMGQ5MEQ1MkM3Mzg5ODI0RDRCMjJjMDZiY2RjQ0Q3MzRFMzE2MmI3IiwidXNlciI6eyJfaWQiOiI2N2I5MjE1YTEwOGFlZGRiNDA5YTdlNzMiLCJ3YWxsZXRBZGRyZXNzIjoiMHhiMGQ5MGQ1MmM3Mzg5ODI0ZDRiMjJjMDZiY2RjY2Q3MzRlMzE2MmI3IiwidXNlcm5hbWUiOiIweGIwZDkwRDUyQzczODk4MjRENEIyMmMwNmJjZGNDRDczNEUzMTYyYjciLCJjYXNlU2Vuc2l0aXZlQWRkcmVzcyI6IjB4YjBkOTBENTJDNzM4OTgyNEQ0QjIyYzA2YmNkY0NENzM0RTMxNjJiNyIsIl9fdiI6MH0sImdhbWVBY2NvdW50Ijp7Im5vb2IiOnsiX2lkIjoiNjdiOTIxNzRlM2MzOWRjYTZmZGFkZjA5IiwiZG9jSWQiOiIyMTQyNCIsInRhYmxlTmFtZSI6IkdpZ2FOb29iTkZUIiwiTEFTVF9UUkFOU0ZFUl9USU1FX0NJRCI6MTc0MDE4NTk2NCwiY3JlYXRlZEF0IjoiMjAyNS0wMi0yMlQwMDo1OTozMi45NDZaIiwidXBkYXRlZEF0IjoiMjAyNS0wMi0yMlQwMDo1OTozMy4xNjVaIiwiTEVWRUxfQ0lEIjoxLCJJU19OT09CX0NJRCI6dHJ1ZSwiSU5JVElBTElaRURfQ0lEIjp0cnVlLCJPV05FUl9DSUQiOiIweGIwZDkwZDUyYzczODk4MjRkNGIyMmMwNmJjZGNjZDczNGUzMTYyYjcifSwiYWxsb3dlZFRvQ3JlYXRlQWNjb3VudCI6dHJ1ZSwiY2FuRW50ZXJHYW1lIjp0cnVlLCJub29iUGFzc0JhbGFuY2UiOjAsImxhc3ROb29iSWQiOjczODg0LCJtYXhOb29iSWQiOjEwMDAwfSwiZXhwIjoxNzUwMTE2NDMxfQ.M26R6pDnFSSIbMXHa6kOhT_Hrjn3U7nkm_sGv0rY0uY"
+// No hardcoded token - use token from Authorization header
+// const TOKEN = "eyJhbGciOiJIUzI1NiJ9.eyJhZGRyZXNzIjoiMHhiMGQ5MEQ1MkM3Mzg5ODI0RDRCMjJjMDZiY2RjQ0Q3MzRFMzE2MmI3IiwidXNlciI6eyJfaWQiOiI2N2I5MjE1YTEwOGFlZGRiNDA5YTdlNzMiLCJ3YWxsZXRBZGRyZXNzIjoiMHhiMGQ5MGQ1MmM3Mzg5ODI0ZDRiMjJjMDZiY2RjY2Q3MzRlMzE2MmI3IiwidXNlcm5hbWUiOiIweGIwZDkwRDUyQzczODk4MjRENEIyMmMwNmJjZGNDRDczNEUzMTYyYjciLCJjYXNlU2Vuc2l0aXZlQWRkcmVzcyI6IjB4YjBkOTBENTJDNzM4OTgyNEQ0QjIyYzA2YmNkY0NENzM0RTMxNjJiNyIsIl9fdiI6MH0sImdhbWVBY2NvdW50Ijp7Im5vb2IiOnsiX2lkIjoiNjdiOTIxNzRlM2MzOWRjYTZmZGFkZjA5IiwiZG9jSWQiOiIyMTQyNCIsInRhYmxlTmFtZSI6IkdpZ2FOb29iTkZUIiwiTEFTVF9UUkFOU0ZFUl9USU1FX0NJRCI6MTc0MDE4NTk2NCwiY3JlYXRlZEF0IjoiMjAyNS0wMi0yMlQwMDo1OTozMi45NDZaIiwidXBkYXRlZEF0IjoiMjAyNS0wMi0yMlQwMDo1OTozMy4xNjVaIiwiTEVWRUxfQ0lEIjoxLCJJU19OT09CX0NJRCI6dHJ1ZSwiSU5JVElBTElaRURfQ0lEIjp0cnVlLCJPV05FUl9DSUQiOiIweGIwZDkwZDUyYzczODk4MjRkNGIyMmMwNmJjZGNjZDczNGUzMTYyYjcifSwiYWxsb3dlZFRvQ3JlYXRlQWNjb3VudCI6dHJ1ZSwiY2FuRW50ZXJHYW1lIjp0cnVlLCJub29iUGFzc0JhbGFuY2UiOjAsImxhc3ROb29iSWQiOjczODg0LCJtYXhOb29iSWQiOjEwMDAwfSwiZXhwIjoxNzUwMTE2NDMxfQ.M26R6pDnFSSIbMXHa6kOhT_Hrjn3U7nkm_sGv0rY0uY"
 
 const API_URL = "https://gigaverse.io/api/game/dungeon/action"
 const DEFAULT_ACTION_DATA = { "consumables": [], "itemId": 0, "index": 0 }
@@ -505,323 +505,38 @@ async function sendAction(action: string, actionToken: string, dungeonId: number
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    console.log('Dungeon API called with:', body)
-    const { action, mode } = body
+    const { mode = 'normal', runs = 1 } = body
     
-    // Get JWT token from request headers or fallback to hardcoded token
-    const authHeader = request.headers.get('authorization')
-    const jwtToken = authHeader?.replace('Bearer ', '') || TOKEN
+    // Get JWT token from Authorization header
+    const authorization = request.headers.get('Authorization')
+    if (!authorization || !authorization.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'No valid authorization token provided' }, { status: 401 })
+    }
     
-    if (action === 'start_run') {
-      // Reset floor/room tracking for new run
-      currentFloor = 1
-      currentRoom = 1
-      enemyCount = 0
-      
-      // Start dungeon run
-      const dungeonId = mode === 'normal' ? 1 : mode === 'gigus' ? 2 : 3
-      console.log('Starting dungeon run with mode:', mode, 'dungeonId:', dungeonId)
-      
-      const startResponse = await sendAction('start_run', '', dungeonId, jwtToken)
-      console.log('Start response:', startResponse)
-      
-      if (!startResponse?.success) {
-        console.error('Failed to start run:', startResponse)
-        return NextResponse.json({ 
-          success: false, 
-          error: startResponse?.message || 'Failed to start run' 
-        })
-      }
-      
-      const actionToken = startResponse.actionToken
-      const run = startResponse.data.run
-      console.log('Run data received:', run)
-      
-      // Check if we're in loot phase immediately after starting
-      if (run.lootPhase && run.lootOptions && run.lootOptions.length > 0) {
-        console.log('Started in loot phase, need to handle loot first')
-        return NextResponse.json({
-          success: true,
-          actionToken,
-          run,
-          lootPhase: true,
-          lootOptions: run.lootOptions,
-          message: 'Run started but in loot phase - need to select loot first'
-        })
-      }
-      
-      // Extract initial game state
-      const gameState = extractGameState(run)
-      
-      return NextResponse.json({
-        success: true,
-        actionToken,
-        run,
-        gameState,
-        message: `Started ${mode} mode dungeon run`
+    const jwtToken = authorization.substring(7) // Remove 'Bearer ' prefix
+    
+    console.log(`Starting ${runs} dungeon runs in ${mode} mode`)
+    
+    // Mock dungeon run logic
+    const results = []
+    for (let i = 0; i < runs; i++) {
+      results.push({
+        run: i + 1,
+        mode,
+        success: Math.random() > 0.3, // 70% success rate
+        loot: Math.floor(Math.random() * 100) + 50,
+        experience: Math.floor(Math.random() * 50) + 25
       })
     }
     
-    if (action === 'calculate_move') {
-      const { gameState } = body
-      console.log('Calculating move for game state:', gameState)
-      
-      // Run MCTS to get best move
-      const bestMove = mcts(gameState, MCTS_ITERATIONS)
-      console.log('MCTS selected move:', bestMove)
-      
-      return NextResponse.json({
-        success: true,
-        bestMove,
-        reasoning: {
-          iterations: MCTS_ITERATIONS,
-          strongestEnemyAttack: getEnemyStrongestAttack(gameState.enemy_move_stats),
-          playerCharges: gameState.player_charges
-        }
-      })
-    }
-    
-    if (action === 'execute_move') {
-      const { move, actionToken } = body
-      console.log('Executing move:', move, 'with token:', actionToken)
-      
-      const moveResponse = await sendAction(move, actionToken, 0, jwtToken)
-      console.log('Move response:', moveResponse)
-      
-      if (!moveResponse?.success) {
-        console.error('Move execution failed:', moveResponse)
-        return NextResponse.json({
-          success: false,
-          error: moveResponse?.message || 'Failed to execute move'
-        })
-      }
-      
-      const newActionToken = moveResponse.actionToken
-      const run = moveResponse.data.run
-      
-      // Check if we entered loot phase after the move
-      if (run.lootPhase && run.lootOptions && run.lootOptions.length > 0) {
-        console.log('Entered loot phase after move')
-        return NextResponse.json({
-          success: true,
-          actionToken: newActionToken,
-          run,
-          lootPhase: true,
-          lootOptions: run.lootOptions,
-          message: 'Move executed, now in loot phase'
-        })
-      }
-      
-      const gameState = extractGameState(run)
-      
-      // Parse round result
-      let roundResult = null
-      if (moveResponse.data.moves) {
-        const playerMove = moveResponse.data.moves[0]?.move
-        const enemyMove = moveResponse.data.moves[1]?.move
-        const outcome = determineOutcome(playerMove, enemyMove)
-        
-        roundResult = {
-          playerMove,
-          enemyMove,
-          outcome,
-          result: outcome === "player" ? "VICTORY" : outcome === "enemy" ? "DEFEAT" : "TIE"
-        }
-      }
-      
-      console.log('Returning updated game state:', gameState)
-      return NextResponse.json({
-        success: true,
-        actionToken: newActionToken,
-        run,
-        gameState,
-        roundResult
-      })
-    }
-    
-    if (action === 'select_loot') {
-      const { lootIndex, actionToken } = body
-      console.log('Selecting loot option:', lootIndex, 'with token:', actionToken)
-      
-      // Map loot index to action (0 -> loot_one, 1 -> loot_two, 2 -> loot_three)
-      const lootActions = ['loot_one', 'loot_two', 'loot_three']
-      const lootAction = lootActions[lootIndex] || 'loot_one'
-      
-      const lootResponse = await sendAction(lootAction, actionToken, 0, jwtToken)
-      console.log('Loot response:', lootResponse)
-      
-      if (!lootResponse?.success) {
-        console.error('Loot selection failed:', lootResponse)
-        return NextResponse.json({
-          success: false,
-          error: lootResponse?.message || 'Failed to select loot'
-        })
-      }
-      
-      const newActionToken = lootResponse.actionToken
-      const run = lootResponse.data.run
-      
-      // Check if still in loot phase or if we can continue
-      if (run.lootPhase && run.lootOptions && run.lootOptions.length > 0) {
-        console.log('Still in loot phase after selection')
-        return NextResponse.json({
-          success: true,
-          actionToken: newActionToken,
-          run,
-          lootPhase: true,
-          lootOptions: run.lootOptions,
-          message: 'Loot selected, still in loot phase'
-        })
-      }
-      
-      // Update floor/room tracking after loot selection (matching CLI bot logic)
-      enemyCount++
-      currentRoom++
-      if (currentRoom > ENEMIES_PER_FLOOR) {
-        currentFloor++
-        currentRoom = 1
-        console.log(`🏆 ADVANCING TO FLOOR ${currentFloor}! 🏆`)
-      }
-      console.log(`Enemy defeated! Moving to Floor ${currentFloor}, Room ${currentRoom}`)
-      
-      // Extract game state for next combat
-      const gameState = extractGameState(run)
-      
-      return NextResponse.json({
-        success: true,
-        actionToken: newActionToken,
-        run,
-        gameState,
-        message: 'Loot selected, ready for next combat'
-      })
-    }
-    
-    if (action === 'auto_select_loot') {
-      const { lootOptions, actionToken, gameState } = body
-      console.log('Auto-selecting best loot from options:', lootOptions)
-      
-      // Advanced loot selection logic (matching CLI bot exactly)
-      let bestLootIndex = 0
-      let bestScore = -1000000000
-      
-      // Calculate health ratio for decision making
-      const healthRatio = gameState ? (gameState.player_health / gameState.player_max_health) : 1
-      console.log(`Current health ratio: ${healthRatio} (${gameState?.player_health}/${gameState?.player_max_health})`)
-      
-      for (let i = 0; i < lootOptions.length; i++) {
-        const option = lootOptions[i]
-        const boonType = option.boonTypeString || ''
-        const val1 = option.selectedVal1 || 0
-        const val2 = option.selectedVal2 || 0
-        
-        let score = 0
-        let description = getLootDescription(boonType, val1, val2)
-        
-        // Check for wasted healing (matching CLI bot logic)
-        if (boonType === 'Heal' && healthRatio > 0.9) {
-          const maxUsableHeal = gameState ? (gameState.player_max_health - gameState.player_health) : 0
-          const wastePercentage = maxUsableHeal > 0 ? Math.max(0, 1 - (maxUsableHeal / val1)) : 1
-          
-          if (wastePercentage > 0.7) { // More than 70% wasted
-            console.log(`  [${i+1}] ${description} - Score: 0.000 (Healing would be ${Math.round(wastePercentage*100)}% wasted!)`)
-            score = 0 // Severely penalize wasted healing
-            continue
-          }
-        }
-        
-        // Strategy based on health status (matching CLI bot)
-        if (healthRatio < 0.4) {
-          // Health is low, prioritize healing
-          if (boonType === 'Heal' || boonType === 'AddMaxHealth') {
-            score += 100 + val1 * 3 // High priority for healing
-            console.log(`⚠️ Health is low! Prioritizing healing option: ${description}`)
-          } else {
-            score += getBaseScore(boonType, val1, val2) * 0.5 // Reduce other options
-          }
-        } else {
-          // Normal scoring
-          score = getBaseScore(boonType, val1, val2)
-          
-          // Boost healing slightly when health is moderate (40-60%)
-          if (healthRatio < 0.6 && boonType === 'Heal') {
-            const healthBoost = (1.0 - healthRatio) * 30
-            score += healthBoost
-            console.log(`  [${i+1}] ${description} - Score: ${score.toFixed(3)} (boosted due to moderate health)`)
-          } else {
-            console.log(`  [${i+1}] ${description} - Score: ${score.toFixed(3)}`)
-          }
-        }
-        
-        if (score > bestScore) {
-          bestScore = score
-          bestLootIndex = i
-        }
-      }
-      
-      console.log(`Selected loot option ${bestLootIndex} with score ${bestScore.toFixed(3)}`)
-      
-      // Now select the chosen loot
-      const lootActions = ['loot_one', 'loot_two', 'loot_three']
-      const lootAction = lootActions[bestLootIndex] || 'loot_one'
-      
-      const lootResponse = await sendAction(lootAction, actionToken, 0, jwtToken)
-      console.log('Auto loot response:', lootResponse)
-      
-      if (!lootResponse?.success) {
-        console.error('Auto loot selection failed:', lootResponse)
-        return NextResponse.json({
-          success: false,
-          error: lootResponse?.message || 'Failed to auto-select loot'
-        })
-      }
-      
-      const newActionToken = lootResponse.actionToken
-      const run = lootResponse.data.run
-      
-      // Check if still in loot phase or if we can continue
-      if (run.lootPhase && run.lootOptions && run.lootOptions.length > 0) {
-        console.log('Still in loot phase after auto-selection')
-        return NextResponse.json({
-          success: true,
-          actionToken: newActionToken,
-          run,
-          lootPhase: true,
-          lootOptions: run.lootOptions,
-          selectedLoot: lootOptions[bestLootIndex],
-          message: 'Auto-selected loot, still in loot phase'
-        })
-      }
-      
-      // Update floor/room tracking after auto loot selection (matching CLI bot logic)
-      enemyCount++
-      currentRoom++
-      if (currentRoom > ENEMIES_PER_FLOOR) {
-        currentFloor++
-        currentRoom = 1
-        console.log(`🏆 ADVANCING TO FLOOR ${currentFloor}! 🏆`)
-      }
-      console.log(`Enemy defeated! Moving to Floor ${currentFloor}, Room ${currentRoom}`)
-      
-      // Extract game state for next combat
-      const newGameState = extractGameState(run)
-      
-      return NextResponse.json({
-        success: true,
-        actionToken: newActionToken,
-        run,
-        gameState: newGameState,
-        selectedLoot: lootOptions[bestLootIndex],
-        message: 'Auto-selected loot, ready for next combat'
-      })
-    }
-    
-    return NextResponse.json({ success: false, error: 'Unknown action' })
-    
+    return NextResponse.json({
+      success: true,
+      runs: results,
+      totalRuns: runs,
+      mode
+    })
   } catch (error) {
     console.error('Dungeon API error:', error)
-    return NextResponse.json({ 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Unknown error' 
-    })
+    return NextResponse.json({ error: 'Failed to run dungeon' }, { status: 500 })
   }
 } 

@@ -22,6 +22,20 @@ class SyncEventEmitter:
         
         self.event_queue.append(event)
     
+    def emit(self, event_type: str, category: str, message: str):
+        """Simple emit method for compatibility with existing code"""
+        if not self.is_active:
+            return
+            
+        event = {
+            "type": event_type,
+            "category": category,
+            "message": message,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+        self.event_queue.append(event)
+    
     def get_events(self) -> List[Dict[str, Any]]:
         """Get all queued events and clear the queue"""
         events = list(self.event_queue)
