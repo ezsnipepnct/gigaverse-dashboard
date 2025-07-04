@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
 import random
+import math
 from typing import List, Dict, Tuple, Optional
-from mcts import mcts
 import copy
 from fishing_common import FishCard, extract_damage_from_effects
 
@@ -185,6 +185,50 @@ class FishingMCTSState:
         new_state.game_state.turn += 1
         return new_state
 
+def simple_mcts_search(initial_state: FishingMCTSState, simulations: int = 100) -> Optional[FishingGameAction]:
+    """Simple MCTS search implementation"""
+    legal_actions = initial_state.get_legal_actions()
+    if not legal_actions:
+        return None
+    
+    action_scores = {}
+    
+    # Run simulations for each possible action
+    for action in legal_actions:
+        total_reward = 0
+        
+        for _ in range(simulations // len(legal_actions)):
+            # Take the action
+            new_state = initial_state.take_action(action)
+            
+            # Run a random simulation for a few steps
+            current_state = new_state
+            for _ in range(5):  # Simulate 5 steps ahead
+                if current_state.is_terminal():
+                    break
+                
+                available_actions = current_state.get_legal_actions()
+                if not available_actions:
+                    break
+                    
+                # Pick a random action
+                random_action = random.choice(available_actions)
+                current_state = current_state.take_action(random_action)
+            
+            # Get the reward
+            reward = current_state.get_reward()
+            total_reward += reward
+        
+        # Average reward for this action
+        action_scores[action.card_id] = total_reward / max(1, simulations // len(legal_actions))
+    
+    # Return the action with the highest average reward
+    if action_scores:
+        best_card_id = max(action_scores.keys(), key=lambda k: action_scores[k])
+        return FishingGameAction(best_card_id)
+    
+    return None
+
 def get_fishing_mcts_recommendation(cards: List[Dict], fish_position: List[int], 
                                   fish_previous_position: List[int], 
                                   fish_hp: int, fish_max_hp: int,
@@ -218,9 +262,8 @@ def get_fishing_mcts_recommendation(cards: List[Dict], fish_position: List[int],
         # Create MCTS state
         mcts_state = FishingMCTSState(game_state)
         
-        # Run MCTS
-        mcts_instance = mcts(timeLimit=1000)  # 1 second time limit
-        best_action = mcts_instance.search(initialState=mcts_state)
+        # Run simple MCTS search
+        best_action = simple_mcts_search(mcts_state, simulations=100)
         
         if best_action:
             return best_action.card_id
