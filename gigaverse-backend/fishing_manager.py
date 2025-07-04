@@ -402,6 +402,15 @@ class FishingManager:
                     best_effectiveness = effectiveness
                     best_card = card_id
         
+        # FALLBACK: If no card was selected (all had poor effectiveness), 
+        # just play the first available card in hand
+        if best_card is None:
+            for card_id in self.current_state.hand:
+                if card_id in self.available_cards:
+                    if self.logger:
+                        logging.info(f"⚠️ Using fallback: playing card {card_id} (no optimal choice found)")
+                    return card_id
+        
         return best_card
 
     def should_continue_fishing(self) -> bool:
