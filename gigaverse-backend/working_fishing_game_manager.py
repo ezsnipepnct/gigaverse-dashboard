@@ -6,7 +6,7 @@ from termcolor import colored
 from fishing_manager import FishingManager
 from fishing_api import FishingApiManager
 from fishing_loot_manager import FishingLootManager
-from fishing_logger import FishingLogger
+# fishing_logger was removed - using standard logger instead
 
 class FishingGameManager:
     """Main controller for the fishing game mode"""

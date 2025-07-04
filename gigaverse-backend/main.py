@@ -130,6 +130,48 @@ async def websocket_endpoint(websocket: WebSocket):
             "timestamp": time.time()
         }))
         
+        # AUTOMATIC ACTIVE GAME CHECK - Check for active games immediately when connecting
+        def check_active_games():
+            try:
+                logger.info("🔍 Checking for active fishing games on connection...")
+                
+                # Create a temporary API manager to check for active games
+                # Use a fresh JWT token that doesn't expire for 24 hours
+                temp_jwt = "eyJhbGciOiJIUzI1NiJ9.eyJhZGRyZXNzIjoiMHhiMGQ5MEQ1MkM3Mzg5ODI0RDRCMjJjMDZiY2RjQ0Q3MzRFMzE2MmI3IiwidXNlciI6eyJfaWQiOiI2N2I5MjE1YTEwOGFlZGRiNDA5YTdlNzMiLCJ3YWxsZXRBZGRyZXNzIjoiMHhiMGQ5MGQ1MmM3Mzg5ODI0ZDRiMjJjMDZiY2RjY2Q3MzRlMzE2MmI3IiwidXNlcm5hbWUiOiIweGIwZDkwRDUyQzczODk4MjRENEIyMmMwNmJjZGNDRDczNEUzMTYyYjciLCJjYXNlU2Vuc2l0aXZlQWRkcmVzcyI6IjB4YjBkOTBENTJDNzM4OTgyNEQ0QjIyYzA2YmNkY0NENzM0RTMxNjJiNyIsIl9fdiI6MH0sImdhbWVBY2NvdW50Ijp7Im5vb2IiOnsiX2lkIjoiNjdiOTIxNzRlM2MzOWRjYTZmZGFkZjA5IiwiZG9jSWQiOiIyMTQyNCIsInRhYmxlTmFtZSI6IkdpZ2FOb29iTkZUIiwiTEFTVF9UUkFOU0ZFUl9USU1FX0NJRCI6MTc0MDE4NTk2NCwiY3JlYXRlZEF0IjoiMjAyNS0wMi0yMlQwMDo1OTozMi45NDZaIiwidXBkYXRlZEF0IjoiMjAyNS0wMi0yMlQwMDo1OTozMy4xNjVaIiwiTEVWRUxfQ0lEIjoxLCJJU19OT09CX0NJRCI6dHJ1ZSwiSU5JVElBTElaRURfQ0lEIjp0cnVlLCJPV05FUl9DSUQiOiIweGIwZDkwZDUyYzczODk4MjRkNGIyMmMwNmJjZGNjZDczNGUzMTYyYjcifSwiYWxsb3dlZFRvQ3JlYXRlQWNjb3VudCI6dHJ1ZSwiY2FuRW50ZXJHYW1lIjp0cnVlLCJub29iUGFzc0JhbGFuY2UiOjAsImxhc3ROb29iSWQiOjc0MjQ4LCJtYXhOb29iSWQiOjEwMDAwfSwiZXhwIjoxNzUxNzI5MzM0fQ.QpuVQYxSdRLJpCIKkTIhgKhGjkRnKjAJQzBa7_eJElQ"
+                fishing_api = FishingApiManager(token=temp_jwt, logger=logger)
+                
+                # Check for existing active game
+                player_address = "0xb0d90D52C7389824D4B22c06bcdcCD734E3162b7"
+                existing_state = fishing_api.get_fishing_state(player_address)
+                
+                # Check if there's an active game (COMPLETE_CID: False)
+                if (existing_state and 
+                    existing_state.get('gameState') and 
+                    existing_state['gameState'].get('COMPLETE_CID') == False):
+                    
+                    logger.info("🎮 ACTIVE FISHING GAME DETECTED ON CONNECTION!")
+                    logger.info(f"🎯 Game ID: {existing_state['gameState'].get('docId')}")
+                    logger.info(f"🐟 Fish HP: {existing_state['gameState']['data'].get('fishHp')}/{existing_state['gameState']['data'].get('fishMaxHp')}")
+                    logger.info(f"❤️ Player HP: {existing_state['gameState']['data'].get('playerHp')}/{existing_state['gameState']['data'].get('playerMaxHp')}")
+                    logger.info(f"🃏 Hand: {existing_state['gameState']['data'].get('hand')}")
+                    
+                    # EMIT THE ACTIVE GAME FOUND EVENT - This should trigger the Continue button
+                    event_emitter.emit("fishing_session", "active_game_found", "🎮 Active fishing game detected! Click Continue to resume.")
+                    logger.info("✅ Emitted active_game_found event - Continue button should appear!")
+                    
+                else:
+                    logger.info("ℹ️ No active fishing game found on connection")
+                    event_emitter.emit("fishing_session", "no_active_game", "No active fishing game found")
+                    
+            except Exception as e:
+                logger.error(f"❌ Error checking for active games: {e}")
+                event_emitter.emit("fishing_session", "error", f"❌ Error checking active games: {e}")
+        
+        # Run the active game check in a separate thread
+        active_check_thread = threading.Thread(target=check_active_games, daemon=True)
+        active_check_thread.start()
+        logger.info("🔍 Started active game check thread")
+        
         # Keep connection alive and handle incoming messages
         while True:
             try:
@@ -197,27 +239,88 @@ async def websocket_endpoint(websocket: WebSocket):
                             # Use the CORRECT FishingApiManager instead of dungeon ApiManager
                             fishing_api = FishingApiManager(token=jwt_token, logger=logger)
                             
-                            # Use the CORRECT fishing API method with correct action "start_run"
-                            fishing_response = fishing_api.start_fishing_game(node_id="2")
+                            # Check for existing active game first
+                            player_address = "0xb0d90D52C7389824D4B22c06bcdcCD734E3162b7"
+                            existing_state = fishing_api.get_fishing_state(player_address)
                             
-                            if fishing_response and fishing_response.get('success'):
-                                event_emitter.emit("fishing_session", "start", "✅ Fishing session started successfully!")
-                                logger.info("Fishing session started successfully")
-                                logger.info(f"Action token: {fishing_response.get('actionToken')}")
+                            action_token = None
+                            game_data = None
+                            
+                            # Check if there's an active game (COMPLETE_CID: False)
+                            if (existing_state and 
+                                existing_state.get('gameState') and 
+                                existing_state['gameState'].get('COMPLETE_CID') == False):
                                 
-                                # Initialize web fishing manager for continuous play
-                                web_fishing_manager = WebFishingManager(jwt_token, event_emitter, logger)
+                                logger.info("🎮 ACTIVE FISHING GAME DETECTED!")
+                                logger.info(f"🎯 Game ID: {existing_state['gameState'].get('docId')}")
+                                logger.info(f"🐟 Fish HP: {existing_state['gameState']['data'].get('fishHp')}/{existing_state['gameState']['data'].get('fishMaxHp')}")
+                                logger.info(f"❤️ Player HP: {existing_state['gameState']['data'].get('playerHp')}/{existing_state['gameState']['data'].get('playerMaxHp')}")
+                                logger.info(f"🃏 Hand: {existing_state['gameState']['data'].get('hand')}")
+                                
+                                # SHOW CONTINUE BUTTON - emit event for frontend
+                                event_emitter.emit("fishing_session", "active_game_found", "🎮 Active fishing game detected! Click Continue to resume.")
+                                
+                                # Try to continue the existing game to get a valid action token
+                                continue_response = fishing_api.continue_fishing_game(node_id="2")
+                                if continue_response and continue_response.get('success'):
+                                    action_token = continue_response.get('actionToken')
+                                    game_data = continue_response.get('data', {}).get('doc', {}).get('data', {})
+                                    logger.info("✅ Successfully continued existing game")
+                                else:
+                                    logger.info("🔄 Continue failed, trying start_run with latest token...")
+                                    # If continue fails, try start_run which will use action token strategy
+                                    fishing_response = fishing_api.start_fishing_game(node_id="2")
+                                    if fishing_response:
+                                        if fishing_response.get('success'):
+                                            action_token = fishing_response.get('actionToken')
+                                            game_data = fishing_response.get('data', {}).get('doc', {}).get('data', {})
+                                        elif fishing_response.get('existing_game'):
+                                            action_token = fishing_response.get('actionToken')
+                                            game_data = existing_state['gameState']['data']
+                                            logger.info("✅ Using existing game data with fresh action token")
+                            else:
+                                logger.info("🆕 No active game found - starting new game")
+                                event_emitter.emit("fishing_session", "start", "🆕 Starting new fishing game...")
+                                
+                                # Start new game
+                                fishing_response = fishing_api.start_fishing_game(node_id="2")
+                                if fishing_response and fishing_response.get('success'):
+                                    action_token = fishing_response.get('actionToken')
+                                    game_data = fishing_response.get('data', {}).get('doc', {}).get('data', {})
+                                    logger.info("✅ Successfully started new game")
+                                else:
+                                    logger.error("❌ Failed to start new fishing game")
+                                    event_emitter.emit("fishing_session", "error", "❌ Failed to start fishing session")
+                                    return
+
+                            if action_token and game_data:
+                                logger.info("Fishing session started successfully")
+                                logger.info(f"Action token: {action_token}")
+                                event_emitter.emit("fishing_session", "start", "✅ Fishing session started successfully!")
+                                event_emitter.emit("fishing_session", "start", f"🔑 Action token: {str(action_token)[:20]}...")
+                                
+                                # Initialize WebFishingManager with action token and game data
+                                web_fishing_manager = WebFishingManager(
+                                    fishing_api=fishing_api,
+                                    action_token=action_token,
+                                    game_data=game_data,
+                                    event_emitter=event_emitter,
+                                    logger=logger
+                                )
+                                
+                                # Start continuous fishing
                                 web_fishing_manager.start_fishing_session(run_continuously=True)
                             else:
-                                error_msg = fishing_response.get('message', 'Unknown error') if fishing_response else 'No response from fishing API'
-                                event_emitter.emit("fishing_session", "error", f"❌ Failed to start fishing: {error_msg}")
-                                logger.error(f"Failed to start fishing: {error_msg}")
-                                
+                                logger.error("❌ Failed to get action token or game data")
+                                event_emitter.emit("fishing_session", "error", "❌ Failed to initialize fishing session")
+                        
                         except Exception as e:
-                            logger.error(f"Fishing start error: {e}")
-                            event_emitter.emit("fishing_session", "error", f"❌ Fishing error: {str(e)}")
+                            logger.error(f"❌ Error in fishing thread: {e}")
+                            event_emitter.emit("fishing_session", "error", f"❌ Error in fishing session: {e}")
                     
-                    fishing_thread = threading.Thread(target=run_fishing, daemon=True)
+                    # Start fishing in background thread
+                    fishing_thread = threading.Thread(target=run_fishing)
+                    fishing_thread.daemon = True
                     fishing_thread.start()
                     logger.info("Fishing thread started")
                 
@@ -250,8 +353,18 @@ async def websocket_endpoint(websocket: WebSocket):
                                 event_emitter.emit("fishing_session", "continue", "✅ Continued existing fishing game!")
                                 logger.info("Successfully continued existing fishing game")
                                 
+                                # Get the action token and game data from the response
+                                action_token = continue_response.get('actionToken')
+                                game_data = continue_response.get('data', {}).get('doc', {}).get('data', {})
+                                
                                 # Initialize web fishing manager to handle the existing game
-                                web_fishing_manager = WebFishingManager(jwt_token, event_emitter, logger)
+                                web_fishing_manager = WebFishingManager(
+                                    fishing_api=fishing_api,
+                                    action_token=action_token,
+                                    game_data=game_data,
+                                    event_emitter=event_emitter,
+                                    logger=logger
+                                )
                                 web_fishing_manager.start_fishing_session(run_continuously=True)
                             else:
                                 error_msg = continue_response.get('message', 'Unknown error') if continue_response else 'No response from fishing API'

@@ -7,132 +7,155 @@ import logging
 
 from fishing_manager import FishingManager
 from fishing_api import FishingApiManager
+from game_event_emitter import GameEventEmitter
 
 class WebFishingManager:
     """Main controller for web-based fishing game sessions"""
     
-    def __init__(self, jwt_token: str, event_emitter, logger=None):
-        self.jwt_token = jwt_token
+    def __init__(self, fishing_api: FishingApiManager, action_token: str, game_data: Dict, 
+                 event_emitter: GameEventEmitter, logger: logging.Logger):
+        self.fishing_api = fishing_api
+        self.action_token = action_token
+        self.game_data = game_data
         self.event_emitter = event_emitter
-        self.logger = logger or logging.getLogger(__name__)
+        self.logger = logger
         
-        # Initialize fishing components
-        self.fishing_manager = FishingManager(logger=self.logger)
-        self.fishing_api = FishingApiManager(token=jwt_token, logger=self.logger)
+        # Initialize the fishing manager with game data
+        self.fishing_manager = FishingManager(logger=logger)
         
-        # Game state tracking
+        # Load game state from provided data
+        self.fishing_manager.load_game_state(game_data)
+        
+        # Fishing session state
         self.is_fishing_active = False
-        self.current_action_token = None
-        self.current_node_id = "2"  # Default fishing node
+        self.max_turns = 50
         self.turn_count = 0
-        self.max_turns = 50  # Maximum turns per fishing session
-        
-        # Session statistics
-        self.session_stats = {
-            'session_start_time': time.time(),
-            'turns_played': 0,
-            'fish_caught': 0,
-            'damage_dealt': 0,
-            'cards_played': 0,
-            'fishing_active': False
-        }
+        self.fishing_thread = None
 
     def start_fishing_session(self, run_continuously: bool = False):
-        """Start a fishing session"""
+        """Start a fishing session with the provided game data"""
         self.logger.info("🎣 Starting web fishing session...")
         
         try:
             # Emit session start event
             self._emit_event("fishing_session", "start", "🎣 Starting fishing session...")
             
-            # Check if fishing is available
-            if not self.fishing_api.check_fishing_availability():
-                self._emit_event("fishing_session", "error", "❌ Fishing is not available right now")
+            # Load card data from game data
+            card_data = self.game_data.get('deckCardData', [])
+            if card_data:
+                self.fishing_manager.load_card_data(card_data)
+                self.logger.info("✅ Card data loaded")
+            else:
+                self.logger.error("❌ No card data found in game data")
+                self._emit_event("fishing_session", "error", "❌ No card data available")
                 return
+                
+            # Extract game state info
+            player_hp = self.game_data.get('playerHp', 0)
+            player_max_hp = self.game_data.get('playerMaxHp', 0)
+            fish_hp = self.game_data.get('fishHp', 0)
+            fish_max_hp = self.game_data.get('fishMaxHp', 0)
+            fish_position = self.game_data.get('fishPosition', [2, 2])
+            previous_fish_position = self.game_data.get('previousFishPosition', [2, 2])
+            current_hand = self.game_data.get('hand', [])
             
-            # Try to get existing game state first
-            player_address = self._get_player_address_from_token()
-            if player_address:
-                existing_state = self.fishing_api.get_fishing_state(player_address)
-                if existing_state and self._has_active_game(existing_state):
-                    self.logger.info("🐟 Found existing fishing game, continuing...")
-                    self._emit_event("fishing_session", "continue", "🐟 Continuing existing fishing game...")
-                    self._continue_existing_game(existing_state)
-                    return
+            self.logger.info("✅ Game state loaded")
             
-            # Start new fishing game
-            self._start_new_fishing_game()
+            # Log current game state
+            self._emit_event("fishing_game", "continue", f"🎮 Game state: Player {player_hp}/{player_max_hp} HP, Fish {fish_hp}/{fish_max_hp} HP")
+            self._emit_event("fishing_stats", "update", {
+                "playerHp": player_hp,
+                "playerMaxHp": player_max_hp,
+                "fishHp": fish_hp,
+                "fishMaxHp": fish_max_hp,
+                "fishPosition": fish_position,
+                "hand": current_hand
+            })
             
             if run_continuously:
-                self._run_continuous_fishing()
+                self.is_fishing_active = True
+                self.turn_count = 0
+                self.fishing_thread = threading.Thread(target=self._run_continuous_fishing, daemon=True)
+                self.fishing_thread.start()
+                self.logger.info("🔄 Continuous fishing started")
+            else:
+                self.play_turn()
                 
         except Exception as e:
             self.logger.error(f"❌ Error starting fishing session: {e}")
-            self._emit_event("fishing_session", "error", f"❌ Error starting fishing: {str(e)}")
+            self._emit_event("fishing_session", "error", f"❌ Error starting fishing session: {e}")
 
     def stop_fishing_session(self):
-        """Stop the current fishing session"""
-        self.logger.info("🛑 Stopping fishing session...")
+        """Stop the fishing session"""
         self.is_fishing_active = False
-        self.session_stats['fishing_active'] = False
-        self._emit_event("fishing_session", "stop", "🛑 Fishing session stopped")
+        self.logger.info("🛑 Fishing session stopped")
+        self._emit_event("fishing_session", "end", "🛑 Fishing session stopped")
 
     def play_turn(self):
         """Play a single fishing turn"""
-        if not self.is_fishing_active or not self.current_action_token:
-            self._emit_event("fishing_turn", "error", "❌ No active fishing session")
+        if not self.is_fishing_active:
             return
+            
+        self.turn_count += 1
+        self.logger.info(f"🎯 Playing fishing turn {self.turn_count}")
         
         try:
-            self.turn_count += 1
-            self.logger.info(f"🎯 Playing fishing turn {self.turn_count}")
-            
             # Get card recommendation from fishing manager
-            recommended_card = self.fishing_manager.get_best_card_recommendation()
+            recommended_card = self.fishing_manager.get_card_recommendation()
             
             if recommended_card is None:
-                self._emit_event("fishing_turn", "error", "❌ No suitable card found to play")
-                self._check_game_end()
+                self.logger.error("❌ No card recommendation available")
+                self._emit_event("fishing_turn", "error", "❌ No card recommendation available")
+                self.stop_fishing_session()
                 return
+                
+            # Log the card selection
+            self._emit_event("fishing_turn", "card_selected", f"🎯 Selected card: {recommended_card}")
             
-            # Emit card selection event (no card names, just IDs)
-            self._emit_event("fishing_turn", "card_selected", 
-                           f"🎯 Selected card: {recommended_card}")
+            # Play the card via API
+            response = self.fishing_api.play_fishing_cards([recommended_card])
             
-            # Play the card
-            play_response = self.fishing_api.play_fishing_cards(
-                action_token=self.current_action_token,
-                card_indices=[recommended_card],
-                node_id=self.current_node_id
-            )
-            
-            if play_response and play_response.get('success'):
-                self.session_stats['cards_played'] += 1
-                self.session_stats['turns_played'] += 1
+            if response and response.get('success'):
+                self.logger.info("✅ Card played successfully")
                 
-                # Process the response
-                self._process_play_response(play_response, recommended_card)
-                
-                # Update action token if provided
-                if 'actionToken' in play_response:
-                    self.current_action_token = play_response['actionToken']
-                
-                # Check for loot phase
-                if self._check_for_loot_phase(play_response):
-                    self._handle_loot_phase(play_response)
-                
-                # Check if game should continue
-                if not self.fishing_manager.should_continue_fishing():
-                    self._check_game_end()
-                
+                # Update game state from response
+                new_game_data = response.get('data', {}).get('doc', {}).get('data', {})
+                if new_game_data:
+                    self.game_data = new_game_data
+                    self.fishing_manager.load_game_state(new_game_data)
+                    
+                    # Emit updated stats
+                    self._emit_event("fishing_stats", "update", {
+                        "playerHp": new_game_data.get('playerHp', 0),
+                        "playerMaxHp": new_game_data.get('playerMaxHp', 0),
+                        "fishHp": new_game_data.get('fishHp', 0),
+                        "fishMaxHp": new_game_data.get('fishMaxHp', 0),
+                        "fishPosition": new_game_data.get('fishPosition', [2, 2]),
+                        "hand": new_game_data.get('hand', [])
+                    })
+                    
+                    # Check if game is complete
+                    if new_game_data.get('fishHp', 0) <= 0:
+                        self.logger.info("🏆 Fish defeated! Game complete!")
+                        self._emit_event("fishing_session", "complete", "🏆 Fish defeated! Game complete!")
+                        self.stop_fishing_session()
+                    elif new_game_data.get('playerHp', 0) <= 0:
+                        self.logger.info("💀 Player defeated! Game over!")
+                        self._emit_event("fishing_session", "complete", "💀 Player defeated! Game over!")
+                        self.stop_fishing_session()
+                else:
+                    self.logger.warning("⚠️ No game data in response")
+                    
             else:
-                error_msg = play_response.get('message', 'Unknown error') if play_response else 'No response'
+                error_msg = response.get('message', 'Unknown error') if response else 'No response from API'
+                self.logger.error(f"❌ Failed to play card: {error_msg}")
                 self._emit_event("fishing_turn", "error", f"❌ Failed to play card: {error_msg}")
-                self._check_game_end()
+                self.stop_fishing_session()
                 
         except Exception as e:
             self.logger.error(f"❌ Error playing turn: {e}")
-            self._emit_event("fishing_turn", "error", f"❌ Error playing turn: {str(e)}")
+            self._emit_event("fishing_turn", "error", f"❌ Error playing turn: {e}")
+            self.stop_fishing_session()
 
     def get_current_stats(self) -> Dict:
         """Get current session statistics"""
@@ -144,86 +167,25 @@ class WebFishingManager:
         return stats
 
     def _emit_event(self, event_type: str, category: str, message: str):
-        """Emit an event through the event emitter"""
+        """Emit event to WebSocket clients"""
         try:
             self.event_emitter.emit(event_type, category, message)
         except Exception as e:
             self.logger.error(f"❌ Error emitting event: {e}")
 
-    def _start_new_fishing_game(self):
-        """Start a new fishing game"""
-        self.logger.info("🎣 Starting new fishing game...")
-        
-        try:
-            # Start fishing game
-            start_response = self.fishing_api.start_fishing_game(node_id=self.current_node_id)
-            
-            if start_response and start_response.get('success'):
-                self.logger.info("✅ Successfully started fishing game!")
-                self._emit_event("fishing_game", "start", "✅ Fishing game started successfully!")
+    def _run_continuous_fishing(self):
+        """Run fishing continuously with 5-second MCTS thinking delay"""
+        while self.is_fishing_active and self.turn_count < self.max_turns:
+            self.play_turn()
+            if self.is_fishing_active:
+                # 5-second MCTS thinking delay
+                self.logger.info("🧠 MCTS thinking... (5 seconds)")
+                time.sleep(5)
                 
-                # Extract action token
-                self.current_action_token = start_response.get('actionToken')
-                
-                # Load initial game state
-                if self._load_initial_game_state(start_response):
-                    self.is_fishing_active = True
-                    self.session_stats['fishing_active'] = True
-                    self.turn_count = 0
-                    
-                    self._emit_event("fishing_game", "ready", "🎮 Ready to start fishing turns!")
-                    self._emit_fishing_stats()
-                else:
-                    self._emit_event("fishing_game", "error", "❌ Failed to load initial game state")
-            else:
-                error_msg = start_response.get('message', 'Unknown error') if start_response else 'No response'
-                self._emit_event("fishing_game", "error", f"❌ Failed to start fishing game: {error_msg}")
-                
-        except Exception as e:
-            self.logger.error(f"❌ Error starting new fishing game: {e}")
-            self._emit_event("fishing_game", "error", f"❌ Error starting game: {str(e)}")
-
-    def _load_initial_game_state(self, start_response: Dict) -> bool:
-        """Load initial game state from start response"""
-        try:
-            # Try different possible response structures
-            game_state = None
-            
-            if 'data' in start_response and 'gameState' in start_response['data']:
-                game_state = start_response['data']['gameState']
-            elif 'data' in start_response and 'doc' in start_response['data']:
-                game_state = start_response['data']['doc']
-            elif 'gameState' in start_response:
-                game_state = start_response['gameState']
-            
-            if game_state and 'data' in game_state:
-                # Load card data
-                if 'deckCardData' in game_state['data']:
-                    self.fishing_manager.load_card_data(game_state['data']['deckCardData'])
-                    self.logger.info("✅ Card data loaded")
-                
-                # Update game state
-                self.fishing_manager.update_game_state(game_state)
-                self.logger.info("✅ Game state loaded")
-                return True
-            else:
-                self.logger.warning("⚠️ No valid game state found in start response")
-                return False
-                
-        except Exception as e:
-            self.logger.error(f"❌ Error loading initial game state: {e}")
-            return False
-
-    def _emit_fishing_stats(self):
-        """Emit current fishing statistics"""
-        try:
-            stats = self.fishing_manager.get_fishing_stats()
-            stats.update(self.session_stats)
-            stats['turn_count'] = self.turn_count
-            
-            self.event_emitter.emit("fishing_stats", "update", json.dumps(stats))
-        except Exception as e:
-            self.logger.error(f"❌ Error emitting fishing stats: {e}")
+        if self.turn_count >= self.max_turns:
+            self.logger.info(f"🔚 Reached maximum turns ({self.max_turns})")
+            self._emit_event("fishing_session", "end", f"🔚 Reached maximum turns ({self.max_turns})")
+            self.stop_fishing_session()
 
     def _process_play_response(self, response: Dict, card_id: int):
         """Process the response from playing a card"""
@@ -343,11 +305,11 @@ class WebFishingManager:
     def _get_player_address_from_token(self) -> Optional[str]:
         """Extract player address from JWT token"""
         try:
-            # For now, return None to skip existing game check
+            # For now, return the known wallet address from the fishing data
             # This could be implemented to decode JWT token in the future
-            return None
+            return "0xb0d90D52C7389824D4B22c06bcdcCD734E3162b7"
         except:
-            return None
+            return "0xb0d90D52C7389824D4B22c06bcdcCD734E3162b7"
 
     def _check_game_end(self):
         """Check if the game should end"""
@@ -355,14 +317,13 @@ class WebFishingManager:
         self.session_stats['fishing_active'] = False
         self._emit_event("fishing_session", "end", "🔚 Fishing session ended")
 
-    def _run_continuous_fishing(self):
-        """Run fishing continuously until stopped"""
-        while self.is_fishing_active and self.turn_count < self.max_turns:
-            self.play_turn()
-            if self.is_fishing_active:
-                time.sleep(2)  # Wait 2 seconds between turns
-                
-        if self.turn_count >= self.max_turns:
-            self.logger.info(f"🔚 Reached maximum turns ({self.max_turns})")
-            self._emit_event("fishing_session", "end", f"🔚 Reached maximum turns ({self.max_turns})")
-            self.stop_fishing_session() 
+    def _emit_fishing_stats(self):
+        """Emit current fishing statistics"""
+        try:
+            stats = self.fishing_manager.get_fishing_stats()
+            stats.update(self.session_stats)
+            stats['turn_count'] = self.turn_count
+            
+            self.event_emitter.emit("fishing_stats", "update", json.dumps(stats))
+        except Exception as e:
+            self.logger.error(f"❌ Error emitting fishing stats: {e}") 

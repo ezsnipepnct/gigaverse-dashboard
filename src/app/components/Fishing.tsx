@@ -150,8 +150,8 @@ const Fishing: React.FC<FishingProps> = ({ isOpen, onClose }) => {
         console.log('📊 Full API response:', data)
         
         // FIXED: Check if there's an active game - COMPLETE_CID should be null or false for active games
-        const isGameActive = data.gameState?.data?.COMPLETE_CID === null || data.gameState?.data?.COMPLETE_CID === false
-        console.log('🎮 Is game active?', isGameActive, 'COMPLETE_CID:', data.gameState?.data?.COMPLETE_CID)
+        const isGameActive = data.gameState?.COMPLETE_CID === null || data.gameState?.COMPLETE_CID === false
+        console.log('🎮 Is game active?', isGameActive, 'COMPLETE_CID:', data.gameState?.COMPLETE_CID)
         setHasActiveGame(isGameActive)
         
         // ADDED: Parse daily fishing runs data
@@ -319,6 +319,13 @@ const Fishing: React.FC<FishingProps> = ({ isOpen, onClose }) => {
       // Add event to log
       addEvent(type, category, message)
 
+      // Handle system connection events
+      if (type === 'system' && category === 'connection') {
+        // Reset checking state when connected
+        setIsCheckingForActiveGame(false)
+        console.log('🔗 WebSocket connection established - active game check should start automatically')
+      }
+
       // Handle fishing-specific events
       if (type === 'fishing_stats' && category === 'update') {
         try {
@@ -334,6 +341,17 @@ const Fishing: React.FC<FishingProps> = ({ isOpen, onClose }) => {
         } else if (category === 'end' || category === 'stop') {
           setIsGameActive(false)
           setIsStarting(false)
+        } else if (category === 'active_game_found') {
+          // ACTIVE GAME DETECTED - Show continue button
+          console.log('🎮 Active game found event received!')
+          setHasActiveGame(true)
+          setIsCheckingForActiveGame(false)
+          addEvent('fishing_session', 'active_game_found', '🎮 Active game detected - Continue button should appear!')
+        } else if (category === 'no_active_game') {
+          // NO ACTIVE GAME - Show start button
+          console.log('ℹ️ No active game found event received')
+          setHasActiveGame(false)
+          setIsCheckingForActiveGame(false)
         } else if (category === 'state') {
           // Parse real-time state messages like "🎯 Turn 1: Player Mana: 8, Fish HP: 7, Fish Position: [2, 3]"
           try {
