@@ -329,7 +329,8 @@ const Fishing: React.FC<FishingProps> = ({ isOpen, onClose }) => {
       // Handle fishing-specific events
       if (type === 'fishing_stats' && category === 'update') {
         try {
-          const stats = JSON.parse(message)
+          // Check if message is a string before parsing
+          const stats = typeof message === 'string' ? JSON.parse(message) : message
           setFishingStats(stats)
         } catch (error) {
           console.error('Error parsing fishing stats:', error)
@@ -385,11 +386,11 @@ const Fishing: React.FC<FishingProps> = ({ isOpen, onClose }) => {
     }
   }
 
-  const addEvent = (type: string, category: string, message: string) => {
+  const addEvent = (type: string, category: string, message: any) => {
     const event: GameEvent = {
       type,
       category,
-      message,
+      message: typeof message === 'string' ? message : JSON.stringify(message),
       timestamp: Date.now()
     }
     setGameEvents(prev => [event, ...prev].slice(0, 50)) // Keep last 50 events

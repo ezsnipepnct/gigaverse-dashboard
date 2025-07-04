@@ -42,7 +42,16 @@ class FishingManager:
 
     def update_game_state(self, api_data: Dict) -> None:
         """Update current game state from API response"""
-        data = api_data['data']
+        # Handle both API response format and already-extracted data format
+        if 'doc' in api_data.get('data', {}):
+            # Full API response format: {data: {doc: {data: {...}}}}
+            data = api_data['data']['doc']['data']
+        elif 'gameState' in api_data.get('data', {}):
+            # Alternative format: {data: {gameState: {...}}}
+            data = api_data['data']['gameState']
+        else:
+            # Already extracted format or direct data
+            data = api_data.get('data', api_data)
         
         # Convert fish position from [x,y] to single position (1-9)
         fish_pos = data['fishPosition']

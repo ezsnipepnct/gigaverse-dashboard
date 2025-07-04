@@ -145,15 +145,26 @@ async def websocket_endpoint(websocket: WebSocket):
                 existing_state = fishing_api.get_fishing_state(player_address)
                 
                 # Check if there's an active game (COMPLETE_CID: False)
-                if (existing_state and 
-                    existing_state.get('gameState') and 
-                    existing_state['gameState'].get('COMPLETE_CID') == False):
+                # Handle different API response formats
+                game_state = None
+                if existing_state:
+                    if 'data' in existing_state and 'doc' in existing_state['data']:
+                        # Full API response format: {data: {doc: {data: {...}}}}
+                        game_state = existing_state['data']['doc']
+                    elif 'gameState' in existing_state:
+                        # Alternative format: {gameState: {...}}
+                        game_state = existing_state['gameState']
+                
+                if (game_state and game_state.get('COMPLETE_CID') == False):
                     
                     logger.info("🎮 ACTIVE FISHING GAME DETECTED ON CONNECTION!")
-                    logger.info(f"🎯 Game ID: {existing_state['gameState'].get('docId')}")
-                    logger.info(f"🐟 Fish HP: {existing_state['gameState']['data'].get('fishHp')}/{existing_state['gameState']['data'].get('fishMaxHp')}")
-                    logger.info(f"❤️ Player HP: {existing_state['gameState']['data'].get('playerHp')}/{existing_state['gameState']['data'].get('playerMaxHp')}")
-                    logger.info(f"🃏 Hand: {existing_state['gameState']['data'].get('hand')}")
+                    logger.info(f"🎯 Game ID: {game_state.get('docId')}")
+                    
+                    # Handle game data with safe access
+                    game_data = game_state.get('data', {})
+                    logger.info(f"🐟 Fish HP: {game_data.get('fishHp')}/{game_data.get('fishMaxHp')}")
+                    logger.info(f"❤️ Player HP: {game_data.get('playerHp')}/{game_data.get('playerMaxHp')}")
+                    logger.info(f"🃏 Hand: {game_data.get('hand')}")
                     
                     # EMIT THE ACTIVE GAME FOUND EVENT - This should trigger the Continue button
                     event_emitter.emit("fishing_session", "active_game_found", "🎮 Active fishing game detected! Click Continue to resume.")
@@ -247,15 +258,26 @@ async def websocket_endpoint(websocket: WebSocket):
                             game_data = None
                             
                             # Check if there's an active game (COMPLETE_CID: False)
-                            if (existing_state and 
-                                existing_state.get('gameState') and 
-                                existing_state['gameState'].get('COMPLETE_CID') == False):
+                            # Handle different API response formats
+                            game_state = None
+                            if existing_state:
+                                if 'data' in existing_state and 'doc' in existing_state['data']:
+                                    # Full API response format: {data: {doc: {data: {...}}}}
+                                    game_state = existing_state['data']['doc']
+                                elif 'gameState' in existing_state:
+                                    # Alternative format: {gameState: {...}}
+                                    game_state = existing_state['gameState']
+                            
+                            if (game_state and game_state.get('COMPLETE_CID') == False):
                                 
                                 logger.info("🎮 ACTIVE FISHING GAME DETECTED!")
-                                logger.info(f"🎯 Game ID: {existing_state['gameState'].get('docId')}")
-                                logger.info(f"🐟 Fish HP: {existing_state['gameState']['data'].get('fishHp')}/{existing_state['gameState']['data'].get('fishMaxHp')}")
-                                logger.info(f"❤️ Player HP: {existing_state['gameState']['data'].get('playerHp')}/{existing_state['gameState']['data'].get('playerMaxHp')}")
-                                logger.info(f"🃏 Hand: {existing_state['gameState']['data'].get('hand')}")
+                                logger.info(f"🎯 Game ID: {game_state.get('docId')}")
+                                
+                                # Handle game data with safe access
+                                game_data = game_state.get('data', {})
+                                logger.info(f"🐟 Fish HP: {game_data.get('fishHp')}/{game_data.get('fishMaxHp')}")
+                                logger.info(f"❤️ Player HP: {game_data.get('playerHp')}/{game_data.get('playerMaxHp')}")
+                                logger.info(f"🃏 Hand: {game_data.get('hand')}")
                                 
                                 # SHOW CONTINUE BUTTON - emit event for frontend
                                 event_emitter.emit("fishing_session", "active_game_found", "🎮 Active fishing game detected! Click Continue to resume.")
@@ -276,7 +298,7 @@ async def websocket_endpoint(websocket: WebSocket):
                                             game_data = fishing_response.get('data', {}).get('doc', {}).get('data', {})
                                         elif fishing_response.get('existing_game'):
                                             action_token = fishing_response.get('actionToken')
-                                            game_data = existing_state['gameState']['data']
+                                            game_data = game_state.get('data', {})
                                             logger.info("✅ Using existing game data with fresh action token")
                             else:
                                 logger.info("🆕 No active game found - starting new game")

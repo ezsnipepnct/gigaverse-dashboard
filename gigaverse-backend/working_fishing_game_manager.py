@@ -5,7 +5,7 @@ from termcolor import colored
 
 from fishing_manager import FishingManager
 from fishing_api import FishingApiManager
-from fishing_loot_manager import FishingLootManager
+from loot_manager import LootManager
 # fishing_logger was removed - using standard logger instead
 
 class FishingGameManager:
@@ -16,7 +16,7 @@ class FishingGameManager:
         self.logger = logger
         self.fishing_manager = FishingManager(logger)
         self.fishing_api = FishingApiManager(token=token, logger=logger)
-        self.loot_manager = FishingLootManager(logger)
+        self.loot_manager = LootManager(logger)
         
         # Game session tracking
         self.session_stats = {
@@ -120,9 +120,20 @@ class FishingGameManager:
         """Continue an existing fishing game"""
         print(colored("🎣 Continuing existing fishing game...", 'cyan'))
         
-        # Load game state
-        game_data = state_data['gameState']
-        self.fishing_manager.load_card_data(game_data['data']['deckCardData'])
+        # Load game state - handle different API response formats
+        if 'data' in state_data and 'doc' in state_data['data']:
+            # Full API response format: {data: {doc: {data: {...}}}}
+            game_data = state_data['data']['doc']
+        elif 'gameState' in state_data:
+            # Alternative format: {gameState: {...}}
+            game_data = state_data['gameState']
+        else:
+            # Direct format or already extracted
+            game_data = state_data
+            
+        # Load card data and game state
+        if 'data' in game_data and 'deckCardData' in game_data['data']:
+            self.fishing_manager.load_card_data(game_data['data']['deckCardData'])
         self.fishing_manager.update_game_state(game_data)
         
         # Try to extract action token from state if available
@@ -203,14 +214,23 @@ class FishingGameManager:
                     player_address = self.fishing_api.get_player_address()
                     if player_address:
                         current_state = self.fishing_api.get_fishing_state(player_address)
-                        if current_state and current_state.get('gameState'):
-                            print(colored("✅ Successfully retrieved initial state from API", 'green'))
-                            game_data = current_state['gameState']
+                        if current_state:
+                            # Handle different API response formats
+                            game_data = None
+                            if 'data' in current_state and 'doc' in current_state['data']:
+                                # Full API response format: {data: {doc: {data: {...}}}}
+                                game_data = current_state['data']['doc']
+                            elif 'gameState' in current_state:
+                                # Alternative format: {gameState: {...}}
+                                game_data = current_state['gameState']
                             
-                            # Load card data and game state
-                            if 'data' in game_data and 'deckCardData' in game_data['data']:
-                                self.fishing_manager.load_card_data(game_data['data']['deckCardData'])
-                                print(colored("✅ Card data loaded from API state", 'green'))
+                            if game_data:
+                                print(colored("✅ Successfully retrieved initial state from API", 'green'))
+                                
+                                # Load card data and game state
+                                if 'data' in game_data and 'deckCardData' in game_data['data']:
+                                    self.fishing_manager.load_card_data(game_data['data']['deckCardData'])
+                                    print(colored("✅ Card data loaded from API state", 'green'))
                             
                             self.fishing_manager.update_game_state(game_data)
                             print(colored("✅ Game state loaded from API", 'green'))
@@ -269,10 +289,21 @@ class FishingGameManager:
         """Run a fishing demo using pre-loaded data"""
         print(colored("🎮 Running fishing demo with real game data", 'green'))
         
-        # Load the demo game state
-        game_state = demo_data['gameState']
-        self.fishing_manager.load_card_data(game_state['data']['deckCardData'])
-        self.fishing_manager.update_game_state(game_state)
+        # Load the demo game state - handle different API response formats
+        game_state = None
+        if 'data' in demo_data and 'doc' in demo_data['data']:
+            # Full API response format: {data: {doc: {data: {...}}}}
+            game_state = demo_data['data']['doc']
+        elif 'gameState' in demo_data:
+            # Alternative format: {gameState: {...}}
+            game_state = demo_data['gameState']
+        else:
+            # Direct format or already extracted
+            game_state = demo_data
+        
+        if game_state and 'data' in game_state:
+            self.fishing_manager.load_card_data(game_state['data']['deckCardData'])
+            self.fishing_manager.update_game_state(game_state)
         
         # Display initial state
         self._display_fishing_game_state()
@@ -509,12 +540,15 @@ class FishingGameManager:
                     if play_response and play_response.get('success'):
                         print(colored("✅ Card played successfully!", 'green'))
                         
-                        # Update game state from API response
-                        if 'gameState' in play_response.get('data', {}):
-                            game_data = play_response['data']['gameState']
+                        # Update game state from API response - handle different formats
+                        response_data = play_response.get('data', {})
+                        if 'doc' in response_data:
+                            # Full API response format: {data: {doc: {data: {...}}}}
+                            game_data = response_data['doc']
                             self.fishing_manager.update_game_state(game_data)
-                        elif 'doc' in play_response.get('data', {}):
-                            game_data = play_response['data']['doc']
+                        elif 'gameState' in response_data:
+                            # Alternative format: {data: {gameState: {...}}}
+                            game_data = response_data['gameState']
                             self.fishing_manager.update_game_state(game_data)
                         
                         # Display current state AFTER successful update
@@ -562,12 +596,15 @@ class FishingGameManager:
                                 if retry_response and retry_response.get('success'):
                                     print(colored("✅ Retry successful!", 'green'))
                                     
-                                    # Update game state from retry response
-                                    if 'gameState' in retry_response.get('data', {}):
-                                        game_data = retry_response['data']['gameState']
+                                    # Update game state from retry response - handle different formats
+                                    retry_data = retry_response.get('data', {})
+                                    if 'doc' in retry_data:
+                                        # Full API response format: {data: {doc: {data: {...}}}}
+                                        game_data = retry_data['doc']
                                         self.fishing_manager.update_game_state(game_data)
-                                    elif 'doc' in retry_response.get('data', {}):
-                                        game_data = retry_response['data']['doc']
+                                    elif 'gameState' in retry_data:
+                                        # Alternative format: {data: {gameState: {...}}}
+                                        game_data = retry_data['gameState']
                                         self.fishing_manager.update_game_state(game_data)
                                     
                                     # Display current state AFTER successful retry
@@ -601,9 +638,17 @@ class FishingGameManager:
                             if current_state and self._has_active_game(current_state):
                                 print(colored("✅ Game is still active! Refreshing state and continuing...", 'green'))
                                 
-                                # Update game state with fresh data
-                                game_data = current_state['gameState']
-                                self.fishing_manager.update_game_state(game_data)
+                                # Update game state with fresh data - handle different formats
+                                game_data = None
+                                if 'data' in current_state and 'doc' in current_state['data']:
+                                    # Full API response format: {data: {doc: {data: {...}}}}
+                                    game_data = current_state['data']['doc']
+                                elif 'gameState' in current_state:
+                                    # Alternative format: {gameState: {...}}
+                                    game_data = current_state['gameState']
+                                
+                                if game_data:
+                                    self.fishing_manager.update_game_state(game_data)
                                 
                                 # Display refreshed state
                                 self._display_fishing_game_state()
@@ -789,8 +834,19 @@ class FishingGameManager:
             
             current_state = self.fishing_api.get_fishing_state(player_address)
             
-            if current_state and current_state.get('dayDoc', {}).get('data', {}).get('deck'):
-                persistent_cards = current_state['dayDoc']['data']['deck']
+            # Handle different API response formats for dayDoc access
+            persistent_cards = None
+            if current_state:
+                if 'data' in current_state and 'doc' in current_state['data']:
+                    # Full API response format: {data: {doc: {dayDoc: {data: {deck: [...]}}}}}
+                    doc_data = current_state['data']['doc']
+                    if 'dayDoc' in doc_data and 'data' in doc_data['dayDoc'] and 'deck' in doc_data['dayDoc']['data']:
+                        persistent_cards = doc_data['dayDoc']['data']['deck']
+                elif 'dayDoc' in current_state and 'data' in current_state['dayDoc'] and 'deck' in current_state['dayDoc']['data']:
+                    # Direct format: {dayDoc: {data: {deck: [...]}}}
+                    persistent_cards = current_state['dayDoc']['data']['deck']
+            
+            if persistent_cards:
                 return {
                     'persistent_cards': persistent_cards,
                     'total_cards': len(persistent_cards),

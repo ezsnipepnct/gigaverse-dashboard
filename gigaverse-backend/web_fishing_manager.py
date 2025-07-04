@@ -109,11 +109,25 @@ class WebFishingManager:
                 self.stop_fishing_session()
                 return
                 
-            # Log the card selection
-            self._emit_event("fishing_turn", "card_selected", f"🎯 Selected card: {recommended_card}")
-            
-            # Play the card via API
-            response = self.fishing_api.play_fishing_cards([recommended_card])
+            # Convert card ID to hand index
+            if self.fishing_manager.current_state and self.fishing_manager.current_state.hand:
+                try:
+                    hand_index = self.fishing_manager.current_state.hand.index(recommended_card)
+                    self.logger.info(f"🎯 Playing card ID {recommended_card} at hand index {hand_index}")
+                    self._emit_event("fishing_turn", "card_selected", f"🎯 Selected card ID {recommended_card} (hand index {hand_index})")
+                    
+                    # Play the card via API using hand index
+                    response = self.fishing_api.play_fishing_cards([hand_index])
+                except ValueError:
+                    self.logger.error(f"❌ Card ID {recommended_card} not found in hand {self.fishing_manager.current_state.hand}")
+                    self._emit_event("fishing_turn", "error", f"❌ Card ID {recommended_card} not in hand")
+                    self.stop_fishing_session()
+                    return
+            else:
+                self.logger.error("❌ No hand information available")
+                self._emit_event("fishing_turn", "error", "❌ No hand information available")
+                self.stop_fishing_session()
+                return
             
             if response and response.get('success'):
                 self.logger.info("✅ Card played successfully")
@@ -227,16 +241,34 @@ class WebFishingManager:
     def _check_for_loot_phase(self, response: Dict) -> bool:
         """Check if response indicates a loot phase"""
         try:
-            if 'data' in response and 'lootOptions' in response['data']:
-                return len(response['data']['lootOptions']) > 0
-            return False
+            # Handle different API response formats for loot detection
+            loot_options = None
+            if 'data' in response:
+                if 'doc' in response['data'] and 'data' in response['data']['doc']:
+                    # Full API response format: {data: {doc: {data: {lootOptions: [...]}}}}
+                    doc_data = response['data']['doc']['data']
+                    loot_options = doc_data.get('lootOptions', [])
+                elif 'lootOptions' in response['data']:
+                    # Direct format: {data: {lootOptions: [...]}}
+                    loot_options = response['data']['lootOptions']
+            
+            return loot_options and len(loot_options) > 0
         except:
             return False
 
     def _handle_loot_phase(self, response: Dict):
         """Handle loot selection phase"""
         try:
-            loot_options = response['data']['lootOptions']
+            # Handle different API response formats for loot options
+            loot_options = None
+            if 'data' in response:
+                if 'doc' in response['data'] and 'data' in response['data']['doc']:
+                    # Full API response format: {data: {doc: {data: {lootOptions: [...]}}}}
+                    doc_data = response['data']['doc']['data']
+                    loot_options = doc_data.get('lootOptions', [])
+                elif 'lootOptions' in response['data']:
+                    # Direct format: {data: {lootOptions: [...]}}
+                    loot_options = response['data']['lootOptions']
             
             if loot_options:
                 # For simplicity, select the first loot option
