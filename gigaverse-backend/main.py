@@ -18,6 +18,8 @@ from giga_cli_bot.loot_manager import LootManager
 from giga_cli_bot.ui_manager import UiManager
 from web_game_manager import WebGameManager
 from sync_event_emitter import SyncEventEmitter
+from fishing_api import FishingApiManager
+from web_fishing_manager import WebFishingManager
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -172,6 +174,97 @@ async def websocket_endpoint(websocket: WebSocket):
                     game_thread = threading.Thread(target=run_game, daemon=True)
                     game_thread.start()
                     logger.info("Game thread started")
+                
+                elif message.get("action") == "start_run":
+                    # Handle fishing start request
+                    jwt_token = message.get("jwt_token")
+                    
+                    logger.info("Starting fishing run")
+                    
+                    # Send fishing start confirmation
+                    await websocket.send_text(json.dumps({
+                        "type": "fishing_session",
+                        "category": "start",
+                        "message": "🎣 Starting fishing run...",
+                        "timestamp": time.time()
+                    }))
+                    
+                    # Start fishing session in separate thread
+                    def run_fishing():
+                        try:
+                            logger.info("Initializing fishing session with correct API")
+                            
+                            # Use the CORRECT FishingApiManager instead of dungeon ApiManager
+                            fishing_api = FishingApiManager(token=jwt_token, logger=logger)
+                            
+                            # Use the CORRECT fishing API method with correct action "start_run"
+                            fishing_response = fishing_api.start_fishing_game(node_id="2")
+                            
+                            if fishing_response and fishing_response.get('success'):
+                                event_emitter.emit("fishing_session", "start", "✅ Fishing session started successfully!")
+                                logger.info("Fishing session started successfully")
+                                logger.info(f"Action token: {fishing_response.get('actionToken')}")
+                                
+                                # Initialize web fishing manager for continuous play
+                                web_fishing_manager = WebFishingManager(jwt_token, event_emitter, logger)
+                                web_fishing_manager.start_fishing_session(run_continuously=True)
+                            else:
+                                error_msg = fishing_response.get('message', 'Unknown error') if fishing_response else 'No response from fishing API'
+                                event_emitter.emit("fishing_session", "error", f"❌ Failed to start fishing: {error_msg}")
+                                logger.error(f"Failed to start fishing: {error_msg}")
+                                
+                        except Exception as e:
+                            logger.error(f"Fishing start error: {e}")
+                            event_emitter.emit("fishing_session", "error", f"❌ Fishing error: {str(e)}")
+                    
+                    fishing_thread = threading.Thread(target=run_fishing, daemon=True)
+                    fishing_thread.start()
+                    logger.info("Fishing thread started")
+                
+                elif message.get("action") == "continue_run":
+                    # Handle fishing continue request
+                    jwt_token = message.get("jwt_token")
+                    
+                    logger.info("Continuing fishing run")
+                    
+                    # Send fishing continue confirmation
+                    await websocket.send_text(json.dumps({
+                        "type": "fishing_session",
+                        "category": "continue",
+                        "message": "🎮 Continuing existing fishing game...",
+                        "timestamp": time.time()
+                    }))
+                    
+                    # Continue monitoring existing fishing session
+                    def continue_fishing():
+                        try:
+                            logger.info("Continuing existing fishing session with correct API")
+                            
+                            # Use the CORRECT FishingApiManager to continue existing game
+                            fishing_api = FishingApiManager(token=jwt_token, logger=logger)
+                            
+                            # Try to continue the existing fishing game
+                            continue_response = fishing_api.continue_fishing_game(node_id="2")
+                            
+                            if continue_response and continue_response.get('success'):
+                                event_emitter.emit("fishing_session", "continue", "✅ Continued existing fishing game!")
+                                logger.info("Successfully continued existing fishing game")
+                                
+                                # Initialize web fishing manager to handle the existing game
+                                web_fishing_manager = WebFishingManager(jwt_token, event_emitter, logger)
+                                web_fishing_manager.start_fishing_session(run_continuously=True)
+                            else:
+                                error_msg = continue_response.get('message', 'Unknown error') if continue_response else 'No response from fishing API'
+                                event_emitter.emit("fishing_session", "error", f"❌ Failed to continue fishing: {error_msg}")
+                                logger.error(f"Failed to continue fishing: {error_msg}")
+                            
+                        except Exception as e:
+                            logger.error(f"Fishing continue error: {e}")
+                            event_emitter.emit("fishing_session", "error", f"❌ Fishing continue error: {str(e)}")
+                    
+                    continue_thread = threading.Thread(target=continue_fishing, daemon=True)
+                    continue_thread.start()
+                    logger.info("Fishing continue thread started")
                 
             except WebSocketDisconnect:
                 logger.info("WebSocket disconnected by client")
