@@ -510,9 +510,6 @@ const CraftingStation: React.FC<CraftingStationProps> = ({ isOpen, onClose }) =>
                                   <Star className="w-3 h-3 text-green-400" />
                                   <span className="text-green-400 font-mono text-xs">{recipe.SUCCESS_RATE_CID || 100}%</span>
                                 </div>
-                                <span className={`px-2 py-1 text-xs font-mono rounded ${getRarityColor(recipe.RARITY_CID || 1)}`}>
-                                  {getRarityName(recipe.RARITY_CID || 1)}
-                                </span>
                               </div>
                             </div>
                           </div>
@@ -552,7 +549,7 @@ const CraftingStation: React.FC<CraftingStationProps> = ({ isOpen, onClose }) =>
                         <div>
                           <div className="text-cyan-400 font-mono text-xs uppercase">Energy Cost</div>
                           <div className="text-yellow-400 font-mono text-lg font-bold">
-                            {selectedRecipe.ENERGY_CID || 0}
+                            {(selectedRecipe.ENERGY_CID || 0) * craftingQuantity}
                           </div>
                         </div>
                         <div>
@@ -592,6 +589,28 @@ const CraftingStation: React.FC<CraftingStationProps> = ({ isOpen, onClose }) =>
                               </div>
                             )
                           })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Rewards */}
+                    {selectedRecipe.REWARDS_CID && selectedRecipe.REWARDS_CID.length > 0 && (
+                      <div>
+                        <h4 className="text-cyan-400 font-mono text-sm font-bold mb-3 uppercase">Rewards</h4>
+                        <div className="space-y-2">
+                          {selectedRecipe.REWARDS_CID.map((reward, index) => (
+                            <div key={index} className="p-3 bg-gray-900/50 rounded-lg border border-cyan-400/20">
+                              <div className="flex items-center justify-between">
+                                <span className="text-white font-mono text-sm">{reward.name}</span>
+                                <span className="text-cyan-400 font-mono text-sm font-bold">
+                                  x{reward.amount * craftingQuantity}
+                                </span>
+                              </div>
+                              <div className="text-xs font-mono text-gray-400 mt-1">
+                                Item ID: {reward.itemId}
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       </div>
                     )}
