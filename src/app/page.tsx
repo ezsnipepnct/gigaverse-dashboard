@@ -26,7 +26,8 @@ import {
   Key,
   Battery,
   Waves,
-  Fish
+  Fish,
+  Tag
 } from 'lucide-react'
 import CraftingStation from './components/CraftingStation'
 import Gigamarket from './components/Gigamarket'
@@ -36,6 +37,7 @@ import DungeonRunner from './components/DungeonRunner'
 import Fishing from './components/Fishing'
 import TokenManager from './components/TokenManager'
 import ROMOverview from './components/ROMOverview'
+import DealsModal from './components/DealsModal'
 
 // Refined minimal button component with gold hover theme
 const RefinedButton = ({ children, onClick, variant = 'primary', className = '', disabled = false, goldHover = false }: {
@@ -836,6 +838,7 @@ export default function GigaverseDashboard() {
   const [showFishing, setShowFishing] = useState(false)
   const [showTokenManager, setShowTokenManager] = useState(false)
   const [showROMOverview, setShowROMOverview] = useState(false)
+  const [showDeals, setShowDeals] = useState(false)
   const [showEnergyClaimModal, setShowEnergyClaimModal] = useState(false)
   const [energyClaimAmount, setEnergyClaimAmount] = useState(0)
   const [playerBalances, setPlayerBalances] = useState<Record<string, number>>({})
@@ -994,6 +997,13 @@ export default function GigaverseDashboard() {
       icon: Cpu,
       title: 'ROM COLLECTION',
       description: 'View and manage your ROM NFTs',
+      color: 'cyan'
+    },
+    {
+      id: 'deals',
+      icon: Tag,
+      title: 'DEALS',
+      description: 'Check out current market deals',
       color: 'cyan'
     }
   ]
@@ -1257,6 +1267,8 @@ export default function GigaverseDashboard() {
                             fetchPlayerBalances()
                           } else if (station.id === 'roms') {
                             setShowROMOverview(true)
+                          } else if (station.id === 'deals') {
+                            setShowDeals(true)
                           }
                         }}
                      />
@@ -1431,6 +1443,28 @@ export default function GigaverseDashboard() {
          isOpen={showROMOverview}
          onClose={() => setShowROMOverview(false)}
        />
+
+       {/* Deals Modal */}
+       {showDeals && (
+         <motion.div
+           initial={{ opacity: 0 }}
+           animate={{ opacity: 1 }}
+           exit={{ opacity: 0 }}
+           className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+           onClick={() => setShowDeals(false)}
+         >
+           <motion.div
+             initial={{ scale: 0.8, opacity: 0, y: 50 }}
+             animate={{ scale: 1, opacity: 1, y: 0 }}
+             exit={{ scale: 0.8, opacity: 0, y: 50 }}
+             transition={{ type: 'spring', damping: 20, stiffness: 300 }}
+             className="bg-black/90 border-2 border-cyan-400/50 rounded-xl p-0 max-w-6xl w-full mx-4 backdrop-blur-md max-h-[90vh] overflow-hidden"
+             onClick={(e) => e.stopPropagation()}
+           >
+             <DealsModal onClose={() => setShowDeals(false)} />
+           </motion.div>
+         </motion.div>
+       )}
 
        {/* Energy Claiming Modal */}
        {showEnergyClaimModal && (
