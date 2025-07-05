@@ -11,13 +11,16 @@ export async function GET(request: NextRequest) {
 
     console.log('🎯 Fetching dungeon progress with auth header:', authHeader.substring(0, 20) + '...')
 
-    // Try the original endpoint first
+    // Extract token from Bearer header
+    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : authHeader
+
+    // Make the API call exactly like Postman
     const response = await fetch('https://gigaverse.io/api/game/dungeon/today', {
       method: 'GET',
       headers: {
-        'accept': '*/*',
-        'content-type': 'application/json',
-        'authorization': authHeader
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        'Accept': '*/*'
       }
     })
 
@@ -29,20 +32,34 @@ export async function GET(request: NextRequest) {
       console.error('❌ Dungeon progress API error:', response.status, response.statusText)
       console.error('❌ Error response body:', errorText)
 
-      // Try alternative endpoints or return mock data
-      console.log('🔄 API failed, checking if we should return mock data...')
-      
-      // Return mock data structure that matches what the frontend expects
+      // Return mock data that matches the real API structure
       const mockData = {
-        dayProgressEntities: [
-          { ID_CID: "1", UINT256_CID: 5 },   // Normal: 5 completed
-          { ID_CID: "2", UINT256_CID: 12 },  // Gigus: 12 completed  
-          { ID_CID: "3", UINT256_CID: 3 }    // Underhaul: 3 completed
-        ],
+        dayProgressEntities: [],
         dungeonDataEntities: [
-          { ID_CID: 1, UINT256_CID: 10 },    // Normal: max 10
-          { ID_CID: 2, UINT256_CID: 30 },    // Gigus: max 30
-          { ID_CID: 3, UINT256_CID: 8 }      // Underhaul: max 8
+          {
+            ID_CID: 1,
+            NAME_CID: "Dungetron 5000",
+            ENERGY_CID: 40,
+            UINT256_CID: 10,
+            CHECKPOINT_CID: -1,
+            juicedMaxRunsPerDay: 12
+          },
+          {
+            ID_CID: 2,
+            NAME_CID: "Gigus Dungeon",
+            ENERGY_CID: 200,
+            UINT256_CID: 30,
+            CHECKPOINT_CID: -1,
+            juicedMaxRunsPerDay: 30
+          },
+          {
+            ID_CID: 3,
+            NAME_CID: "Dungetron Underhaul",
+            ENERGY_CID: 40,
+            UINT256_CID: 8,
+            CHECKPOINT_CID: 2,
+            juicedMaxRunsPerDay: 9
+          }
         ]
       }
       
@@ -57,17 +74,34 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('💥 Error fetching dungeon progress:', error)
     
-    // Return mock data on any error
+    // Return mock data that matches the real API structure
     const mockData = {
-      dayProgressEntities: [
-        { ID_CID: "1", UINT256_CID: 7 },   // Normal: 7 completed
-        { ID_CID: "2", UINT256_CID: 15 },  // Gigus: 15 completed  
-        { ID_CID: "3", UINT256_CID: 4 }    // Underhaul: 4 completed
-      ],
+      dayProgressEntities: [],
       dungeonDataEntities: [
-        { ID_CID: 1, UINT256_CID: 10 },    // Normal: max 10
-        { ID_CID: 2, UINT256_CID: 30 },    // Gigus: max 30
-        { ID_CID: 3, UINT256_CID: 8 }      // Underhaul: max 8
+        {
+          ID_CID: 1,
+          NAME_CID: "Dungetron 5000",
+          ENERGY_CID: 40,
+          UINT256_CID: 10,
+          CHECKPOINT_CID: -1,
+          juicedMaxRunsPerDay: 12
+        },
+        {
+          ID_CID: 2,
+          NAME_CID: "Gigus Dungeon",
+          ENERGY_CID: 200,
+          UINT256_CID: 30,
+          CHECKPOINT_CID: -1,
+          juicedMaxRunsPerDay: 30
+        },
+        {
+          ID_CID: 3,
+          NAME_CID: "Dungetron Underhaul",
+          ENERGY_CID: 40,
+          UINT256_CID: 8,
+          CHECKPOINT_CID: 2,
+          juicedMaxRunsPerDay: 9
+        }
       ]
     }
     

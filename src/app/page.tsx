@@ -635,26 +635,57 @@ const DungeonProgress = () => {
         console.log('🏰 Dungeon API response:', data)
         
         // Parse the actual API response structure
-        if (data.dayProgressEntities && data.dungeonDataEntities) {
-          // Create a map of dungeon ID to completed runs
-          const progressMap = new Map()
-          data.dayProgressEntities.forEach((progress: any) => {
-            progressMap.set(progress.ID_CID, progress.UINT256_CID || 0)
-          })
+        if (data.dungeonDataEntities) {
+          // Helper function to get dungeon data by ID
+          const getDungeonById = (id: number) => {
+            return data.dungeonDataEntities.find((d: any) => d.ID_CID === id)
+          }
 
-          // Create parsed data structure
+          // Get all dungeon entities
+          const dungeon1 = getDungeonById(1)
+          const dungeon2 = getDungeonById(2) 
+          const dungeon3 = getDungeonById(3)
+
+          // Parse completed runs from CHECKPOINT_CID (handles -1 as 0)
+          const getCompletedRuns = (dungeon: any) => {
+            if (!dungeon || dungeon.CHECKPOINT_CID === undefined) return 0
+            return Math.max(0, dungeon.CHECKPOINT_CID)
+          }
+
+          // Determine if player is juiced based on similar logic to fishing
+          // If juicedMaxRunsPerDay > standard runs, player is juiced
+          const isPlayerJuiced = (dungeon: any) => {
+            if (!dungeon) return false
+            const standardRuns = dungeon.UINT256_CID || 0
+            const juicedRuns = dungeon.juicedMaxRunsPerDay || 0
+            return juicedRuns > standardRuns
+          }
+
+          // Create parsed data structure using the real API data
           const parsedData = {
             normal: {
-              completed: progressMap.get("1") || 0,
-              total: data.dungeonDataEntities.find((d: any) => d.ID_CID === 1)?.UINT256_CID || 10
+              name: dungeon1?.NAME_CID || "Dungetron 5000",
+              energy: dungeon1?.ENERGY_CID || 40,
+              completed: getCompletedRuns(dungeon1),
+              total: dungeon1?.UINT256_CID || 10,
+              juicedMax: dungeon1?.juicedMaxRunsPerDay || 12,
+              isJuiced: isPlayerJuiced(dungeon1)
             },
             gigus: {
-              completed: progressMap.get("2") || 0,
-              total: data.dungeonDataEntities.find((d: any) => d.ID_CID === 2)?.UINT256_CID || 30
+              name: dungeon2?.NAME_CID || "Gigus Dungeon",
+              energy: dungeon2?.ENERGY_CID || 200,
+              completed: getCompletedRuns(dungeon2),
+              total: dungeon2?.UINT256_CID || 30,
+              juicedMax: dungeon2?.juicedMaxRunsPerDay || 30,
+              isJuiced: isPlayerJuiced(dungeon2)
             },
             underhaul: {
-              completed: progressMap.get("3") || 0,
-              total: data.dungeonDataEntities.find((d: any) => d.ID_CID === 3)?.UINT256_CID || 8
+              name: dungeon3?.NAME_CID || "Dungetron Underhaul",
+              energy: dungeon3?.ENERGY_CID || 40,
+              completed: getCompletedRuns(dungeon3),
+              total: dungeon3?.UINT256_CID || 8,
+              juicedMax: dungeon3?.juicedMaxRunsPerDay || 9,
+              isJuiced: isPlayerJuiced(dungeon3)
             }
           }
           
@@ -670,11 +701,32 @@ const DungeonProgress = () => {
       }
     } catch (error) {
       console.error('🏰 Error fetching dungeon progress:', error)
-      // Fallback to mock data
+      // Fallback to mock data with real structure
       const fallbackData = {
-        normal: { completed: 5, total: 10 },
-        gigus: { completed: 12, total: 30 },
-        underhaul: { completed: 3, total: 8 }
+        normal: {
+          name: "Dungetron 5000",
+          energy: 40,
+          completed: 0,
+          total: 10,
+          juicedMax: 12,
+          isJuiced: false
+        },
+        gigus: {
+          name: "Gigus Dungeon", 
+          energy: 200,
+          completed: 0,
+          total: 30,
+          juicedMax: 30,
+          isJuiced: false
+        },
+        underhaul: {
+          name: "Dungetron Underhaul",
+          energy: 40,
+          completed: 0,
+          total: 8,
+          juicedMax: 9,
+          isJuiced: false
+        }
       }
       console.log('🏰 Using fallback dungeon data:', fallbackData)
       setDungeonData(fallbackData)
@@ -693,27 +745,36 @@ const DungeonProgress = () => {
   const modes = [
     { 
       id: 'normal', 
-      name: 'DUNGETRON 5000', 
+      name: dungeonData?.normal?.name || 'DUNGETRON 5000', 
       color: 'cyan', 
       icon: Target,
+      energy: dungeonData?.normal?.energy || 40,
       completed: dungeonData?.normal?.completed || 0,
-      total: dungeonData?.normal?.total || 10
+      total: dungeonData?.normal?.total || 10,
+      juicedMax: dungeonData?.normal?.juicedMax || 12,
+      isJuiced: dungeonData?.normal?.isJuiced || false
     },
     { 
       id: 'gigus', 
-      name: 'GIGUS DUNGEON', 
+      name: dungeonData?.gigus?.name || 'GIGUS DUNGEON', 
       color: 'purple', 
       icon: Flame,
+      energy: dungeonData?.gigus?.energy || 200,
       completed: dungeonData?.gigus?.completed || 0,
-      total: dungeonData?.gigus?.total || 30
+      total: dungeonData?.gigus?.total || 30,
+      juicedMax: dungeonData?.gigus?.juicedMax || 30,
+      isJuiced: dungeonData?.gigus?.isJuiced || false
     },
     { 
       id: 'underhaul', 
-      name: 'UNDERHAUL', 
+      name: dungeonData?.underhaul?.name || 'UNDERHAUL', 
       color: 'red', 
       icon: Bolt,
+      energy: dungeonData?.underhaul?.energy || 40,
       completed: dungeonData?.underhaul?.completed || 0,
-      total: dungeonData?.underhaul?.total || 8
+      total: dungeonData?.underhaul?.total || 8,
+      juicedMax: dungeonData?.underhaul?.juicedMax || 9,
+      isJuiced: dungeonData?.underhaul?.isJuiced || false
     }
   ]
 
@@ -740,7 +801,9 @@ const DungeonProgress = () => {
       
       <div className="space-y-6">
         {modes.map((mode) => {
-          const progress = mode.total > 0 ? mode.completed / mode.total : 0
+          // Use juiced max if player is juiced, otherwise use normal total
+          const actualTotal = mode.isJuiced ? mode.juicedMax : mode.total
+          const progress = actualTotal > 0 ? mode.completed / actualTotal : 0
           const progressWidth = Math.max(5, progress * 100) // Minimum 5% width for visibility
           
           return (
@@ -749,16 +812,28 @@ const DungeonProgress = () => {
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
                   <mode.icon className={`w-4 h-4 text-${mode.color}-400`} />
-                  <span className={`text-${mode.color}-400 font-mono text-sm font-bold`}>
-                    {mode.name}
-                  </span>
+                  <div className="flex flex-col">
+                    <div className="flex items-center space-x-2">
+                      <span className={`text-${mode.color}-400 font-mono text-sm font-bold uppercase`}>
+                        {mode.name}
+                      </span>
+                      {mode.isJuiced && (
+                        <span className="text-yellow-400 font-mono text-xs bg-yellow-400/20 px-2 py-1 rounded">
+                          ⚡ JUICED
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-gray-500 font-mono text-xs">
+                      {mode.energy} Energy Required
+                    </span>
+                  </div>
                 </div>
                 <div className="text-right">
                   <div className={`text-${mode.color}-400 font-mono text-lg font-bold`}>
                     {mode.completed}
                   </div>
                   <div className="text-gray-400 font-mono text-xs">
-                    / {mode.total}
+                    / {actualTotal}
                   </div>
                 </div>
               </div>
@@ -783,7 +858,7 @@ const DungeonProgress = () => {
 
                 {/* Progress Dots */}
                 <div className="absolute inset-0 flex items-center px-2">
-                  {Array.from({ length: Math.min(mode.total, 20) }, (_, i) => ( // Limit dots to 20 for visual clarity
+                  {Array.from({ length: Math.min(actualTotal, 20) }, (_, i) => ( // Limit dots to 20 for visual clarity
                     <div
                       key={i}
                       className={`w-1 h-1 rounded-full mx-0.5 ${
@@ -819,6 +894,14 @@ const DungeonProgress = () => {
                   <span className="font-mono text-xs">COMPLETE</span>
                 </motion.div>
               )}
+
+              {/* Run Stats */}
+              <div className="flex justify-between text-xs font-mono text-gray-500">
+                <span>Max Runs Today</span>
+                <span className={mode.isJuiced ? "text-yellow-400" : "text-gray-400"}>
+                  {actualTotal} {mode.isJuiced ? "(Juiced)" : "(Standard)"}
+                </span>
+              </div>
             </div>
           )
         })}
@@ -832,6 +915,10 @@ const DungeonProgress = () => {
           </div>
           <div className="text-2xl font-bold font-mono text-white">
             {modes.reduce((sum, mode) => sum + mode.completed, 0)}
+          </div>
+          <div className="text-gray-400 font-mono text-xs mt-1">
+            Current Max: {modes.reduce((sum, mode) => sum + (mode.isJuiced ? mode.juicedMax : mode.total), 0)} | 
+            {modes.some(mode => mode.isJuiced) && <span className="text-yellow-400 ml-1">⚡ Juiced Active</span>}
           </div>
         </div>
       </div>
