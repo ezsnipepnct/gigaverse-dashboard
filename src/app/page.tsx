@@ -403,10 +403,12 @@ const ROMProductionSummary = ({ setShowROMOverview }: { setShowROMOverview: (sho
   )
 }
 
-// Fishing Progress Display
-const FishingProgress = () => {
+// Game Progress Combined Display
+const GameProgress = () => {
   const [fishingData, setFishingData] = useState<any>(null)
+  const [dungeonData, setDungeonData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [activeTab, setActiveTab] = useState<'fishing' | 'dungeons'>('fishing')
 
   // Use the same JWT token function as other components
   const getJWTToken = () => {
@@ -420,7 +422,6 @@ const FishingProgress = () => {
   const fetchFishingProgress = async () => {
     try {
       const jwtToken = getJWTToken()
-
       const WALLET_ADDRESS = "0xb0d90D52C7389824D4B22c06bcdcCD734E3162b7"
       const response = await fetch(`https://gigaverse.io/api/fishing/state/${WALLET_ADDRESS}`, {
         method: 'GET',
@@ -432,9 +433,6 @@ const FishingProgress = () => {
 
       if (response.ok) {
         const data = await response.json()
-        console.log('Fishing API response:', data)
-        
-        // Parse the fishing data
         const dailyRuns = data.dayDoc?.UINT256_CID || 0
         const maxRuns = data.maxPerDayJuiced || data.maxPerDay || 10
         const hasActiveGame = data.gameState?.data?.COMPLETE_CID === null || data.gameState?.data?.COMPLETE_CID === false
@@ -443,217 +441,33 @@ const FishingProgress = () => {
           completed: dailyRuns,
           total: maxRuns,
           hasActiveGame: hasActiveGame,
-          isJuiced: maxRuns > 10 // If max runs > 10, player is juiced
+          isJuiced: maxRuns > 10
         })
       } else {
         throw new Error('API request failed')
       }
     } catch (error) {
       console.error('Error fetching fishing progress:', error)
-      // Fallback to mock data
-      setFishingData({
-        completed: 0,
-        total: 10,
-        hasActiveGame: false,
-        isJuiced: false
-      })
-    } finally {
-      setLoading(false)
+      setFishingData({ completed: 0, total: 10, hasActiveGame: false, isJuiced: false })
     }
-  }
-
-  useEffect(() => {
-    fetchFishingProgress()
-  }, [])
-
-  if (loading) {
-    return (
-      <RefinedCard glowColor="blue" className="p-6">
-        <div className="flex items-center justify-center h-48">
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-            className="w-8 h-8 border-2 border-blue-400 border-t-transparent rounded-full"
-          />
-        </div>
-      </RefinedCard>
-    )
-  }
-
-  const progress = fishingData?.total > 0 ? fishingData.completed / fishingData.total : 0
-  const progressWidth = Math.max(5, progress * 100) // Minimum 5% width for visibility
-
-  return (
-    <RefinedCard glowColor="blue" className="p-6">
-      <h3 className="text-blue-400 font-mono font-bold text-lg mb-6 flex items-center">
-        <Fish className="w-5 h-5 mr-2" />
-        FISHING RUNS
-      </h3>
-      
-      <div className="space-y-6">
-        {/* Fishing Progress */}
-        <div className="space-y-3">
-          {/* Mode Header */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <Fish className="w-4 h-4 text-blue-400" />
-              <span className="text-blue-400 font-mono text-sm font-bold">
-                TACTICAL FISHING
-              </span>
-              {fishingData?.hasActiveGame && (
-                <span className="text-green-400 font-mono text-xs bg-green-400/20 px-2 py-1 rounded">
-                  ACTIVE
-                </span>
-              )}
-            </div>
-            <div className="text-right">
-              <div className="text-blue-400 font-mono text-lg font-bold">
-                {fishingData?.completed || 0}
-              </div>
-              <div className="text-gray-400 font-mono text-xs">
-                / {fishingData?.total || 0}
-              </div>
-            </div>
-          </div>
-
-          {/* Progress Visualization */}
-          <div className="relative h-8 bg-gray-900/50 rounded border border-gray-600">
-            {/* Progress Bar */}
-            <motion.div
-              initial={{ width: 0 }}
-              animate={{ width: `${progressWidth}%` }}
-              transition={{ duration: 1, ease: 'easeOut' }}
-              className="h-full bg-gradient-to-r from-blue-600 to-blue-400 rounded relative overflow-hidden"
-            >
-              {/* Animated Shimmer Effect */}
-              <motion.div
-                animate={{ x: ['-100%', '100%'] }}
-                transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
-                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
-                style={{ width: '50%' }}
-              />
-            </motion.div>
-
-            {/* Progress Dots */}
-            <div className="absolute inset-0 flex items-center px-2">
-              {Array.from({ length: Math.min(fishingData?.total || 0, 20) }, (_, i) => (
-                <div
-                  key={i}
-                  className={`w-1 h-1 rounded-full mx-0.5 ${
-                    i < (fishingData?.completed || 0) 
-                      ? 'bg-blue-200' 
-                      : 'bg-gray-600'
-                  }`}
-                />
-              ))}
-            </div>
-
-            {/* Percentage Text */}
-            <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-white font-mono text-xs font-bold drop-shadow-lg">
-                {Math.round(progress * 100)}%
-              </span>
-            </div>
-          </div>
-
-          {/* Achievement Indicator */}
-          {progress >= 1 && (
-            <motion.div
-              initial={{ scale: 0, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="flex items-center justify-center space-x-1 text-yellow-400"
-            >
-              <motion.div
-                animate={{ rotate: [0, 360] }}
-                transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
-              >
-                ⭐
-              </motion.div>
-              <span className="font-mono text-xs">COMPLETE</span>
-            </motion.div>
-          )}
-        </div>
-
-        {/* Juiced Status */}
-        {fishingData?.isJuiced && (
-          <div className="bg-yellow-400/10 rounded-lg p-3 border border-yellow-400/30">
-            <div className="flex items-center space-x-2">
-              <Zap className="w-4 h-4 text-yellow-400" />
-              <span className="text-yellow-400 font-mono text-sm font-bold">⚡ JUICED PLAYER</span>
-            </div>
-            <div className="text-yellow-400/70 font-mono text-xs mt-1">
-              Increased daily fishing limit: {fishingData.total} runs
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Daily Summary */}
-      <div className="mt-6 pt-4 border-t border-blue-400/20">
-        <div className="text-center">
-          <div className="text-blue-400 font-mono text-sm">
-            REMAINING RUNS
-          </div>
-          <div className="text-2xl font-bold font-mono text-white">
-            {Math.max(0, (fishingData?.total || 0) - (fishingData?.completed || 0))}
-          </div>
-        </div>
-      </div>
-    </RefinedCard>
-  )
-}
-
-// Dungeon Progress Display
-const DungeonProgress = () => {
-  const [dungeonData, setDungeonData] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
-
-  // Use the same JWT token function as other components
-  const getJWTToken = () => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('jwt_token') || ''
-    }
-    return ''
   }
 
   // Fetch dungeon progress data
   const fetchDungeonProgress = async () => {
     try {
-      setLoading(true)
       const jwtToken = getJWTToken()
-
-      console.log('🏰 Fetching dungeon progress...')
-
       const response = await fetch('/api/dungeon/progress', {
-        headers: {
-          'Authorization': `Bearer ${jwtToken}`,
-        },
+        headers: { 'Authorization': `Bearer ${jwtToken}` },
       })
 
       if (response.ok) {
         const data = await response.json()
-        console.log('🏰 Dungeon API response:', data)
-        
-        // Parse the actual API response structure
         if (data.dungeonDataEntities) {
-          // Helper function to get dungeon data by ID
-          const getDungeonById = (id: number) => {
-            return data.dungeonDataEntities.find((d: any) => d.ID_CID === id)
-          }
-
-          // Get all dungeon entities
-          const dungeon1 = getDungeonById(1)
-          const dungeon2 = getDungeonById(2) 
-          const dungeon3 = getDungeonById(3)
-
-          // Parse completed runs from CHECKPOINT_CID (handles -1 as 0)
+          const getDungeonById = (id: number) => data.dungeonDataEntities.find((d: any) => d.ID_CID === id)
           const getCompletedRuns = (dungeon: any) => {
             if (!dungeon || dungeon.CHECKPOINT_CID === undefined) return 0
             return Math.max(0, dungeon.CHECKPOINT_CID)
           }
-
-          // Determine if player is juiced based on similar logic to fishing
-          // If juicedMaxRunsPerDay > standard runs, player is juiced
           const isPlayerJuiced = (dungeon: any) => {
             if (!dungeon) return false
             const standardRuns = dungeon.UINT256_CID || 0
@@ -661,7 +475,10 @@ const DungeonProgress = () => {
             return juicedRuns > standardRuns
           }
 
-          // Create parsed data structure using the real API data
+          const dungeon1 = getDungeonById(1)
+          const dungeon2 = getDungeonById(2)
+          const dungeon3 = getDungeonById(3)
+
           const parsedData = {
             normal: {
               name: dungeon1?.NAME_CID || "Dungetron 5000",
@@ -688,240 +505,211 @@ const DungeonProgress = () => {
               isJuiced: isPlayerJuiced(dungeon3)
             }
           }
-          
-          console.log('🏰 Parsed dungeon data:', parsedData)
           setDungeonData(parsedData)
-        } else {
-          console.log('🏰 Invalid API response structure, using fallback data')
-          throw new Error('Invalid API response structure')
         }
-      } else {
-        console.error('🏰 Dungeon API request failed:', response.status)
-        throw new Error('API request failed')
       }
     } catch (error) {
-      console.error('🏰 Error fetching dungeon progress:', error)
-      // Fallback to mock data with real structure
-      const fallbackData = {
-        normal: {
-          name: "Dungetron 5000",
-          energy: 40,
-          completed: 0,
-          total: 10,
-          juicedMax: 12,
-          isJuiced: false
-        },
-        gigus: {
-          name: "Gigus Dungeon", 
-          energy: 200,
-          completed: 0,
-          total: 30,
-          juicedMax: 30,
-          isJuiced: false
-        },
-        underhaul: {
-          name: "Dungetron Underhaul",
-          energy: 40,
-          completed: 0,
-          total: 8,
-          juicedMax: 9,
-          isJuiced: false
-        }
-      }
-      console.log('🏰 Using fallback dungeon data:', fallbackData)
-      setDungeonData(fallbackData)
-    } finally {
-      setLoading(false)
+      console.error('Error fetching dungeon progress:', error)
+      setDungeonData({
+        normal: { name: "Dungetron 5000", energy: 40, completed: 0, total: 10, juicedMax: 12, isJuiced: false },
+        gigus: { name: "Gigus Dungeon", energy: 200, completed: 0, total: 30, juicedMax: 30, isJuiced: false },
+        underhaul: { name: "Dungetron Underhaul", energy: 40, completed: 0, total: 8, juicedMax: 9, isJuiced: false }
+      })
     }
   }
 
+  // Fetch both data sources
+  const fetchAllData = async () => {
+    setLoading(true)
+    await Promise.all([fetchFishingProgress(), fetchDungeonProgress()])
+    setLoading(false)
+  }
+
   useEffect(() => {
-    fetchDungeonProgress()
-    // Refresh dungeon progress every 60 seconds (like energy)
-    const interval = setInterval(fetchDungeonProgress, 60000)
+    fetchAllData()
+    const interval = setInterval(fetchAllData, 60000)
     return () => clearInterval(interval)
   }, [])
 
-  const modes = [
-    { 
-      id: 'normal', 
-      name: dungeonData?.normal?.name || 'DUNGETRON 5000', 
-      color: 'cyan', 
-      icon: Target,
-      energy: dungeonData?.normal?.energy || 40,
-      completed: dungeonData?.normal?.completed || 0,
-      total: dungeonData?.normal?.total || 10,
-      juicedMax: dungeonData?.normal?.juicedMax || 12,
-      isJuiced: dungeonData?.normal?.isJuiced || false
-    },
-    { 
-      id: 'gigus', 
-      name: dungeonData?.gigus?.name || 'GIGUS DUNGEON', 
-      color: 'purple', 
-      icon: Flame,
-      energy: dungeonData?.gigus?.energy || 200,
-      completed: dungeonData?.gigus?.completed || 0,
-      total: dungeonData?.gigus?.total || 30,
-      juicedMax: dungeonData?.gigus?.juicedMax || 30,
-      isJuiced: dungeonData?.gigus?.isJuiced || false
-    },
-    { 
-      id: 'underhaul', 
-      name: dungeonData?.underhaul?.name || 'UNDERHAUL', 
-      color: 'red', 
-      icon: Bolt,
-      energy: dungeonData?.underhaul?.energy || 40,
-      completed: dungeonData?.underhaul?.completed || 0,
-      total: dungeonData?.underhaul?.total || 8,
-      juicedMax: dungeonData?.underhaul?.juicedMax || 9,
-      isJuiced: dungeonData?.underhaul?.isJuiced || false
-    }
-  ]
-
   if (loading) {
     return (
-      <RefinedCard glowColor="cyan" className="p-6">
-        <div className="flex items-center justify-center h-48">
+      <RefinedCard glowColor="cyan" className="p-4">
+        <div className="flex items-center justify-center h-32">
           <motion.div
             animate={{ rotate: 360 }}
             transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-            className="w-8 h-8 border-2 border-cyan-400 border-t-transparent rounded-full"
+            className="w-6 h-6 border-2 border-cyan-400 border-t-transparent rounded-full"
           />
         </div>
       </RefinedCard>
     )
   }
 
+  // Calculate totals
+  const fishingProgress = fishingData?.total > 0 ? fishingData.completed / fishingData.total : 0
+  const dungeonModes = dungeonData ? [
+    { ...dungeonData.normal, id: 'normal', color: 'cyan', icon: Target },
+    { ...dungeonData.gigus, id: 'gigus', color: 'purple', icon: Flame },
+    { ...dungeonData.underhaul, id: 'underhaul', color: 'red', icon: Bolt }
+  ] : []
+  const totalDungeonRuns = dungeonModes.reduce((sum, mode) => sum + mode.completed, 0)
+  const totalDungeonMax = dungeonModes.reduce((sum, mode) => sum + (mode.isJuiced ? mode.juicedMax : mode.total), 0)
+
   return (
-    <RefinedCard glowColor="cyan" className="p-6">
-      <h3 className="text-cyan-400 font-mono font-bold text-lg mb-6 flex items-center">
-        <Target className="w-5 h-5 mr-2" />
-        DUNGEON RUNS
-      </h3>
-      
-      <div className="space-y-6">
-        {modes.map((mode) => {
-          // Use juiced max if player is juiced, otherwise use normal total
-          const actualTotal = mode.isJuiced ? mode.juicedMax : mode.total
-          const progress = actualTotal > 0 ? mode.completed / actualTotal : 0
-          const progressWidth = Math.max(5, progress * 100) // Minimum 5% width for visibility
-          
-          return (
-            <div key={mode.id} className="space-y-3">
-              {/* Mode Header */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <mode.icon className={`w-4 h-4 text-${mode.color}-400`} />
-                  <div className="flex flex-col">
-                    <div className="flex items-center space-x-2">
-                      <span className={`text-${mode.color}-400 font-mono text-sm font-bold uppercase`}>
-                        {mode.name}
-                      </span>
-                      {mode.isJuiced && (
-                        <span className="text-yellow-400 font-mono text-xs bg-yellow-400/20 px-2 py-1 rounded">
-                          ⚡ JUICED
-                        </span>
-                      )}
-                    </div>
-                    <span className="text-gray-500 font-mono text-xs">
-                      {mode.energy} Energy Required
-                    </span>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className={`text-${mode.color}-400 font-mono text-lg font-bold`}>
-                    {mode.completed}
-                  </div>
-                  <div className="text-gray-400 font-mono text-xs">
-                    / {actualTotal}
-                  </div>
-                </div>
-              </div>
+    <RefinedCard glowColor="cyan" className="p-4">
+      {/* Tab Headers */}
+      <div className="flex items-center space-x-1 mb-4">
+        <motion.button
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={() => setActiveTab('fishing')}
+          className={`flex-1 py-2 px-3 rounded-lg font-mono text-sm font-bold transition-all ${
+            activeTab === 'fishing' 
+              ? 'bg-blue-400/20 text-blue-400 border border-blue-400/30' 
+              : 'text-gray-400 hover:text-blue-400 hover:bg-blue-400/10'
+          }`}
+        >
+          <Fish className="w-4 h-4 inline mr-2" />
+          FISHING
+        </motion.button>
+        <motion.button
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={() => setActiveTab('dungeons')}
+          className={`flex-1 py-2 px-3 rounded-lg font-mono text-sm font-bold transition-all ${
+            activeTab === 'dungeons' 
+              ? 'bg-cyan-400/20 text-cyan-400 border border-cyan-400/30' 
+              : 'text-gray-400 hover:text-cyan-400 hover:bg-cyan-400/10'
+          }`}
+        >
+          <Target className="w-4 h-4 inline mr-2" />
+          DUNGEONS
+        </motion.button>
+      </div>
 
-              {/* Progress Visualization */}
-              <div className="relative h-8 bg-gray-900/50 rounded border border-gray-600">
-                {/* Progress Bar */}
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${progressWidth}%` }}
-                  transition={{ duration: 1, ease: 'easeOut' }}
-                  className={`h-full bg-gradient-to-r from-${mode.color}-600 to-${mode.color}-400 rounded relative overflow-hidden`}
-                >
-                  {/* Animated Shimmer Effect */}
-                  <motion.div
-                    animate={{ x: ['-100%', '100%'] }}
-                    transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
-                    className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
-                    style={{ width: '50%' }}
-                  />
-                </motion.div>
-
-                {/* Progress Dots */}
-                <div className="absolute inset-0 flex items-center px-2">
-                  {Array.from({ length: Math.min(actualTotal, 20) }, (_, i) => ( // Limit dots to 20 for visual clarity
-                    <div
-                      key={i}
-                      className={`w-1 h-1 rounded-full mx-0.5 ${
-                        i < mode.completed 
-                          ? `bg-${mode.color}-200` 
-                          : 'bg-gray-600'
-                      }`}
-                    />
-                  ))}
-                </div>
-
-                {/* Percentage Text */}
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-white font-mono text-xs font-bold drop-shadow-lg">
-                    {Math.round(progress * 100)}%
+      {/* Content */}
+      <AnimatePresence mode="wait">
+        {activeTab === 'fishing' ? (
+          <motion.div
+            key="fishing"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="space-y-4"
+          >
+            {/* Fishing Header */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <span className="text-blue-400 font-mono text-sm font-bold">TACTICAL FISHING</span>
+                {fishingData?.hasActiveGame && (
+                  <span className="text-green-400 font-mono text-xs bg-green-400/20 px-2 py-1 rounded">
+                    ACTIVE
                   </span>
+                )}
+                {fishingData?.isJuiced && (
+                  <span className="text-yellow-400 font-mono text-xs bg-yellow-400/20 px-2 py-1 rounded">
+                    ⚡ JUICED
+                  </span>
+                )}
+              </div>
+              <div className="text-right">
+                <div className="text-blue-400 font-mono text-lg font-bold">
+                  {fishingData?.completed || 0}/{fishingData?.total || 0}
                 </div>
               </div>
+            </div>
 
-              {/* Achievement Indicator */}
-              {progress >= 1 && (
+            {/* Fishing Progress Bar */}
+            <div className="relative h-6 bg-gray-900/50 rounded border border-gray-600">
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${Math.max(5, fishingProgress * 100)}%` }}
+                transition={{ duration: 1, ease: 'easeOut' }}
+                className="h-full bg-gradient-to-r from-blue-600 to-blue-400 rounded relative overflow-hidden"
+              >
                 <motion.div
-                  initial={{ scale: 0, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  className="flex items-center justify-center space-x-1 text-yellow-400"
-                >
-                  <motion.div
-                    animate={{ rotate: [0, 360] }}
-                    transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
-                  >
-                    ⭐
-                  </motion.div>
-                  <span className="font-mono text-xs">COMPLETE</span>
-                </motion.div>
-              )}
-
-              {/* Run Stats */}
-              <div className="flex justify-between text-xs font-mono text-gray-500">
-                <span>Max Runs Today</span>
-                <span className={mode.isJuiced ? "text-yellow-400" : "text-gray-400"}>
-                  {actualTotal} {mode.isJuiced ? "(Juiced)" : "(Standard)"}
+                  animate={{ x: ['-100%', '100%'] }}
+                  transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
+                  style={{ width: '50%' }}
+                />
+              </motion.div>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className="text-white font-mono text-xs font-bold drop-shadow-lg">
+                  {Math.round(fishingProgress * 100)}%
                 </span>
               </div>
             </div>
-          )
-        })}
-      </div>
 
-      {/* Daily Summary */}
-      <div className="mt-6 pt-4 border-t border-cyan-400/20">
-        <div className="text-center">
-          <div className="text-cyan-400 font-mono text-sm">
-            TOTAL RUNS TODAY
-          </div>
-          <div className="text-2xl font-bold font-mono text-white">
-            {modes.reduce((sum, mode) => sum + mode.completed, 0)}
-          </div>
-          <div className="text-gray-400 font-mono text-xs mt-1">
-            Current Max: {modes.reduce((sum, mode) => sum + (mode.isJuiced ? mode.juicedMax : mode.total), 0)} | 
-            {modes.some(mode => mode.isJuiced) && <span className="text-yellow-400 ml-1">⚡ Juiced Active</span>}
-          </div>
-        </div>
-      </div>
+            {/* Fishing Stats */}
+            <div className="flex justify-between text-xs font-mono text-gray-400">
+              <span>Remaining: {Math.max(0, (fishingData?.total || 0) - (fishingData?.completed || 0))}</span>
+              <span>Max: {fishingData?.total || 0}</span>
+            </div>
+          </motion.div>
+        ) : (
+          <motion.div
+            key="dungeons"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="space-y-4"
+          >
+            {/* Dungeon Summary */}
+            <div className="flex items-center justify-between">
+              <span className="text-cyan-400 font-mono text-sm font-bold">DUNGEON RUNS</span>
+              <div className="text-right">
+                <div className="text-cyan-400 font-mono text-lg font-bold">
+                  {totalDungeonRuns}/{totalDungeonMax}
+                </div>
+              </div>
+            </div>
+
+            {/* Dungeon List */}
+            <div className="space-y-3">
+              {dungeonModes.map((mode) => {
+                const actualTotal = mode.isJuiced ? mode.juicedMax : mode.total
+                const progress = actualTotal > 0 ? mode.completed / actualTotal : 0
+                
+                return (
+                  <div key={mode.id} className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <mode.icon className={`w-3 h-3 text-${mode.color}-400`} />
+                      <span className={`text-${mode.color}-400 font-mono text-xs font-bold`}>
+                        {mode.name}
+                      </span>
+                      {mode.isJuiced && (
+                        <span className="text-yellow-400 font-mono text-xs bg-yellow-400/20 px-1 py-0.5 rounded">
+                          ⚡
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <div className={`w-16 h-2 bg-gray-900/50 rounded-full border border-gray-600`}>
+                        <div 
+                          className={`h-full bg-gradient-to-r from-${mode.color}-600 to-${mode.color}-400 rounded-full transition-all duration-300`}
+                          style={{ width: `${Math.max(5, progress * 100)}%` }}
+                        />
+                      </div>
+                      <span className={`text-${mode.color}-400 font-mono text-xs font-bold w-8 text-right`}>
+                        {mode.completed}/{actualTotal}
+                      </span>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* Dungeon Summary */}
+            <div className="pt-2 border-t border-cyan-400/20">
+              <div className="flex justify-between text-xs font-mono text-gray-400">
+                <span>Total: {totalDungeonRuns} runs</span>
+                <span>Max: {totalDungeonMax}</span>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </RefinedCard>
   )
 }
@@ -1383,8 +1171,7 @@ export default function GigaverseDashboard() {
           {/* Left Sidebar */}
           <div className="lg:col-span-1 space-y-6">
             <ROMProductionSummary setShowROMOverview={setShowROMOverview} />
-            <FishingProgress />
-            <DungeonProgress />
+            <GameProgress />
           </div>
 
           {/* Main Area - Stations Grid */}
