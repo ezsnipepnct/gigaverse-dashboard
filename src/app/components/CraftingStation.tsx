@@ -86,6 +86,7 @@ const CraftingStation: React.FC<CraftingStationProps> = ({ isOpen, onClose }) =>
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [playerBalances, setPlayerBalances] = useState<Record<string, number>>({})
   const [mounted, setMounted] = useState(false)
+  const [showLockedRecipes, setShowLockedRecipes] = useState(false)
 
   useEffect(() => {
     setMounted(true)
@@ -391,7 +392,8 @@ const CraftingStation: React.FC<CraftingStationProps> = ({ isOpen, onClose }) =>
   const filteredRecipes = recipes.filter(recipe => {
     const matchesSearch = recipe.NAME_CID?.toLowerCase().includes(searchTerm.toLowerCase()) || false
     const matchesCategory = selectedCategory === 'all' || recipe.CATEGORY_CID === selectedCategory
-    return matchesSearch && matchesCategory
+    const matchesUnlockFilter = showLockedRecipes || recipe.unlocked
+    return matchesSearch && matchesCategory && matchesUnlockFilter
   })
 
   if (!mounted) return null
@@ -469,6 +471,30 @@ const CraftingStation: React.FC<CraftingStationProps> = ({ isOpen, onClose }) =>
                     <option key={category} value={category}>{category}</option>
                   ))}
                 </select>
+                
+                {/* Show Locked Recipes Toggle */}
+                <div className="flex items-center space-x-3 px-3 py-2 bg-gray-900/50 border border-cyan-400/20 rounded-lg">
+                  <span className="text-cyan-400 font-mono text-sm">Show Locked</span>
+                  <button
+                    onClick={() => setShowLockedRecipes(!showLockedRecipes)}
+                    className={`
+                      relative w-12 h-6 rounded-full transition-all duration-200 focus:outline-none
+                      ${showLockedRecipes ? 'bg-cyan-400/30' : 'bg-gray-600/50'}
+                    `}
+                  >
+                    <motion.div
+                      animate={{ x: showLockedRecipes ? 24 : 2 }}
+                      transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                      className={`
+                        absolute top-1 w-4 h-4 rounded-full shadow-lg
+                        ${showLockedRecipes ? 'bg-cyan-400' : 'bg-gray-400'}
+                      `}
+                    />
+                  </button>
+                  <span className={`font-mono text-xs ${showLockedRecipes ? 'text-cyan-400' : 'text-gray-400'}`}>
+                    {showLockedRecipes ? 'ON' : 'OFF'}
+                  </span>
+                </div>
               </div>
             </div>
 
