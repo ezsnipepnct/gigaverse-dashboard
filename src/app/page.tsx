@@ -958,7 +958,7 @@ export default function GigaverseDashboard() {
   const handleEnergyClick = () => {
     setEnergyClaimResults(null)
     setEnergyClaimMessage('')
-    setEnergyClaimAmount(200) // Default threshold
+    setEnergyClaimAmount(50) // Default claim amount
     setShowEnergyClaimModal(true)
   }
 
@@ -1584,34 +1584,45 @@ export default function GigaverseDashboard() {
                </div>
              </div>
 
-             {/* Energy Claim Threshold */}
+             {/* Energy Claim Amount */}
              <div className="mb-6">
                <div className="flex justify-between items-center mb-3">
-                 <label className="text-cyan-400 font-mono text-sm font-semibold">ENERGY THRESHOLD</label>
+                 <label className="text-cyan-400 font-mono text-sm font-semibold">CLAIM AMOUNT</label>
                  <span className="text-yellow-400 font-mono text-lg font-bold">
-                   {Math.round(energyClaimAmount)}
+                   +{Math.round(energyClaimAmount)}
                  </span>
                </div>
                
-               {/* Custom Input */}
+               {/* Custom Slider */}
                <div className="relative">
                  <input
-                   type="number"
+                   type="range"
                    min="10"
-                   max="1000"
+                   max="500"
                    step="10"
                    value={energyClaimAmount}
                    onChange={(e) => setEnergyClaimAmount(Number(e.target.value))}
-                   className="w-full bg-gray-800 border border-cyan-400/30 rounded-lg px-4 py-3 text-white font-mono text-center text-lg focus:border-cyan-400 focus:outline-none"
+                   className="w-full h-2 bg-gray-800 rounded-lg appearance-none cursor-pointer slider-cyan"
                    disabled={energyClaimLoading}
+                 />
+                 
+                 {/* Slider track decoration */}
+                 <div className="absolute top-1/2 left-0 w-full h-1 bg-gradient-to-r from-cyan-600/30 to-yellow-400/30 rounded-full pointer-events-none transform -translate-y-1/2" />
+                 
+                 {/* Slider fill */}
+                 <motion.div
+                   className="absolute top-1/2 left-0 h-1 bg-gradient-to-r from-cyan-400 to-yellow-400 rounded-full pointer-events-none transform -translate-y-1/2"
+                   animate={{
+                     width: `${((energyClaimAmount - 10) / (500 - 10)) * 100}%`
+                   }}
                  />
                </div>
                
-               {/* Input Labels */}
+               {/* Slider Labels */}
                <div className="flex justify-between mt-2 text-xs font-mono text-gray-400">
-                 <span>Min: 10</span>
-                 <span className="text-cyan-400">Stop claiming when this amount is reached</span>
-                 <span>Max: 1000</span>
+                 <span>10</span>
+                 <span className="text-cyan-400">Target energy to claim</span>
+                 <span>500</span>
                </div>
              </div>
 

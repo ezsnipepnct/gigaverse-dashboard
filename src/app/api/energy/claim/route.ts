@@ -119,9 +119,10 @@ async function claimEnergy(jwtToken: string, threshold: number = 200): Promise<C
       continue
     }
     
-    if (totalClaimed >= threshold) {
-      console.log(`  Reached energy threshold (${threshold}). Stopping claims.`)
-      break
+    // Check if claiming this ROM would exceed our target threshold
+    if (totalClaimed + energy > threshold) {
+      console.log(`  Skipping ROM ${rom.romId} (${energy} energy) - would exceed threshold (${totalClaimed} + ${energy} > ${threshold})`)
+      continue
     }
     
     console.log(`  Claiming energy from ROM ${rom.romId} (${energy} energy, ${(rom.percentage * 100).toFixed(1)}% full)...`)
@@ -132,6 +133,12 @@ async function claimEnergy(jwtToken: string, threshold: number = 200): Promise<C
       console.log(`  ✅ Claimed ${energy} energy from ROM ${rom.romId}`)
       totalClaimed += energy
       claimedRoms.push({ id: rom.romId, amount: energy })
+      
+      // Check if we've reached our target exactly
+      if (totalClaimed >= threshold) {
+        console.log(`  Reached energy threshold (${threshold}). Stopping claims.`)
+        break
+      }
     } else {
       console.log(`  ❌ Failed to claim energy from ROM ${rom.romId}: ${result.error}`)
       errors.push({ id: rom.romId, error: result.error || 'Unknown error' })
