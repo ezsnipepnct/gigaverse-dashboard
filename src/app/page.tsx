@@ -619,7 +619,10 @@ const DungeonProgress = () => {
   // Fetch dungeon progress data
   const fetchDungeonProgress = async () => {
     try {
+      setLoading(true)
       const jwtToken = getJWTToken()
+
+      console.log('🏰 Fetching dungeon progress...')
 
       const response = await fetch('/api/dungeon/progress', {
         headers: {
@@ -629,7 +632,7 @@ const DungeonProgress = () => {
 
       if (response.ok) {
         const data = await response.json()
-        console.log('Dungeon API response:', data)
+        console.log('🏰 Dungeon API response:', data)
         
         // Parse the actual API response structure
         if (data.dayProgressEntities && data.dungeonDataEntities) {
@@ -655,21 +658,26 @@ const DungeonProgress = () => {
             }
           }
           
+          console.log('🏰 Parsed dungeon data:', parsedData)
           setDungeonData(parsedData)
         } else {
+          console.log('🏰 Invalid API response structure, using fallback data')
           throw new Error('Invalid API response structure')
         }
       } else {
+        console.error('🏰 Dungeon API request failed:', response.status)
         throw new Error('API request failed')
       }
     } catch (error) {
-      console.error('Error fetching dungeon progress:', error)
+      console.error('🏰 Error fetching dungeon progress:', error)
       // Fallback to mock data
-      setDungeonData({
+      const fallbackData = {
         normal: { completed: 5, total: 10 },
         gigus: { completed: 12, total: 30 },
         underhaul: { completed: 3, total: 8 }
-      })
+      }
+      console.log('🏰 Using fallback dungeon data:', fallbackData)
+      setDungeonData(fallbackData)
     } finally {
       setLoading(false)
     }
@@ -677,6 +685,9 @@ const DungeonProgress = () => {
 
   useEffect(() => {
     fetchDungeonProgress()
+    // Refresh dungeon progress every 60 seconds (like energy)
+    const interval = setInterval(fetchDungeonProgress, 60000)
+    return () => clearInterval(interval)
   }, [])
 
   const modes = [
