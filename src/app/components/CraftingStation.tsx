@@ -44,6 +44,7 @@ interface Recipe {
     amount: number
     name: string
   }>
+  unlocked: boolean
 }
 
 interface CraftingInstance {
@@ -123,42 +124,46 @@ const CraftingStation: React.FC<CraftingStationProps> = ({ isOpen, onClose }) =>
       setLoading(true)
       await fetchPlayerBalances()
       
-      // Fetch recipes
+      // Fetch all recipes
       const allRecipesResponse = await fetch('https://gigaverse.io/api/offchain/recipes')
       const allRecipesData = await allRecipesResponse.json()
       const allRecipes = allRecipesData.entities || []
       
+      // Fetch player recipes to determine what's unlocked
       const playerRecipesResponse = await fetch(`https://gigaverse.io/api/offchain/recipes/player/${WALLET_ADDRESS}`)
       const playerRecipesData = await playerRecipesResponse.json()
       const playerRecipes = playerRecipesData.entities || []
       
       const playerRecipeIds = new Set(playerRecipes.map((pr: any) => pr.ID_CID))
-      const availableRecipes = allRecipes.filter((recipe: any) => {
-        return playerRecipeIds.has(recipe.docId) || playerRecipeIds.has(recipe.ID_CID)
-      })
       
-      const formattedRecipes = availableRecipes.map((recipe: any) => ({
-        _id: recipe.docId,
-        ID_CID: recipe.docId,
-        NAME_CID: recipe.NAME_CID,
-        DESCRIPTION_CID: `Craft ${recipe.NAME_CID}`,
-        RARITY_CID: recipe.TIER_CID || 1,
-        TYPE_CID: 'Consumable',
-        CATEGORY_CID: recipe.TAG_CID_array?.includes('crafting') ? 'Alchemy' : 
-                     recipe.TAG_CID_array?.includes('workbench') ? 'Smithing' : 'General',
-        SUCCESS_RATE_CID: recipe.SUCCESS_RATE_CID || 100,
-        ENERGY_CID: recipe.ENERGY_CID || 0,
-        REQUIREMENTS_CID: recipe.INPUT_NAMES_CID_array?.map((name: string, index: number) => ({
-          itemId: recipe.INPUT_ID_CID_array?.[index] || 0,
-          amount: recipe.INPUT_AMOUNT_CID_array?.[index] || 1,
-          name: name
-        })) || [],
-        REWARDS_CID: recipe.LOOT_ID_CID_array?.map((id: number, index: number) => ({
-          itemId: id,
-          amount: recipe.LOOT_AMOUNT_CID_array?.[index] || 1,
-          name: `Item #${id}`
-        })) || []
-      }))
+      // Format all recipes with unlock status
+      const formattedRecipes = allRecipes.map((recipe: any) => {
+        const isUnlocked = playerRecipeIds.has(recipe.docId) || playerRecipeIds.has(recipe.ID_CID)
+        
+        return {
+          _id: recipe.docId,
+          ID_CID: recipe.docId,
+          NAME_CID: recipe.NAME_CID,
+          DESCRIPTION_CID: `Craft ${recipe.NAME_CID}`,
+          RARITY_CID: recipe.TIER_CID || 1,
+          TYPE_CID: 'Consumable',
+          CATEGORY_CID: recipe.TAG_CID_array?.includes('crafting') ? 'Alchemy' : 
+                       recipe.TAG_CID_array?.includes('workbench') ? 'Smithing' : 'General',
+          SUCCESS_RATE_CID: recipe.SUCCESS_RATE_CID || 100,
+          ENERGY_CID: recipe.ENERGY_CID || 0,
+          REQUIREMENTS_CID: recipe.INPUT_NAMES_CID_array?.map((name: string, index: number) => ({
+            itemId: recipe.INPUT_ID_CID_array?.[index] || 0,
+            amount: recipe.INPUT_AMOUNT_CID_array?.[index] || 1,
+            name: name
+          })) || [],
+          REWARDS_CID: recipe.LOOT_ID_CID_array?.map((id: number, index: number) => ({
+            itemId: id,
+            amount: recipe.LOOT_AMOUNT_CID_array?.[index] || 1,
+            name: `Item #${id}`
+          })) || [],
+          unlocked: isUnlocked
+        }
+      })
       
       if (formattedRecipes.length > 0) {
         setRecipes(formattedRecipes)
@@ -191,7 +196,8 @@ const CraftingStation: React.FC<CraftingStationProps> = ({ isOpen, onClose }) =>
       ],
       REWARDS_CID: [
         { itemId: 200, amount: 1, name: 'Health Potion' }
-      ]
+      ],
+      unlocked: true
     },
     {
       _id: '2',
@@ -209,7 +215,8 @@ const CraftingStation: React.FC<CraftingStationProps> = ({ isOpen, onClose }) =>
       ],
       REWARDS_CID: [
         { itemId: 201, amount: 1, name: 'Steel Blade' }
-      ]
+      ],
+      unlocked: true
     },
     {
       _id: '3',
@@ -227,7 +234,8 @@ const CraftingStation: React.FC<CraftingStationProps> = ({ isOpen, onClose }) =>
       ],
       REWARDS_CID: [
         { itemId: 202, amount: 1, name: 'Void Crystal' }
-      ]
+      ],
+      unlocked: false
     }
   ]
 
@@ -483,41 +491,76 @@ const CraftingStation: React.FC<CraftingStationProps> = ({ isOpen, onClose }) =>
                     {filteredRecipes.map((recipe) => (
                       <motion.div
                         key={recipe._id}
-                        whileHover={{ scale: 1.01 }}
-                        onClick={() => setSelectedRecipe(recipe)}
+                        whileHover={{ scale: recipe.unlocked ? 1.01 : 1 }}
+                        onClick={() => recipe.unlocked && setSelectedRecipe(recipe)}
                         className={`
-                          p-4 rounded-lg cursor-pointer transition-all duration-200 border
-                          ${selectedRecipe?._id === recipe._id
-                            ? 'bg-cyan-400/10 border-cyan-400/50 shadow-lg'
-                            : 'bg-gray-900/30 border-gray-600/30 hover:bg-gray-900/50 hover:border-cyan-400/30'
+                          p-4 rounded-lg transition-all duration-200 border relative
+                          ${!recipe.unlocked 
+                            ? 'bg-gray-800/30 border-gray-700/50 opacity-60 cursor-not-allowed' 
+                            : selectedRecipe?._id === recipe._id
+                              ? 'bg-cyan-400/10 border-cyan-400/50 shadow-lg cursor-pointer'
+                              : 'bg-gray-900/30 border-gray-600/30 hover:bg-gray-900/50 hover:border-cyan-400/30 cursor-pointer'
                           }
                         `}
                       >
-                        <div className="flex items-center justify-between">
+                        {/* Lock/Unlock Indicator */}
+                        <div className="absolute top-2 right-2">
+                          {recipe.unlocked ? (
+                            <motion.div
+                              initial={{ scale: 0 }}
+                              animate={{ scale: 1 }}
+                              className="w-6 h-6 bg-green-400/20 rounded-full flex items-center justify-center"
+                            >
+                              <CheckCircle className="w-4 h-4 text-green-400" />
+                            </motion.div>
+                          ) : (
+                            <motion.div
+                              initial={{ scale: 0 }}
+                              animate={{ scale: 1 }}
+                              className="w-6 h-6 bg-red-400/20 rounded-full flex items-center justify-center"
+                            >
+                              <X className="w-4 h-4 text-red-400" />
+                            </motion.div>
+                          )}
+                        </div>
+
+                        <div className="flex items-center justify-between pr-8">
                           <div className="flex items-center space-x-4">
-                            <div className="p-2 bg-cyan-400/20 rounded">
-                              <Package className="w-5 h-5 text-cyan-400" />
+                            <div className={`p-2 rounded ${recipe.unlocked ? 'bg-cyan-400/20' : 'bg-gray-600/20'}`}>
+                              <Package className={`w-5 h-5 ${recipe.unlocked ? 'text-cyan-400' : 'text-gray-500'}`} />
                             </div>
                             <div>
-                              <h3 className="font-mono font-bold text-cyan-400 text-lg">{recipe.NAME_CID}</h3>
-                              <p className="text-gray-400 font-mono text-xs">{recipe.DESCRIPTION_CID}</p>
+                              <h3 className={`font-mono font-bold text-lg ${recipe.unlocked ? 'text-cyan-400' : 'text-gray-500'}`}>
+                                {recipe.NAME_CID}
+                              </h3>
+                              <p className={`font-mono text-xs ${recipe.unlocked ? 'text-gray-400' : 'text-gray-600'}`}>
+                                {recipe.DESCRIPTION_CID}
+                              </p>
                               <div className="flex items-center space-x-4 mt-1">
                                 <div className="flex items-center space-x-1">
-                                  <Zap className="w-3 h-3 text-yellow-400" />
-                                  <span className="text-yellow-400 font-mono text-xs">{recipe.ENERGY_CID || 0}</span>
+                                  <Zap className={`w-3 h-3 ${recipe.unlocked ? 'text-yellow-400' : 'text-gray-500'}`} />
+                                  <span className={`font-mono text-xs ${recipe.unlocked ? 'text-yellow-400' : 'text-gray-500'}`}>
+                                    {recipe.ENERGY_CID || 0}
+                                  </span>
                                 </div>
                                 <div className="flex items-center space-x-1">
-                                  <Star className="w-3 h-3 text-green-400" />
-                                  <span className="text-green-400 font-mono text-xs">{recipe.SUCCESS_RATE_CID || 100}%</span>
+                                  <Star className={`w-3 h-3 ${recipe.unlocked ? 'text-green-400' : 'text-gray-500'}`} />
+                                  <span className={`font-mono text-xs ${recipe.unlocked ? 'text-green-400' : 'text-gray-500'}`}>
+                                    {recipe.SUCCESS_RATE_CID || 100}%
+                                  </span>
                                 </div>
                               </div>
                             </div>
                           </div>
                           <div className="text-center">
-                            <div className="text-green-400 font-mono text-xs uppercase">
-                              READY
+                            <div className={`font-mono text-xs uppercase ${recipe.unlocked ? 'text-green-400' : 'text-red-400'}`}>
+                              {recipe.unlocked ? 'UNLOCKED' : 'LOCKED'}
                             </div>
-                            <CheckCircle className="w-4 h-4 text-green-400 mx-auto mt-1" />
+                            {recipe.unlocked ? (
+                              <CheckCircle className="w-4 h-4 text-green-400 mx-auto mt-1" />
+                            ) : (
+                              <X className="w-4 h-4 text-red-400 mx-auto mt-1" />
+                            )}
                           </div>
                         </div>
                       </motion.div>
@@ -535,12 +578,31 @@ const CraftingStation: React.FC<CraftingStationProps> = ({ isOpen, onClose }) =>
                       <motion.div
                         animate={{ scale: [1, 1.1, 1] }}
                         transition={{ duration: 2, repeat: Infinity }}
-                        className="inline-flex items-center justify-center w-16 h-16 bg-cyan-400/20 rounded-full mb-4"
+                        className={`inline-flex items-center justify-center w-16 h-16 rounded-full mb-4 ${
+                          selectedRecipe.unlocked ? 'bg-cyan-400/20' : 'bg-gray-600/20'
+                        }`}
                       >
-                        <Sparkles className="w-8 h-8 text-cyan-400" />
+                        <Sparkles className={`w-8 h-8 ${selectedRecipe.unlocked ? 'text-cyan-400' : 'text-gray-500'}`} />
                       </motion.div>
-                      <h3 className="text-xl font-bold font-mono text-cyan-400 mb-2">{selectedRecipe.NAME_CID}</h3>
-                      <p className="text-gray-400 font-mono text-sm">{selectedRecipe.DESCRIPTION_CID}</p>
+                      <h3 className={`text-xl font-bold font-mono mb-2 ${selectedRecipe.unlocked ? 'text-cyan-400' : 'text-gray-500'}`}>
+                        {selectedRecipe.NAME_CID}
+                      </h3>
+                      <p className={`font-mono text-sm ${selectedRecipe.unlocked ? 'text-gray-400' : 'text-gray-600'}`}>
+                        {selectedRecipe.DESCRIPTION_CID}
+                      </p>
+                      
+                      {/* Lock Status */}
+                      {!selectedRecipe.unlocked && (
+                        <div className="mt-4 p-3 bg-red-400/10 rounded-lg border border-red-400/30">
+                          <div className="flex items-center justify-center space-x-2">
+                            <X className="w-4 h-4 text-red-400" />
+                            <span className="text-red-400 font-mono text-sm">RECIPE LOCKED</span>
+                          </div>
+                          <p className="text-red-400 font-mono text-xs mt-1">
+                            Complete requirements to unlock this recipe
+                          </p>
+                        </div>
+                      )}
                     </div>
 
                     {/* Recipe Stats */}
@@ -696,18 +758,25 @@ const CraftingStation: React.FC<CraftingStationProps> = ({ isOpen, onClose }) =>
                     {/* Craft Button */}
                     <button
                       onClick={startCrafting}
-                      disabled={crafting || !canCraftQuantity(selectedRecipe, craftingQuantity).canCraft}
+                      disabled={crafting || !selectedRecipe.unlocked || !canCraftQuantity(selectedRecipe, craftingQuantity).canCraft}
                       className={`
                         w-full py-3 px-4 rounded-lg font-mono font-bold transition-all duration-200 border-2
                         ${crafting
                           ? 'bg-yellow-400/10 text-yellow-400 border-yellow-400/50'
-                          : canCraftQuantity(selectedRecipe, craftingQuantity).canCraft
-                            ? 'bg-cyan-400/10 text-cyan-400 border-cyan-400/50 hover:bg-cyan-400/20 hover:border-cyan-400'
-                            : 'bg-gray-800/50 text-gray-400 border-gray-600/30 cursor-not-allowed'
+                          : !selectedRecipe.unlocked
+                            ? 'bg-gray-800/50 text-gray-400 border-gray-600/30 cursor-not-allowed'
+                            : canCraftQuantity(selectedRecipe, craftingQuantity).canCraft
+                              ? 'bg-cyan-400/10 text-cyan-400 border-cyan-400/50 hover:bg-cyan-400/20 hover:border-cyan-400'
+                              : 'bg-gray-800/50 text-gray-400 border-gray-600/30 cursor-not-allowed'
                         }
                       `}
                     >
-                      {crafting ? (
+                      {!selectedRecipe.unlocked ? (
+                        <div className="flex items-center justify-center space-x-2">
+                          <X className="w-4 h-4" />
+                          <span>RECIPE LOCKED</span>
+                        </div>
+                      ) : crafting ? (
                         <div className="flex items-center justify-center space-x-2">
                           <motion.div
                             animate={{ rotate: 360 }}
