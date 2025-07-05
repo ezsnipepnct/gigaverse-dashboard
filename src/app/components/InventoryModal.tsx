@@ -194,13 +194,13 @@ const InventoryModal: React.FC<InventoryModalProps> = ({
 
   const getRarityColor = (rarity: number) => {
     switch (rarity) {
-      case 5: return 'text-red-400 border-red-400 bg-red-400/10' // Mythic
-      case 4: return 'text-yellow-400 border-yellow-400 bg-yellow-400/10' // Legendary
-      case 3: return 'text-purple-400 border-purple-400 bg-purple-400/10' // Epic
-      case 2: return 'text-blue-400 border-blue-400 bg-blue-400/10' // Rare
-      case 1: return 'text-green-400 border-green-400 bg-green-400/10' // Uncommon
+      case 5: return 'text-red-400 border-red-400/50 bg-red-400/10' // Mythic
+      case 4: return 'text-yellow-400 border-yellow-400/50 bg-yellow-400/10' // Legendary
+      case 3: return 'text-purple-400 border-purple-400/50 bg-purple-400/10' // Epic
+      case 2: return 'text-blue-400 border-blue-400/50 bg-blue-400/10' // Rare
+      case 1: return 'text-green-400 border-green-400/50 bg-green-400/10' // Uncommon
       case 0: 
-      default: return 'text-gray-400 border-gray-400 bg-gray-400/10' // Common
+      default: return 'text-gray-400 border-gray-400/50 bg-gray-400/10' // Common
     }
   }
 
@@ -220,13 +220,6 @@ const InventoryModal: React.FC<InventoryModalProps> = ({
     return inventoryItems.reduce((total, item) => total + item.quantity, 0)
   }
 
-  const getRarestItem = () => {
-    return inventoryItems.reduce((rarest, item) => 
-      item.rarity > rarest.rarity ? item : rarest, 
-      inventoryItems[0] || { name: 'None', rarity: 0 }
-    )
-  }
-
   if (!isOpen) return null
 
   return (
@@ -239,62 +232,47 @@ const InventoryModal: React.FC<InventoryModalProps> = ({
         onClick={onClose}
       >
         <motion.div
-          initial={{ scale: 0.8, opacity: 0 }}
+          initial={{ scale: 0.95, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          exit={{ scale: 0.8, opacity: 0 }}
-          className="bg-black/90 border-2 border-cyan-400/50 rounded-lg max-w-7xl w-full max-h-[90vh] overflow-hidden"
-          style={{
-            clipPath: 'polygon(20px 0%, 100% 0%, calc(100% - 20px) 100%, 0% 100%)'
-          }}
+          exit={{ scale: 0.95, opacity: 0 }}
+          className="bg-black/90 border border-cyan-400/50 rounded-lg max-w-7xl w-full max-h-[90vh] overflow-hidden"
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Header */}
-          <div className="border-b border-cyan-400/30 p-6 bg-gradient-to-r from-cyan-400/10 to-transparent">
+          {/* Streamlined Header */}
+          <div className="border-b border-cyan-400/20 p-4 bg-cyan-400/5">
             <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <div className="p-3 bg-cyan-400/20 border border-cyan-400/50 rounded-full">
-                  <Package className="w-8 h-8 text-cyan-400" />
-                </div>
+              <div className="flex items-center space-x-3">
+                <Package className="w-6 h-6 text-cyan-400" />
                 <div>
-                  <h2 className="text-3xl font-bold text-cyan-400 font-mono tracking-wider neon-pulse">
-                    GIGAVERSE INVENTORY
+                  <h2 className="text-xl font-bold text-cyan-400 font-mono">
+                    INVENTORY
                   </h2>
-                  <p className="text-cyan-300/70 font-mono">
-                    {inventoryItems.length} unique items • {getTotalValue().toLocaleString()} total quantity
+                  <p className="text-cyan-400/70 font-mono text-sm">
+                    {inventoryItems.length} items • {getTotalValue().toLocaleString()} total
                   </p>
                 </div>
               </div>
-              <div className="flex items-center space-x-4">
-                <button
-                  onClick={onRefreshBalances}
-                  disabled={balancesLoading}
-                  className="p-2 bg-green-400/20 border border-green-400/50 rounded text-green-400 hover:bg-green-400/30 transition-colors disabled:opacity-50"
-                  title="Refresh Inventory"
-                >
-                  <Package className={`w-5 h-5 ${balancesLoading ? 'animate-pulse' : ''}`} />
-                </button>
-                <button
-                  onClick={onClose}
-                  className="p-2 text-gray-400 hover:text-red-400 transition-colors"
-                >
-                  <X className="w-6 h-6" />
-                </button>
-              </div>
+              <button
+                onClick={onClose}
+                className="p-2 text-gray-400 hover:text-cyan-400 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
           </div>
 
-          {/* Controls */}
-          <div className="p-6 border-b border-cyan-400/20 bg-black/40">
-            <div className="flex flex-wrap items-center gap-4 mb-4">
+          {/* Streamlined Controls */}
+          <div className="p-4 border-b border-cyan-400/20 bg-black/20">
+            <div className="flex items-center gap-4">
               {/* Search */}
-              <div className="relative flex-1 min-w-64">
+              <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
                   type="text"
                   placeholder="Search items..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 bg-black/60 border border-gray-600 rounded font-mono text-sm text-white placeholder-gray-400 focus:border-cyan-400 focus:outline-none"
+                  className="w-full pl-10 pr-4 py-2 bg-black/60 border border-cyan-400/30 rounded font-mono text-sm text-white placeholder-gray-500 focus:border-cyan-400 focus:outline-none"
                 />
               </div>
 
@@ -306,71 +284,33 @@ const InventoryModal: React.FC<InventoryModalProps> = ({
                   setSortBy(field as 'name' | 'quantity' | 'rarity')
                   setSortOrder(order as 'asc' | 'desc')
                 }}
-                className="px-4 py-2 bg-black/60 border border-gray-600 rounded font-mono text-sm text-white focus:border-cyan-400 focus:outline-none"
+                className="px-3 py-2 bg-black/60 border border-cyan-400/30 rounded font-mono text-sm text-white focus:border-cyan-400 focus:outline-none"
               >
-                <option value="quantity-desc">Quantity (High to Low)</option>
-                <option value="quantity-asc">Quantity (Low to High)</option>
-                <option value="name-asc">Name (A to Z)</option>
-                <option value="name-desc">Name (Z to A)</option>
-                <option value="rarity-desc">Rarity (High to Low)</option>
-                <option value="rarity-asc">Rarity (Low to High)</option>
+                <option value="quantity-desc">Quantity ↓</option>
+                <option value="quantity-asc">Quantity ↑</option>
+                <option value="name-asc">Name A-Z</option>
+                <option value="name-desc">Name Z-A</option>
+                <option value="rarity-desc">Rarity ↓</option>
+                <option value="rarity-asc">Rarity ↑</option>
               </select>
 
-              {/* Stats */}
-              <div className="flex items-center space-x-4 text-sm font-mono">
-                <span className="text-gray-400">
-                  Showing: <span className="text-cyan-400">{filteredItems.length}</span>
-                </span>
-                <span className="text-gray-400">
-                  Rarest: <span className="text-yellow-400">{getRarestItem().name}</span>
-                </span>
-              </div>
-            </div>
-
-            {/* Rarity Legend */}
-            <div className="bg-black/60 border border-gray-600/50 rounded p-3">
-              <h4 className="text-gray-300 font-mono text-xs mb-2 flex items-center">
-                <Star className="w-3 h-3 mr-1" />
-                RARITY LEGEND
-              </h4>
-              <div className="flex flex-wrap gap-3 text-xs font-mono">
-                <div className="flex items-center space-x-1">
-                  <div className="w-3 h-3 border border-gray-400 bg-gray-400/10 rounded"></div>
-                  <span className="text-gray-400">COMMON</span>
-                </div>
-                <div className="flex items-center space-x-1">
-                  <div className="w-3 h-3 border border-green-400 bg-green-400/10 rounded"></div>
-                  <span className="text-green-400">UNCOMMON</span>
-                </div>
-                <div className="flex items-center space-x-1">
-                  <div className="w-3 h-3 border border-blue-400 bg-blue-400/10 rounded"></div>
-                  <span className="text-blue-400">RARE</span>
-                </div>
-                <div className="flex items-center space-x-1">
-                  <div className="w-3 h-3 border border-purple-400 bg-purple-400/10 rounded"></div>
-                  <span className="text-purple-400">EPIC</span>
-                </div>
-                <div className="flex items-center space-x-1">
-                  <div className="w-3 h-3 border border-yellow-400 bg-yellow-400/10 rounded"></div>
-                  <span className="text-yellow-400">LEGENDARY</span>
-                </div>
-                <div className="flex items-center space-x-1">
-                  <div className="w-3 h-3 border border-red-400 bg-red-400/10 rounded"></div>
-                  <span className="text-red-400">MYTHIC</span>
-                </div>
-                <div className="flex items-center space-x-1 ml-4">
-                  <div className="w-3 h-3 border-2 border-green-400 rounded animate-pulse"></div>
-                  <span className="text-green-400">CRAFTING MATERIAL</span>
-                </div>
-              </div>
+              {/* Refresh */}
+              <button
+                onClick={onRefreshBalances}
+                disabled={balancesLoading}
+                className="p-2 bg-cyan-400/20 border border-cyan-400/50 rounded text-cyan-400 hover:bg-cyan-400/30 transition-colors disabled:opacity-50 font-mono text-sm"
+                title="Refresh"
+              >
+                <Package className={`w-4 h-4 ${balancesLoading ? 'animate-spin' : ''}`} />
+              </button>
             </div>
           </div>
 
-          <div className="flex h-[calc(90vh-280px)]">
-            {/* Category Sidebar */}
-            <div className="w-64 border-r border-cyan-400/20 bg-black/20 p-4">
-              <h3 className="text-lg font-bold text-cyan-400 font-mono mb-4">CATEGORIES</h3>
-              <div className="space-y-2">
+          <div className="flex h-[calc(90vh-180px)]">
+            {/* Compact Category Sidebar */}
+            <div className="w-48 border-r border-cyan-400/20 bg-black/10 p-3">
+              <h3 className="text-sm font-bold text-cyan-400 font-mono mb-3">CATEGORIES</h3>
+              <div className="space-y-1">
                 {categories.map((category) => {
                   const Icon = category.icon
                   const isSelected = selectedCategory === category.id
@@ -380,19 +320,19 @@ const InventoryModal: React.FC<InventoryModalProps> = ({
                       key={category.id}
                       onClick={() => setSelectedCategory(category.id)}
                       className={`
-                        w-full p-3 rounded border-2 transition-all duration-300 font-mono text-left
+                        w-full p-2 rounded border transition-all duration-200 font-mono text-left text-sm
                         ${isSelected 
                           ? 'border-cyan-400 bg-cyan-400/10 text-cyan-400' 
-                          : 'border-gray-600 hover:border-cyan-400/50 text-gray-300 hover:text-cyan-400'
+                          : 'border-transparent hover:border-cyan-400/30 text-gray-400 hover:text-cyan-400'
                         }
                       `}
                     >
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                          <Icon className="w-5 h-5" />
-                          <span className="text-sm">{category.name}</span>
+                        <div className="flex items-center space-x-2">
+                          <Icon className="w-4 h-4" />
+                          <span className="truncate">{category.name}</span>
                         </div>
-                        <span className="text-xs bg-gray-700 px-2 py-1 rounded">
+                        <span className="text-xs bg-gray-700/50 px-1.5 py-0.5 rounded">
                           {category.count}
                         </span>
                       </div>
@@ -402,77 +342,59 @@ const InventoryModal: React.FC<InventoryModalProps> = ({
               </div>
             </div>
 
-            {/* Items Grid */}
-            <div className="flex-1 p-6 overflow-y-auto">
+            {/* Clean Items Grid */}
+            <div className="flex-1 p-4 overflow-y-auto">
               {loading ? (
                 <div className="flex items-center justify-center h-64">
                   <div className="text-center">
                     <motion.div
                       animate={{ rotate: 360 }}
                       transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
-                      className="w-16 h-16 border-4 border-cyan-400/30 border-t-cyan-400 rounded-full mx-auto mb-4"
+                      className="w-12 h-12 border-2 border-cyan-400/30 border-t-cyan-400 rounded-full mx-auto mb-3"
                     />
-                    <p className="text-cyan-400 font-mono">LOADING INVENTORY...</p>
+                    <p className="text-cyan-400 font-mono text-sm">LOADING...</p>
                   </div>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3">
                   {filteredItems.map((item) => (
                     <motion.div
                       key={item.id}
                       whileHover={{ scale: 1.02 }}
                       className={`
-                        p-4 border-2 bg-black/40 backdrop-blur-sm rounded transition-all duration-300 min-h-[140px] flex flex-col
+                        p-3 border bg-black/40 rounded transition-all duration-200
                         ${getRarityColor(item.rarity)}
-                        ${item.canCraft ? 'ring-2 ring-green-400/30' : ''}
+                        ${item.canCraft ? 'ring-1 ring-green-400/30' : ''}
+                        hover:bg-black/60
                       `}
-                      style={{
-                        clipPath: 'polygon(10px 0%, 100% 0%, calc(100% - 10px) 100%, 0% 100%)'
-                      }}
                     >
-                      <div className="mb-3">
-                        {/* Item Header with Name and Quantity */}
-                        <div className="flex items-start justify-between mb-2">
-                          <h4 className="font-bold font-mono text-sm line-clamp-2 flex-1 pr-2">
-                            {item.name}
-                          </h4>
-                          <div className="text-right flex-shrink-0 min-w-0">
-                            <div className="text-lg font-bold font-mono text-cyan-400 break-all">
-                              {item.quantity.toLocaleString()}
-                            </div>
-                            <div className="text-xs text-gray-400 font-mono">QTY</div>
+                      {/* Item Header */}
+                      <div className="flex items-start justify-between mb-2">
+                        <h4 className="font-mono text-sm font-bold text-white line-clamp-2 flex-1 pr-2">
+                          {item.name}
+                        </h4>
+                        <div className="text-right flex-shrink-0">
+                          <div className="text-lg font-bold font-mono text-cyan-400">
+                            {item.quantity > 999 ? `${(item.quantity / 1000).toFixed(1)}K` : item.quantity}
                           </div>
-                        </div>
-                        
-                        {/* Rarity and Category Tags */}
-                        <div className="flex items-center space-x-2 flex-wrap gap-1">
-                          <span className={`px-2 py-1 text-xs font-mono border rounded ${getRarityColor(item.rarity)}`}>
-                            {getRarityName(item.rarity)}
-                          </span>
-                          <span className="px-2 py-1 text-xs font-mono bg-gray-700 rounded">
-                            {item.category}
-                          </span>
                         </div>
                       </div>
+                      
+                      {/* Minimal Tags */}
+                      <div className="flex items-center justify-between text-xs font-mono mb-2">
+                        <span className={`px-2 py-0.5 rounded ${getRarityColor(item.rarity)}`}>
+                          {getRarityName(item.rarity)}
+                        </span>
+                        <span className="text-gray-400">
+                          {item.category}
+                        </span>
+                      </div>
 
-                      {item.description && (
-                        <p className="text-xs text-gray-400 font-mono mb-3 line-clamp-2">
-                          {item.description}
-                        </p>
-                      )}
-
-                      {/* Spacer to push crafting info to bottom */}
-                      <div className="flex-1"></div>
-
-                      {item.canCraft && item.usedInRecipes && item.usedInRecipes.length > 0 && (
-                        <div className="border-t border-green-400/30 pt-3 mt-auto">
-                          <div className="flex items-center space-x-2 mb-1">
-                            <Wrench className="w-3 h-3 text-green-400" />
-                            <span className="text-xs font-mono text-green-400">CRAFTING MATERIAL</span>
-                          </div>
-                          <div className="text-xs text-gray-400 font-mono">
-                            Used in {item.usedInRecipes.length} recipe{item.usedInRecipes.length > 1 ? 's' : ''}
-                          </div>
+                      {/* Crafting Indicator */}
+                      {item.canCraft && (
+                        <div className="flex items-center space-x-1 text-xs text-green-400 font-mono">
+                          <Wrench className="w-3 h-3" />
+                          <span>CRAFTING</span>
                         </div>
                       )}
                     </motion.div>
@@ -483,7 +405,7 @@ const InventoryModal: React.FC<InventoryModalProps> = ({
               {!loading && filteredItems.length === 0 && (
                 <div className="text-center py-16">
                   <Package className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-                  <p className="text-gray-400 font-mono">No items found matching your criteria</p>
+                  <p className="text-gray-400 font-mono">No items found</p>
                 </div>
               )}
             </div>

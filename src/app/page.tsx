@@ -125,7 +125,7 @@ const RefinedBackground = () => {
   )
 }
 
-// Station component with gold hover theme
+// Station component with elegant cyan theme
 const Station = ({ icon: Icon, title, description, color, onClick }: {
   icon: any
   title: string
@@ -134,20 +134,26 @@ const Station = ({ icon: Icon, title, description, color, onClick }: {
   onClick: () => void
 }) => {
   return (
-    <RefinedCard glowColor={color} className="p-6 cursor-pointer group card-gold-hover" onClick={onClick}>
-      <motion.div
-        whileHover={{ scale: 1.01 }}
-        className="flex flex-col items-center text-center space-refined-sm"
-      >
-        <div className={`p-4 rounded-full bg-${color}-400/10 border-2 border-${color}-400/30 group-hover:border-yellow-400/60 transition-all duration-300`}>
-          <Icon className={`w-8 h-8 text-${color}-400 icon-gold-hover`} />
+    <motion.div
+      whileHover={{ scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
+      onClick={onClick}
+      className="p-4 bg-black/40 border border-cyan-400/30 rounded-lg cursor-pointer group hover:border-cyan-400/50 transition-all duration-200 hover:bg-black/60"
+    >
+      <div className="flex flex-col items-center text-center space-y-3">
+        <div className="p-3 rounded-full bg-cyan-400/10 border border-cyan-400/30 group-hover:border-cyan-400/50 transition-all duration-200">
+          <Icon className="w-6 h-6 text-cyan-400 group-hover:text-cyan-300 transition-colors duration-200" />
         </div>
         <div>
-          <h3 className={`text-xl font-semibold text-${color}-400 text-display group-hover:text-yellow-400 transition-colors duration-300`}>{title}</h3>
-          <p className="text-gray-400 text-sm mt-2 text-mono-refined group-hover:text-gray-300 transition-colors duration-300">{description}</p>
+          <h3 className="text-lg font-bold text-cyan-400 font-mono group-hover:text-cyan-300 transition-colors duration-200">
+            {title}
+          </h3>
+          <p className="text-gray-400 text-sm mt-1 font-mono group-hover:text-gray-300 transition-colors duration-200">
+            {description}
+          </p>
         </div>
-      </motion.div>
-    </RefinedCard>
+      </div>
+    </motion.div>
   )
 }
 

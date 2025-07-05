@@ -249,7 +249,7 @@ const Gigamarket: React.FC<GigamarketProps> = ({ isOpen, onClose }) => {
       const matchesCategory = selectedCategory === 'all' || item.category === selectedCategory
       const matchesRarity = selectedRarity === 'all' || item.rarity === selectedRarity
       const matchesPrice = (item.priceInEth || 0) >= priceRange.min && (item.priceInEth || 0) <= priceRange.max
-      const matchesFavorites = !showFavorites || favorites.has(item.GAME_ITEM_ID_CID.toString())
+              const matchesFavorites = !showFavorites || favorites.has(item.GAME_ITEM_ID_CID.toString())
       const matchesAvailable = !showOnlyAvailable || item.available
       const matchesOwner = selectedOwner === 'all' || item.owner === selectedOwner
       
@@ -378,259 +378,182 @@ const Gigamarket: React.FC<GigamarketProps> = ({ isOpen, onClose }) => {
           onClick={onClose}
         >
           <motion.div
-            initial={{ scale: 0.8, opacity: 0 }}
+            initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.8, opacity: 0 }}
-            className="bg-black/90 border-2 border-purple-400/50 rounded-lg max-w-7xl w-full max-h-[90vh] overflow-hidden"
-            style={{
-              clipPath: 'polygon(20px 0%, 100% 0%, calc(100% - 20px) 100%, 0% 100%)'
-            }}
+            exit={{ scale: 0.95, opacity: 0 }}
+            className="bg-black/90 border border-cyan-400/50 rounded-lg max-w-7xl w-full max-h-[95vh] overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Header */}
-            <div className="border-b border-purple-400/30 p-6 bg-gradient-to-r from-purple-400/10 to-transparent">
+            {/* Streamlined Header */}
+            <div className="border-b border-cyan-400/20 p-4 bg-cyan-400/5">
               <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <div className="p-3 bg-purple-400/20 border border-purple-400/50 rounded-full">
-                    <ShoppingCart className="w-8 h-8 text-purple-400" />
-                  </div>
+                <div className="flex items-center space-x-3">
+                  <ShoppingCart className="w-6 h-6 text-cyan-400" />
                   <div>
-                    <h2 className="text-3xl font-bold text-purple-400 font-mono tracking-wider neon-pulse">
+                    <h1 className="text-xl font-bold text-cyan-400 font-mono">
                       GIGAMARKET
-                    </h2>
-                    <p className="text-purple-300/70 font-mono">LIVE BLOCKCHAIN MARKETPLACE</p>
+                    </h1>
+                    <p className="text-cyan-400/70 font-mono text-sm">
+                      {filteredData.length} items • Digital Asset Trading
+                    </p>
                   </div>
                 </div>
                 <button
                   onClick={onClose}
-                  className="p-2 text-gray-400 hover:text-red-400 transition-colors"
+                  className="p-2 text-gray-400 hover:text-cyan-400 transition-colors"
                 >
-                  <X className="w-6 h-6" />
+                  <X className="w-5 h-5" />
                 </button>
               </div>
             </div>
 
-            {/* Controls */}
-            <div className="p-6 border-b border-purple-400/20 bg-black/40">
-              {/* Main Controls Row */}
-              <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-4">
+            {/* Streamlined Controls */}
+            <div className="p-4 border-b border-cyan-400/20 bg-black/20">
+              <div className="flex items-center gap-4 mb-3">
                 {/* Search */}
-                <div className="relative md:col-span-2">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <input
                     type="text"
                     placeholder="Search items..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 bg-black/60 border border-gray-600 rounded font-mono text-sm text-white placeholder-gray-400 focus:border-purple-400 focus:outline-none"
+                    className="w-full pl-10 pr-4 py-2 bg-black/60 border border-cyan-400/30 rounded font-mono text-sm text-white placeholder-gray-500 focus:border-cyan-400 focus:outline-none"
                   />
                 </div>
 
-                {/* Category Filter */}
+                {/* Sort */}
+                <select
+                  value={`${sortBy}-${sortOrder}`}
+                  onChange={(e) => {
+                    const [field, order] = e.target.value.split('-')
+                    setSortBy(field as any)
+                    setSortOrder(order as 'asc' | 'desc')
+                  }}
+                  className="px-3 py-2 bg-black/60 border border-cyan-400/30 rounded font-mono text-sm text-white focus:border-cyan-400 focus:outline-none"
+                >
+                  <option value="price-desc">Price ↓</option>
+                  <option value="price-asc">Price ↑</option>
+                  <option value="name-asc">Name A-Z</option>
+                  <option value="name-desc">Name Z-A</option>
+                  <option value="rarity-desc">Rarity ↓</option>
+                  <option value="rarity-asc">Rarity ↑</option>
+                </select>
+
+                {/* View Mode */}
+                <div className="flex border border-cyan-400/30 rounded overflow-hidden">
+                  <button
+                    onClick={() => setViewMode('grid')}
+                    className={`p-2 font-mono text-sm ${viewMode === 'grid' ? 'bg-cyan-400/20 text-cyan-400' : 'text-gray-400 hover:text-cyan-400'}`}
+                  >
+                    <Grid className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => setViewMode('list')}
+                    className={`p-2 font-mono text-sm ${viewMode === 'list' ? 'bg-cyan-400/20 text-cyan-400' : 'text-gray-400 hover:text-cyan-400'}`}
+                  >
+                    <List className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Filter Tags */}
+              <div className="flex items-center gap-2 text-xs">
+                <span className="text-gray-400 font-mono">Filters:</span>
                 <select
                   value={selectedCategory}
                   onChange={(e) => setSelectedCategory(e.target.value)}
-                  className="px-4 py-2 bg-black/60 border border-gray-600 rounded font-mono text-sm text-white focus:border-purple-400 focus:outline-none"
+                  className="px-2 py-1 bg-black/60 border border-cyan-400/30 rounded font-mono text-xs text-white focus:border-cyan-400 focus:outline-none"
                 >
                   <option value="all">All Categories</option>
-                  {getUniqueCategories().map(category => (
-                    <option key={category} value={category}>
-                      {category.charAt(0).toUpperCase() + category.slice(1)}
-                    </option>
+                  {getUniqueCategories().map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
                   ))}
                 </select>
-
-                {/* Rarity Filter */}
                 <select
                   value={selectedRarity}
                   onChange={(e) => setSelectedRarity(e.target.value)}
-                  className="px-4 py-2 bg-black/60 border border-gray-600 rounded font-mono text-sm text-white focus:border-purple-400 focus:outline-none"
+                  className="px-2 py-1 bg-black/60 border border-cyan-400/30 rounded font-mono text-xs text-white focus:border-cyan-400 focus:outline-none"
                 >
                   <option value="all">All Rarities</option>
                   {getUniqueRarities().map(rarity => (
-                    <option key={rarity} value={rarity}>
-                      {rarity.charAt(0).toUpperCase() + rarity.slice(1)}
-                    </option>
+                    <option key={rarity} value={rarity}>{rarity}</option>
                   ))}
                 </select>
-
-                {/* Sort By */}
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as any)}
-                  className="px-4 py-2 bg-black/60 border border-gray-600 rounded font-mono text-sm text-white focus:border-purple-400 focus:outline-none"
-                >
-                  <option value="price">Sort by Price</option>
-                  <option value="name">Sort by Name</option>
-                  <option value="volume">Sort by Volume</option>
-                  <option value="change">Sort by Change</option>
-                  <option value="id">Sort by ID</option>
-                  <option value="rarity">Sort by Rarity</option>
-                </select>
-
-                {/* Sort Order */}
-                <button
-                  onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                  className="flex items-center justify-center space-x-2 px-4 py-2 bg-purple-400/20 border border-purple-400/50 rounded font-mono text-sm text-purple-400 hover:bg-purple-400/30 transition-colors"
-                >
-                  <ArrowUpDown className="w-4 h-4" />
-                  <span>{sortOrder === 'asc' ? '↑' : '↓'}</span>
-                </button>
               </div>
-
-              {/* Secondary Controls Row */}
-              <div className="flex flex-wrap items-center justify-between gap-4">
-                <div className="flex items-center space-x-4">
-                  {/* View Mode Toggle */}
-                  <div className="flex items-center space-x-2 bg-black/60 border border-gray-600 rounded p-1">
-                    <button
-                      onClick={() => setViewMode('grid')}
-                      className={`p-2 rounded transition-colors ${viewMode === 'grid' ? 'bg-purple-400/30 text-purple-400' : 'text-gray-400 hover:text-white'}`}
-                    >
-                      <Grid className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => setViewMode('list')}
-                      className={`p-2 rounded transition-colors ${viewMode === 'list' ? 'bg-purple-400/30 text-purple-400' : 'text-gray-400 hover:text-white'}`}
-                    >
-                      <List className="w-4 h-4" />
-                    </button>
-                  </div>
-
-                  {/* Quick Filters */}
-                  <button
-                    onClick={() => setShowFavorites(!showFavorites)}
-                    className={`flex items-center space-x-2 px-3 py-2 rounded font-mono text-sm transition-colors ${showFavorites ? 'bg-red-400/20 border border-red-400/50 text-red-400' : 'bg-black/60 border border-gray-600 text-gray-400 hover:text-white'}`}
-                  >
-                    <Heart className="w-4 h-4" />
-                    <span>Favorites</span>
-                  </button>
-
-                  <button
-                    onClick={() => setShowOnlyAvailable(!showOnlyAvailable)}
-                    className={`flex items-center space-x-2 px-3 py-2 rounded font-mono text-sm transition-colors ${showOnlyAvailable ? 'bg-green-400/20 border border-green-400/50 text-green-400' : 'bg-black/60 border border-gray-600 text-gray-400 hover:text-white'}`}
-                  >
-                    <Check className="w-4 h-4" />
-                    <span>Available</span>
-                  </button>
-
-                  <button
-                    onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-                    className="flex items-center space-x-2 px-3 py-2 bg-black/60 border border-gray-600 rounded font-mono text-sm text-gray-400 hover:text-white transition-colors"
-                  >
-                    <Settings className="w-4 h-4" />
-                    <span>Advanced</span>
-                  </button>
-                </div>
-
-                <div className="flex items-center space-x-4">
-                  {/* Items per page */}
-                  <select
-                    value={itemsPerPage}
-                    onChange={(e) => {
-                      setItemsPerPage(Number(e.target.value))
-                      setCurrentPage(1)
-                    }}
-                    className="px-3 py-2 bg-black/60 border border-gray-600 rounded font-mono text-sm text-white focus:border-purple-400 focus:outline-none"
-                  >
-                    <option value={10}>10 per page</option>
-                    <option value={20}>20 per page</option>
-                    <option value={50}>50 per page</option>
-                    <option value={100}>100 per page</option>
-                  </select>
-
-                  {/* Comparison Counter */}
-                  {comparisonItems.size > 0 && (
-                    <button
-                      onClick={() => setShowComparison(true)}
-                      className="flex items-center space-x-2 px-3 py-2 bg-blue-400/20 border border-blue-400/50 rounded font-mono text-sm text-blue-400 hover:bg-blue-400/30 transition-colors"
-                    >
-                      <BarChart3 className="w-4 h-4" />
-                      <span>Compare ({comparisonItems.size})</span>
-                    </button>
-                  )}
-
-                  {/* Refresh */}
-                  <button
-                    onClick={() => window.location.reload()}
-                    className="p-2 bg-black/60 border border-gray-600 rounded text-gray-400 hover:text-white transition-colors"
-                  >
-                    <RefreshCw className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Advanced Filters */}
-              {showAdvancedFilters && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="mt-4 p-4 bg-black/40 border border-gray-600 rounded"
-                >
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {/* Price Range */}
-                    <div>
-                      <label className="block text-sm font-mono text-gray-400 mb-2">Price Range (ETH)</label>
-                      <div className="flex items-center space-x-2">
-                        <input
-                          type="number"
-                          placeholder="Min"
-                          value={priceRange.min}
-                          onChange={(e) => setPriceRange({...priceRange, min: Number(e.target.value)})}
-                          className="w-full px-3 py-2 bg-black/60 border border-gray-600 rounded font-mono text-sm text-white focus:border-purple-400 focus:outline-none"
-                        />
-                        <span className="text-gray-400">-</span>
-                        <input
-                          type="number"
-                          placeholder="Max"
-                          value={priceRange.max}
-                          onChange={(e) => setPriceRange({...priceRange, max: Number(e.target.value)})}
-                          className="w-full px-3 py-2 bg-black/60 border border-gray-600 rounded font-mono text-sm text-white focus:border-purple-400 focus:outline-none"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Owner Filter */}
-                    <div>
-                      <label className="block text-sm font-mono text-gray-400 mb-2">Owner</label>
-                      <select
-                        value={selectedOwner}
-                        onChange={(e) => setSelectedOwner(e.target.value)}
-                        className="w-full px-3 py-2 bg-black/60 border border-gray-600 rounded font-mono text-sm text-white focus:border-purple-400 focus:outline-none"
-                      >
-                        <option value="all">All Owners</option>
-                        {getUniqueOwners().map(owner => (
-                          <option key={owner} value={owner}>
-                            {owner}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {/* Reset Filters */}
-                    <div className="flex items-end">
-                      <button
-                        onClick={() => {
-                          setSearchTerm('')
-                          setSelectedCategory('all')
-                          setSelectedRarity('all')
-                          setPriceRange({ min: 0, max: 10 })
-                          setSelectedOwner('all')
-                          setShowFavorites(false)
-                          setShowOnlyAvailable(false)
-                          setSortBy('price')
-                          setSortOrder('desc')
-                        }}
-                        className="w-full px-4 py-2 bg-red-400/20 border border-red-400/50 rounded font-mono text-sm text-red-400 hover:bg-red-400/30 transition-colors"
-                      >
-                        Reset All Filters
-                      </button>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
             </div>
+
+            {/* Advanced Filters */}
+            {showAdvancedFilters && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="mt-4 p-4 bg-black/40 border border-gray-600 rounded"
+              >
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Price Range */}
+                  <div>
+                    <label className="block text-sm font-mono text-gray-400 mb-2">Price Range (ETH)</label>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="number"
+                        placeholder="Min"
+                        value={priceRange.min}
+                        onChange={(e) => setPriceRange({...priceRange, min: Number(e.target.value)})}
+                        className="w-full px-3 py-2 bg-black/60 border border-gray-600 rounded font-mono text-sm text-white focus:border-purple-400 focus:outline-none"
+                      />
+                      <span className="text-gray-400">-</span>
+                      <input
+                        type="number"
+                        placeholder="Max"
+                        value={priceRange.max}
+                        onChange={(e) => setPriceRange({...priceRange, max: Number(e.target.value)})}
+                        className="w-full px-3 py-2 bg-black/60 border border-gray-600 rounded font-mono text-sm text-white focus:border-purple-400 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Owner Filter */}
+                  <div>
+                    <label className="block text-sm font-mono text-gray-400 mb-2">Owner</label>
+                    <select
+                      value={selectedOwner}
+                      onChange={(e) => setSelectedOwner(e.target.value)}
+                      className="w-full px-3 py-2 bg-black/60 border border-gray-600 rounded font-mono text-sm text-white focus:border-purple-400 focus:outline-none"
+                    >
+                      <option value="all">All Owners</option>
+                      {getUniqueOwners().map(owner => (
+                        <option key={owner} value={owner}>
+                          {owner}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Reset Filters */}
+                  <div className="flex items-end">
+                    <button
+                      onClick={() => {
+                        setSearchTerm('')
+                        setSelectedCategory('all')
+                        setSelectedRarity('all')
+                        setPriceRange({ min: 0, max: 10 })
+                        setSelectedOwner('all')
+                        setShowFavorites(false)
+                        setShowOnlyAvailable(false)
+                        setSortBy('price')
+                        setSortOrder('desc')
+                      }}
+                      className="w-full px-4 py-2 bg-red-400/20 border border-red-400/50 rounded font-mono text-sm text-red-400 hover:bg-red-400/30 transition-colors"
+                    >
+                      Reset All Filters
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </div>
 
             {/* Market Items Grid */}
             <div className="p-6 max-h-[calc(90vh-300px)] overflow-y-auto">
@@ -655,14 +578,14 @@ const Gigamarket: React.FC<GigamarketProps> = ({ isOpen, onClose }) => {
                     
                     return (
                       <motion.div
-                        key={item.GAME_ITEM_ID_CID}
+                        key={item.GAME_ITEM_ID_CID_CID}
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: index * 0.02 }}
                         className={`bg-black/60 border border-gray-600 hover:border-purple-400/50 rounded transition-all duration-300 hover:shadow-lg hover:shadow-purple-400/20 group cursor-pointer ${
                           viewMode === 'grid' ? 'p-4' : 'p-4 flex items-center space-x-4'
                         } ${!item.available ? 'opacity-50' : ''} ${
-                          comparisonItems.has(item.GAME_ITEM_ID_CID.toString()) ? 'ring-2 ring-blue-400' : ''
+                          comparisonItems.has(item.GAME_ITEM_ID_CID_CID.toString()) ? 'ring-2 ring-blue-400' : ''
                         }`}
                         style={viewMode === 'grid' ? {
                           clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)'
@@ -679,7 +602,7 @@ const Gigamarket: React.FC<GigamarketProps> = ({ isOpen, onClose }) => {
                             <div className="flex items-center justify-between mb-3">
                               <div className="flex items-center space-x-2">
                                 <CategoryIcon className="w-4 h-4 text-purple-400" />
-                                <span className="text-xs font-mono text-gray-400">#{item.GAME_ITEM_ID_CID}</span>
+                                <span className="text-xs font-mono text-gray-400">#{item.GAME_ITEM_ID_CID_CID}</span>
                                 <span className="text-xs font-mono text-gray-500">{item.type}</span>
                                 {!item.available && (
                                   <span className="text-xs font-mono text-red-400">SOLD</span>
@@ -689,10 +612,10 @@ const Gigamarket: React.FC<GigamarketProps> = ({ isOpen, onClose }) => {
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation()
-                                    toggleFavorite(item.GAME_ITEM_ID_CID.toString())
+                                    toggleFavorite(item.GAME_ITEM_ID_CID_CID.toString())
                                   }}
                                   className={`p-1 rounded transition-colors ${
-                                    favorites.has(item.GAME_ITEM_ID_CID.toString()) 
+                                    favorites.has(item.GAME_ITEM_ID_CID_CID.toString()) 
                                       ? 'text-red-400 hover:text-red-300' 
                                       : 'text-gray-400 hover:text-red-400'
                                   }`}
@@ -792,10 +715,10 @@ const Gigamarket: React.FC<GigamarketProps> = ({ isOpen, onClose }) => {
                               <button 
                                 onClick={(e) => {
                                   e.stopPropagation()
-                                  toggleComparison(item.GAME_ITEM_ID_CID.toString())
+                                  toggleComparison(item.GAME_ITEM_ID_CID_CID.toString())
                                 }}
                                 className={`px-2 py-1 rounded font-mono text-xs transition-colors ${
-                                  comparisonItems.has(item.GAME_ITEM_ID_CID.toString())
+                                  comparisonItems.has(item.GAME_ITEM_ID_CID_CID.toString())
                                     ? 'bg-blue-400/30 border border-blue-400/50 text-blue-400'
                                     : 'bg-gray-400/20 border border-gray-400/50 text-gray-400 hover:bg-gray-400/30'
                                 }`}
@@ -805,10 +728,10 @@ const Gigamarket: React.FC<GigamarketProps> = ({ isOpen, onClose }) => {
                               <button 
                                 onClick={(e) => {
                                   e.stopPropagation()
-                                  toggleWatchlist(item.GAME_ITEM_ID_CID.toString())
+                                  toggleWatchlist(item.GAME_ITEM_ID_CID_CID.toString())
                                 }}
                                 className={`px-2 py-1 rounded font-mono text-xs transition-colors ${
-                                  watchlist.has(item.GAME_ITEM_ID_CID.toString())
+                                  watchlist.has(item.GAME_ITEM_ID_CID_CID.toString())
                                     ? 'bg-yellow-400/30 border border-yellow-400/50 text-yellow-400'
                                     : 'bg-gray-400/20 border border-gray-400/50 text-gray-400 hover:bg-gray-400/30'
                                 }`}
@@ -850,7 +773,7 @@ const Gigamarket: React.FC<GigamarketProps> = ({ isOpen, onClose }) => {
                                     {item.name}
                                   </h4>
                                   <div className="flex items-center space-x-4 mt-1">
-                                    <span className="text-sm font-mono text-gray-400">#{item.GAME_ITEM_ID_CID}</span>
+                                    <span className="text-sm font-mono text-gray-400">#{item.GAME_ITEM_ID_CID_CID}</span>
                                     <span className={`px-2 py-1 text-xs font-mono border rounded ${getRarityColor(item.rarity || 'common')}`}>
                                       {(item.rarityName || item.rarity || 'COMMON').toUpperCase()}
                                     </span>
@@ -910,10 +833,10 @@ const Gigamarket: React.FC<GigamarketProps> = ({ isOpen, onClose }) => {
                                     <button
                                       onClick={(e) => {
                                         e.stopPropagation()
-                                        toggleFavorite(item.GAME_ITEM_ID_CID.toString())
+                                        toggleFavorite(item.GAME_ITEM_ID_CID_CID.toString())
                                       }}
                                       className={`p-2 rounded transition-colors ${
-                                        favorites.has(item.GAME_ITEM_ID_CID.toString()) 
+                                        favorites.has(item.GAME_ITEM_ID_CID_CID.toString()) 
                                           ? 'text-red-400 hover:text-red-300' 
                                           : 'text-gray-400 hover:text-red-400'
                                       }`}
@@ -923,10 +846,10 @@ const Gigamarket: React.FC<GigamarketProps> = ({ isOpen, onClose }) => {
                                     <button 
                                       onClick={(e) => {
                                         e.stopPropagation()
-                                        toggleComparison(item.GAME_ITEM_ID_CID.toString())
+                                        toggleComparison(item.GAME_ITEM_ID_CID_CID.toString())
                                       }}
                                       className={`p-2 rounded transition-colors ${
-                                        comparisonItems.has(item.GAME_ITEM_ID_CID.toString())
+                                        comparisonItems.has(item.GAME_ITEM_ID_CID_CID.toString())
                                           ? 'bg-blue-400/30 text-blue-400'
                                           : 'text-gray-400 hover:text-blue-400'
                                       }`}
@@ -1088,7 +1011,7 @@ const Gigamarket: React.FC<GigamarketProps> = ({ isOpen, onClose }) => {
                       {selectedItem.name}
                     </h2>
                     <div className="flex items-center space-x-4 mt-1">
-                      <span className="text-gray-400 font-mono">#{selectedItem.GAME_ITEM_ID_CID}</span>
+                      <span className="text-gray-400 font-mono">#{selectedItem.GAME_ITEM_ID_CID_CID}</span>
                       <span className={`px-2 py-1 text-xs font-mono border rounded ${getRarityColor(selectedItem.rarity || 'common')}`}>
                         {(selectedItem.rarityName || selectedItem.rarity || 'COMMON').toUpperCase()}
                       </span>
@@ -1273,20 +1196,20 @@ const Gigamarket: React.FC<GigamarketProps> = ({ isOpen, onClose }) => {
                   <div className="space-y-3">
                     <div className="grid grid-cols-2 gap-3">
                       <button
-                        onClick={() => toggleFavorite(selectedItem.GAME_ITEM_ID_CID.toString())}
+                        onClick={() => toggleFavorite(selectedItem.GAME_ITEM_ID_CID_CID.toString())}
                         className={`flex items-center justify-center space-x-2 px-4 py-3 rounded font-mono text-sm transition-colors ${
-                          favorites.has(selectedItem.GAME_ITEM_ID_CID.toString())
+                          favorites.has(selectedItem.GAME_ITEM_ID_CID_CID.toString())
                             ? 'bg-red-400/30 border border-red-400/50 text-red-400'
                             : 'bg-black/60 border border-gray-600 text-gray-400 hover:text-red-400'
                         }`}
                       >
                         <Heart className="w-4 h-4" />
-                        <span>{favorites.has(selectedItem.GAME_ITEM_ID_CID.toString()) ? 'FAVORITED' : 'FAVORITE'}</span>
+                        <span>{favorites.has(selectedItem.GAME_ITEM_ID_CID_CID.toString()) ? 'FAVORITED' : 'FAVORITE'}</span>
                       </button>
                       <button
-                        onClick={() => toggleWatchlist(selectedItem.GAME_ITEM_ID_CID.toString())}
+                        onClick={() => toggleWatchlist(selectedItem.GAME_ITEM_ID_CID_CID.toString())}
                         className={`flex items-center justify-center space-x-2 px-4 py-3 rounded font-mono text-sm transition-colors ${
-                          watchlist.has(selectedItem.GAME_ITEM_ID_CID.toString())
+                          watchlist.has(selectedItem.GAME_ITEM_ID_CID_CID.toString())
                             ? 'bg-yellow-400/30 border border-yellow-400/50 text-yellow-400'
                             : 'bg-black/60 border border-gray-600 text-gray-400 hover:text-yellow-400'
                         }`}
