@@ -946,21 +946,79 @@ export default function GigaverseDashboard() {
     }
   }
 
+  // State for energy claiming
+  const [energyClaimLoading, setEnergyClaimLoading] = useState(false)
+  const [energyClaimMessage, setEnergyClaimMessage] = useState('')
+  const [energyClaimResults, setEnergyClaimResults] = useState<{
+    totalClaimed: number
+    claimedRoms: Array<{ id: string; amount: number }>
+  } | null>(null)
+
   // Calculate claimable energy when modal opens
   const handleEnergyClick = () => {
-    if (energyData) {
-      const claimable = Math.min(energyData.maxEnergy - energyData.currentEnergy, energyData.maxEnergy * 0.5) // Max 50% can be claimed at once
-      setEnergyClaimAmount(Math.max(0, claimable))
-      setShowEnergyClaimModal(true)
-    }
+    setEnergyClaimResults(null)
+    setEnergyClaimMessage('')
+    setEnergyClaimAmount(200) // Default threshold
+    setShowEnergyClaimModal(true)
   }
 
-  const handleEnergyClaim = () => {
-    // TODO: Implement actual energy claiming logic
-    console.log(`Claiming ${energyClaimAmount} energy`)
-    setShowEnergyClaimModal(false)
-    // Optionally refresh energy data here
-    fetchEnergyData()
+  const handleEnergyClaim = async () => {
+    try {
+      setEnergyClaimLoading(true)
+      setEnergyClaimMessage('')
+      setEnergyClaimResults(null)
+      
+      const jwtToken = getJWTToken()
+      if (!jwtToken) {
+        setEnergyClaimMessage('Authentication required. Please login first.')
+        return
+      }
+
+      console.log(`Starting energy claim with threshold: ${energyClaimAmount}`)
+      
+      const response = await fetch('/api/energy/claim', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${jwtToken}`,
+        },
+        body: JSON.stringify({ threshold: energyClaimAmount })
+      })
+      
+      const result = await response.json()
+      
+      if (response.ok && result.success) {
+        const totalClaimed = result.energy?.total || 0
+        const claimedRoms = result.energy?.claimed_roms || []
+        
+        setEnergyClaimResults({
+          totalClaimed,
+          claimedRoms
+        })
+        
+        if (totalClaimed > 0) {
+          setEnergyClaimMessage(`✅ Successfully claimed ${totalClaimed} energy from ${claimedRoms.length} ROMs!`)
+          // Refresh energy data to show updated amounts
+          fetchEnergyData()
+        } else {
+          setEnergyClaimMessage('ℹ️ No energy was claimed. ROMs might already be empty or below threshold.')
+        }
+      } else {
+        const errorMsg = result.error || result.details || 'Failed to claim energy'
+        setEnergyClaimMessage(`❌ ${errorMsg}`)
+        console.error('Energy claim failed:', result)
+      }
+      
+    } catch (error) {
+      console.error('Error claiming energy:', error)
+      setEnergyClaimMessage('❌ Error claiming energy. Please try again.')
+    } finally {
+      setEnergyClaimLoading(false)
+      // Clear message after 10 seconds
+      setTimeout(() => {
+        setEnergyClaimMessage('')
+      }, 10000)
+    }
   }
 
   const stations = [
@@ -1526,65 +1584,60 @@ export default function GigaverseDashboard() {
                </div>
              </div>
 
-             {/* Energy Claim Slider */}
+             {/* Energy Claim Threshold */}
              <div className="mb-6">
                <div className="flex justify-between items-center mb-3">
-                 <label className="text-cyan-400 font-mono text-sm font-semibold">CLAIM AMOUNT</label>
+                 <label className="text-cyan-400 font-mono text-sm font-semibold">ENERGY THRESHOLD</label>
                  <span className="text-yellow-400 font-mono text-lg font-bold">
-                   +{Math.round(energyClaimAmount)}
+                   {Math.round(energyClaimAmount)}
                  </span>
                </div>
                
-               {/* Custom Slider */}
+               {/* Custom Input */}
                <div className="relative">
                  <input
-                   type="range"
-                   min="0"
-                   max={energyData ? Math.min(energyData.maxEnergy - energyData.currentEnergy, energyData.maxEnergy * 0.5) : 0}
+                   type="number"
+                   min="10"
+                   max="1000"
+                   step="10"
                    value={energyClaimAmount}
                    onChange={(e) => setEnergyClaimAmount(Number(e.target.value))}
-                   className="w-full h-2 bg-gray-800 rounded-lg appearance-none cursor-pointer slider-cyan"
-                 />
-                 
-                 {/* Slider track decoration */}
-                 <div className="absolute top-1/2 left-0 w-full h-1 bg-gradient-to-r from-cyan-600/30 to-yellow-400/30 rounded-full pointer-events-none transform -translate-y-1/2" />
-                 
-                 {/* Slider fill */}
-                 <motion.div
-                   className="absolute top-1/2 left-0 h-1 bg-gradient-to-r from-cyan-400 to-yellow-400 rounded-full pointer-events-none transform -translate-y-1/2"
-                   animate={{
-                     width: energyData ? `${(energyClaimAmount / Math.min(energyData.maxEnergy - energyData.currentEnergy, energyData.maxEnergy * 0.5)) * 100}%` : '0%'
-                   }}
+                   className="w-full bg-gray-800 border border-cyan-400/30 rounded-lg px-4 py-3 text-white font-mono text-center text-lg focus:border-cyan-400 focus:outline-none"
+                   disabled={energyClaimLoading}
                  />
                </div>
                
-               {/* Slider Labels */}
+               {/* Input Labels */}
                <div className="flex justify-between mt-2 text-xs font-mono text-gray-400">
-                 <span>0</span>
-                 <span className="text-cyan-400">
-                   MAX: {energyData ? Math.round(Math.min(energyData.maxEnergy - energyData.currentEnergy, energyData.maxEnergy * 0.5)) : 0}
-                 </span>
+                 <span>Min: 10</span>
+                 <span className="text-cyan-400">Stop claiming when this amount is reached</span>
+                 <span>Max: 1000</span>
                </div>
              </div>
 
-             {/* Preview Stats */}
-             <div className="bg-cyan-400/10 rounded-lg p-4 mb-6 border border-cyan-400/30">
-               <div className="text-center">
-                 <div className="text-cyan-400 font-mono text-xs uppercase mb-1">After Claim</div>
-                 <div className="text-white font-mono text-xl font-bold">
-                   {energyData ? Math.round(energyData.currentEnergy + energyClaimAmount) : 0}
-                   <span className="text-gray-400 text-sm"> / {energyData?.maxEnergy || 0}</span>
-                 </div>
-                 <div className="mt-2 h-2 bg-gray-800 rounded-full overflow-hidden">
-                   <motion.div
-                     className="h-full bg-gradient-to-r from-green-500 to-cyan-300"
-                     animate={{
-                       width: energyData ? `${((energyData.currentEnergy + energyClaimAmount) / energyData.maxEnergy) * 100}%` : '0%'
-                     }}
-                   />
+             {/* Claim Results */}
+             {energyClaimResults && (
+               <div className="bg-green-400/10 rounded-lg p-4 mb-6 border border-green-400/30">
+                 <div className="text-center">
+                   <div className="text-green-400 font-mono text-xs uppercase mb-1">Claim Results</div>
+                   <div className="text-white font-mono text-xl font-bold mb-2">
+                     +{energyClaimResults.totalClaimed} Energy
+                   </div>
+                   <div className="text-sm text-gray-300 font-mono">
+                     From {energyClaimResults.claimedRoms.length} ROM{energyClaimResults.claimedRoms.length !== 1 ? 's' : ''}
+                   </div>
                  </div>
                </div>
-             </div>
+             )}
+
+             {/* Status Message */}
+             {energyClaimMessage && (
+               <div className="bg-gray-900/50 rounded-lg p-3 mb-6 border border-gray-600/30">
+                 <div className="text-center text-sm font-mono text-gray-300">
+                   {energyClaimMessage}
+                 </div>
+               </div>
+             )}
 
              {/* Action Buttons */}
              <div className="flex space-x-3">
@@ -1592,6 +1645,7 @@ export default function GigaverseDashboard() {
                  onClick={() => setShowEnergyClaimModal(false)}
                  variant="secondary"
                  className="flex-1"
+                 disabled={energyClaimLoading}
                >
                  CANCEL
                </RefinedButton>
@@ -1599,17 +1653,26 @@ export default function GigaverseDashboard() {
                  onClick={handleEnergyClaim}
                  variant="primary"
                  className="flex-1"
-                 disabled={energyClaimAmount <= 0}
+                 disabled={energyClaimAmount <= 0 || energyClaimLoading}
                  goldHover={true}
                >
                  <div className="flex items-center justify-center space-x-2">
-                   <span>CLAIM</span>
-                   <motion.div
-                     animate={{ scale: [1, 1.2, 1] }}
-                     transition={{ duration: 1, repeat: Infinity }}
-                   >
-                     ⚡
-                   </motion.div>
+                   {energyClaimLoading ? (
+                     <>
+                       <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                       <span>CLAIMING...</span>
+                     </>
+                   ) : (
+                     <>
+                       <span>CLAIM</span>
+                       <motion.div
+                         animate={{ scale: [1, 1.2, 1] }}
+                         transition={{ duration: 1, repeat: Infinity }}
+                       >
+                         ⚡
+                       </motion.div>
+                     </>
+                   )}
                  </div>
                </RefinedButton>
              </div>
