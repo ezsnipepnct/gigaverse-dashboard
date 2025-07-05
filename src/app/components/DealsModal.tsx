@@ -87,15 +87,10 @@ const DealsModal: React.FC<DealsModalProps> = ({ onClose }) => {
       // Parse the recipe player data into a lookup object
       const playerDataLookup: Record<string, any> = {}
       data.entities.forEach((entity: any) => {
-        // The docId format is like "Player#Recipe#90077_26_20273"
-        // We need to extract the recipe ID from this
-        const docId = entity.docId
-        if (docId && docId.includes('Recipe#')) {
-          const recipeMatch = docId.match(/Recipe#(\d+)/)
-          if (recipeMatch) {
-            const recipeId = `Recipe#${recipeMatch[1]}`
-            playerDataLookup[recipeId] = entity
-          }
+        // Use ID_CID directly as it contains the recipe ID like "Recipe#90077"
+        const recipeId = entity.ID_CID
+        if (recipeId) {
+          playerDataLookup[recipeId] = entity
         }
       })
       
@@ -155,14 +150,16 @@ const DealsModal: React.FC<DealsModalProps> = ({ onClose }) => {
         
         const dealId = recipe.docId || `deal-${inputItemId}`
         
-        // Get completion data from player data
-        const playerData = playerDataLookup[dealId]
+        // Get completion data from player data using the recipe ID
+        const recipeId = dealId // For deals, the docId is actually the recipe ID
+        const playerData = playerDataLookup[recipeId]
         let timesCompleted = 0
         
         if (playerData) {
           // Use DAY_COUNT_CID for daily deals, WEEK_COUNT_CID for weekly deals
           const isWeekly = recipe.IS_WEEKLY_CID || false
           timesCompleted = isWeekly ? (playerData.WEEK_COUNT_CID || 0) : (playerData.DAY_COUNT_CID || 0)
+          console.log(`Deal ${recipeId}: ${isWeekly ? 'Weekly' : 'Daily'} completions: ${timesCompleted}`)
         }
         
         // Generate deal name in format "input item -> output item"
@@ -537,7 +534,7 @@ const DealsModal: React.FC<DealsModalProps> = ({ onClose }) => {
       case 'error':
         return 'bg-red-400/20 border border-red-400/50 text-red-400'
       default:
-        if (isCompleted) return 'bg-gray-600/20 border border-gray-600/50 text-gray-500 cursor-not-allowed'
+        if (isCompleted) return 'bg-green-400/20 border border-green-400/50 text-green-400 cursor-not-allowed'
         return canAfford
           ? 'bg-cyan-400/20 border border-cyan-400/50 text-cyan-400 hover:bg-cyan-400/30 hover:border-cyan-400'
           : 'bg-gray-600/20 border border-gray-600/50 text-gray-500 cursor-not-allowed'
