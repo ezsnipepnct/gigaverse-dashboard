@@ -17,7 +17,7 @@ import {
   AlertCircle,
   CheckCircle,
   Filter,
-  ArrowUpDown
+  RefreshCw
 } from 'lucide-react'
 import ItemCard from './ItemCard'
 import ItemIcon from './ItemIcon'
@@ -66,7 +66,11 @@ const InventoryModal: React.FC<InventoryModalProps> = ({
   const [sortBy, setSortBy] = useState<'name' | 'quantity' | 'rarity'>('quantity')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const [loading, setLoading] = useState(false)
-  const [viewMode, setViewMode] = useState<'cards' | 'grid'>('cards')
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   // Fetch game items and recipes for context
   useEffect(() => {
@@ -160,16 +164,11 @@ const InventoryModal: React.FC<InventoryModalProps> = ({
 
   const inventoryItems = getInventoryItems()
 
-  // Get unique categories - will be enhanced by real metadata
-  const categories = [
-    { id: 'all', name: 'All Items', icon: Package, count: inventoryItems.length },
-    { id: 'Consumables', name: 'Consumables', icon: Beaker, count: inventoryItems.filter(i => i.category === 'Consumables').length },
-    { id: 'Materials', name: 'Materials', icon: Wrench, count: inventoryItems.filter(i => i.category === 'Materials').length },
-    { id: 'Weapons', name: 'Weapons', icon: Sword, count: inventoryItems.filter(i => i.category === 'Weapons').length },
-    { id: 'Armor', name: 'Armor', icon: Shield, count: inventoryItems.filter(i => i.category === 'Armor').length },
-    { id: 'Gems', name: 'Gems', icon: Gem, count: inventoryItems.filter(i => i.category === 'Gems').length },
-    { id: 'Scrolls', name: 'Scrolls', icon: Scroll, count: inventoryItems.filter(i => i.category === 'Scrolls').length },
-  ].filter(cat => cat.count > 0 || cat.id === 'all')
+  // Get unique categories for dropdown
+  const getUniqueCategories = () => {
+    const categories = new Set(inventoryItems.map(item => item.category))
+    return Array.from(categories)
+  }
 
   // Filter and sort items
   const filteredItems = inventoryItems
@@ -194,35 +193,11 @@ const InventoryModal: React.FC<InventoryModalProps> = ({
       return sortOrder === 'asc' ? comparison : -comparison
     })
 
-  const getRarityColor = (rarity: number) => {
-    switch (rarity) {
-      case 5: return 'text-red-400 border-red-400/50 bg-red-400/10' // Mythic
-      case 4: return 'text-yellow-400 border-yellow-400/50 bg-yellow-400/10' // Legendary
-      case 3: return 'text-purple-400 border-purple-400/50 bg-purple-400/10' // Epic
-      case 2: return 'text-blue-400 border-blue-400/50 bg-blue-400/10' // Rare
-      case 1: return 'text-green-400 border-green-400/50 bg-green-400/10' // Uncommon
-      case 0: 
-      default: return 'text-gray-400 border-gray-400/50 bg-gray-400/10' // Common
-    }
-  }
-
-  const getRarityName = (rarity: number) => {
-    switch (rarity) {
-      case 5: return 'MYTHIC'
-      case 4: return 'LEGENDARY'
-      case 3: return 'EPIC'
-      case 2: return 'RARE'
-      case 1: return 'UNCOMMON'
-      case 0:
-      default: return 'COMMON'
-    }
-  }
-
   const getTotalValue = () => {
     return inventoryItems.reduce((total, item) => total + item.quantity, 0)
   }
 
-  if (!isOpen) return null
+  if (!mounted || !isOpen) return null
 
   return (
     <AnimatePresence>
@@ -230,79 +205,78 @@ const InventoryModal: React.FC<InventoryModalProps> = ({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
         onClick={onClose}
       >
         <motion.div
-          initial={{ scale: 0.95, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          exit={{ scale: 0.95, opacity: 0 }}
-          className="bg-black/90 border border-cyan-400/50 rounded-lg max-w-7xl w-full max-h-[90vh] overflow-hidden"
+          initial={{ scale: 0.8, opacity: 0, y: 50 }}
+          animate={{ scale: 1, opacity: 1, y: 0 }}
+          exit={{ scale: 0.8, opacity: 0, y: 50 }}
+          transition={{ type: 'spring', damping: 20, stiffness: 300 }}
+          className="bg-gradient-to-br from-gray-900/95 to-black/95 border-2 border-cyan-400/50 rounded-xl max-w-[95vw] w-full mx-4 backdrop-blur-md max-h-[95vh] overflow-hidden shadow-2xl shadow-cyan-400/10"
+          style={{
+            backgroundImage: `radial-gradient(circle at 50% 50%, rgba(6, 182, 212, 0.03) 0%, transparent 50%)`
+          }}
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Enhanced Header */}
-          <div className="border-b border-cyan-400/20 p-4 bg-cyan-400/5">
+          {/* Header - Enhanced Style */}
+          <div className="border-b border-cyan-400/20 bg-gradient-to-r from-gray-800/50 to-gray-900/50 p-6">
             <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <Package className="w-6 h-6 text-cyan-400" />
+              <div className="flex items-center space-x-4">
+                <motion.div
+                  animate={{ scale: [1, 1.1, 1] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                  className="inline-flex items-center justify-center w-12 h-12 bg-cyan-400/20 rounded-full"
+                >
+                  <Package className="w-6 h-6 text-cyan-400" />
+                </motion.div>
                 <div>
-                  <h2 className="text-xl font-bold text-cyan-400 font-mono">
-                    ENHANCED INVENTORY
-                  </h2>
-                  <p className="text-cyan-400/70 font-mono text-sm">
-                    {inventoryItems.length} items • {getTotalValue().toLocaleString()} total • With Metadata
+                  <h2 className="text-3xl font-bold font-mono text-transparent bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text mb-1 tracking-wide">INVENTORY</h2>
+                  <p className="text-gray-400 font-mono text-sm tracking-wide">
+                    <span className="text-cyan-400 font-semibold">{inventoryItems.length}</span> items • <span className="text-cyan-400 font-semibold">{getTotalValue().toLocaleString()}</span> total
                   </p>
                 </div>
               </div>
-              <button
-                onClick={onClose}
-                className="p-2 text-gray-400 hover:text-cyan-400 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={onRefreshBalances}
+                  disabled={balancesLoading}
+                  className="p-3 text-gray-400 hover:text-cyan-400 hover:bg-cyan-400/10 rounded-lg transition-all duration-200 border border-transparent hover:border-cyan-400/30"
+                  title="Refresh Data"
+                >
+                  <RefreshCw className={`w-5 h-5 ${balancesLoading ? 'animate-spin' : ''}`} />
+                </button>
+                <button
+                  onClick={onClose}
+                  className="p-3 text-gray-400 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all duration-200 border border-transparent hover:border-red-400/30"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
-          </div>
 
-          {/* Enhanced Controls */}
-          <div className="p-4 border-b border-cyan-400/20 bg-black/20">
-            <div className="flex items-center gap-4">
-              {/* Search */}
+            {/* Search and Filter - Match CraftingStation Style */}
+            <div className="flex items-center space-x-4 mt-4">
               <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <input
                   type="text"
                   placeholder="Search items..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 bg-black/60 border border-cyan-400/30 rounded font-mono text-sm text-white placeholder-gray-500 focus:border-cyan-400 focus:outline-none"
+                  className="w-full pl-10 pr-4 py-2 bg-gray-900/50 border border-cyan-400/20 rounded-lg text-white placeholder-gray-400 focus:border-cyan-400 focus:outline-none transition-colors font-mono text-sm"
                 />
               </div>
-
-              {/* View Mode Toggle */}
-              <div className="flex border border-cyan-400/30 rounded overflow-hidden">
-                <button
-                  onClick={() => setViewMode('cards')}
-                  className={`px-3 py-2 font-mono text-xs transition-colors ${
-                    viewMode === 'cards' 
-                      ? 'bg-cyan-400/20 text-cyan-400' 
-                      : 'text-gray-400 hover:text-cyan-400'
-                  }`}
-                >
-                  CARDS
-                </button>
-                <button
-                  onClick={() => setViewMode('grid')}
-                  className={`px-3 py-2 font-mono text-xs transition-colors border-l border-cyan-400/30 ${
-                    viewMode === 'grid' 
-                      ? 'bg-cyan-400/20 text-cyan-400' 
-                      : 'text-gray-400 hover:text-cyan-400'
-                  }`}
-                >
-                  GRID
-                </button>
-              </div>
-
-              {/* Sort */}
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="px-4 py-2 bg-gray-900/50 border border-cyan-400/20 rounded-lg text-white focus:border-cyan-400 focus:outline-none transition-colors font-mono text-sm"
+              >
+                <option value="all">All Categories</option>
+                {getUniqueCategories().map(category => (
+                  <option key={category} value={category}>{category}</option>
+                ))}
+              </select>
               <select
                 value={`${sortBy}-${sortOrder}`}
                 onChange={(e) => {
@@ -310,7 +284,7 @@ const InventoryModal: React.FC<InventoryModalProps> = ({
                   setSortBy(field as 'name' | 'quantity' | 'rarity')
                   setSortOrder(order as 'asc' | 'desc')
                 }}
-                className="px-3 py-2 bg-black/60 border border-cyan-400/30 rounded font-mono text-sm text-white focus:border-cyan-400 focus:outline-none"
+                className="px-4 py-2 bg-gray-900/50 border border-cyan-400/20 rounded-lg text-white focus:border-cyan-400 focus:outline-none transition-colors font-mono text-sm"
               >
                 <option value="quantity-desc">Quantity ↓</option>
                 <option value="quantity-asc">Quantity ↑</option>
@@ -319,135 +293,82 @@ const InventoryModal: React.FC<InventoryModalProps> = ({
                 <option value="rarity-desc">Rarity ↓</option>
                 <option value="rarity-asc">Rarity ↑</option>
               </select>
-
-              {/* Refresh */}
-              <button
-                onClick={onRefreshBalances}
-                disabled={balancesLoading}
-                className="p-2 bg-cyan-400/20 border border-cyan-400/50 rounded text-cyan-400 hover:bg-cyan-400/30 transition-colors disabled:opacity-50 font-mono text-sm"
-                title="Refresh"
-              >
-                <Package className={`w-4 h-4 ${balancesLoading ? 'animate-spin' : ''}`} />
-              </button>
             </div>
           </div>
 
-          <div className="flex h-[calc(90vh-180px)]">
-            {/* Compact Category Sidebar */}
-            <div className="w-48 border-r border-cyan-400/20 bg-black/10 p-3">
-              <h3 className="text-sm font-bold text-cyan-400 font-mono mb-3">CATEGORIES</h3>
-              <div className="space-y-1">
-                {categories.map(category => {
-                  const Icon = category.icon
-                  const isSelected = selectedCategory === category.id
-                  
-                  return (
-                    <button
-                      key={category.id}
-                      onClick={() => setSelectedCategory(category.id)}
-                      className={`
-                        w-full p-2 rounded border transition-all duration-200 font-mono text-left text-sm
-                        ${isSelected 
-                          ? 'border-cyan-400 bg-cyan-400/10 text-cyan-400' 
-                          : 'border-transparent hover:border-cyan-400/30 text-gray-400 hover:text-cyan-400'
-                        }
-                      `}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-2">
-                          <Icon className="w-4 h-4" />
-                          <span className="truncate">{category.name}</span>
-                        </div>
-                        <span className="text-xs bg-gray-700/50 px-1.5 py-0.5 rounded">
-                          {category.count}
-                        </span>
-                      </div>
-                    </button>
-                  )
-                })}
+          {/* Main Content - Grid View Only */}
+          <div className="p-6 overflow-y-auto max-h-[calc(95vh-220px)]">
+            {loading ? (
+              <div className="flex items-center justify-center h-64">
+                <div className="text-center">
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+                    className="w-16 h-16 border-3 border-cyan-400/20 border-t-cyan-400 rounded-full mx-auto mb-4 shadow-lg"
+                  />
+                  <p className="text-cyan-400 font-mono text-lg font-semibold tracking-wide">LOADING INVENTORY...</p>
+                  <p className="text-gray-500 font-mono text-sm mt-2">Fetching your items</p>
+                </div>
               </div>
-            </div>
-
-            {/* Enhanced Items Display */}
-            <div className="flex-1 p-4 overflow-y-auto">
-              {loading ? (
-                <div className="flex items-center justify-center h-64">
-                  <div className="text-center">
-                    <motion.div
-                      animate={{ rotate: 360 }}
-                      transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
-                      className="w-12 h-12 border-2 border-cyan-400/30 border-t-cyan-400 rounded-full mx-auto mb-3"
-                    />
-                    <p className="text-cyan-400 font-mono text-sm">LOADING METADATA...</p>
-                  </div>
-                </div>
-              ) : (
-                <>
-                  {viewMode === 'cards' ? (
-                    // Enhanced Card View with real metadata
-                    <div className="space-y-3">
-                      {filteredItems.map(item => (
-                        <ItemCard
-                          key={item.id}
-                          itemId={parseInt(item.id)}
-                          quantity={item.quantity}
-                          showDescription
-                          onClick={(itemMetadata) => {
-                            if (itemMetadata) {
-                              console.log('Item clicked:', itemMetadata)
-                              // Could open detailed item modal here
-                            }
-                          }}
-                        />
-                      ))}
-                    </div>
-                  ) : (
-                    // Enhanced Grid View with tooltips
-                    <div className="grid grid-cols-8 md:grid-cols-10 lg:grid-cols-12 xl:grid-cols-16 gap-3">
-                      {filteredItems.map(item => (
-                        <ItemTooltip key={item.id} itemId={parseInt(item.id)} position="top">
-                          <div className="relative">
-                            <ItemIcon
-                              itemId={parseInt(item.id)}
-                              size="medium"
-                              showRarity
-                              onClick={(itemMetadata) => {
-                                if (itemMetadata) {
-                                  console.log('Item clicked:', itemMetadata)
-                                }
-                              }}
-                            />
-                            {/* Quantity overlay */}
-                            <div className="absolute -bottom-1 -right-1 bg-cyan-500 text-white text-xs font-bold rounded px-1 min-w-[16px] text-center">
-                              {item.quantity > 999 ? `${Math.floor(item.quantity / 1000)}k` : item.quantity}
+            ) : (
+              <>
+                {filteredItems.length > 0 ? (
+                  <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-12 xl:grid-cols-14 2xl:grid-cols-16 gap-4">
+                    {filteredItems.map(item => (
+                      <ItemTooltip key={item.id} itemId={parseInt(item.id)} position="top">
+                        <div className="group">
+                          {/* Item Card Container */}
+                          <div className="bg-gray-900/40 border border-gray-700/50 rounded-lg p-3 hover:bg-gray-800/60 hover:border-cyan-400/40 transition-all duration-200 hover:shadow-lg hover:shadow-cyan-400/10">
+                            {/* Icon Container */}
+                            <div className="relative flex justify-center mb-2">
+                              <ItemIcon
+                                itemId={parseInt(item.id)}
+                                size="large"
+                                showRarity
+                                onClick={(itemMetadata) => {
+                                  if (itemMetadata) {
+                                    console.log('Item clicked:', itemMetadata)
+                                  }
+                                }}
+                                className="transition-transform duration-200 group-hover:scale-110"
+                              />
+                              {/* Crafting indicator */}
+                              {item.canCraft && (
+                                <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full border border-gray-800 shadow-sm" />
+                              )}
                             </div>
-                            {/* Crafting indicator */}
-                            {item.canCraft && (
-                              <div className="absolute -top-1 -left-1 w-3 h-3 bg-green-400 rounded-full border border-gray-800" />
-                            )}
+                            
+                            {/* Quantity Badge */}
+                            <div className="flex justify-center">
+                              <div className="bg-gradient-to-r from-cyan-500 to-blue-500 text-white text-xs font-bold rounded-full px-2 py-1 min-w-[24px] text-center shadow-sm">
+                                {item.quantity > 999 ? `${Math.floor(item.quantity / 1000)}k` : item.quantity}
+                              </div>
+                            </div>
                           </div>
-                        </ItemTooltip>
-                      ))}
+                        </div>
+                      </ItemTooltip>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-20">
+                    <div className="bg-gray-800/30 rounded-full p-6 w-24 h-24 mx-auto mb-6 border border-gray-700/50">
+                      <Package className="w-12 h-12 text-gray-500 mx-auto" />
                     </div>
-                  )}
-                </>
-              )}
-
-              {!loading && filteredItems.length === 0 && (
-                <div className="text-center py-16">
-                  <Package className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-                  <p className="text-gray-400 font-mono">No items found</p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Enhanced Info Footer */}
-          <div className="border-t border-cyan-400/20 p-3 bg-black/20">
-            <div className="flex items-center justify-between text-xs font-mono text-gray-400">
-              <span>Enhanced with Gigaverse Metadata API</span>
-              <span>Hover items in grid mode for detailed tooltips</span>
-            </div>
+                    <p className="text-gray-400 font-mono text-lg font-semibold mb-2">No items found</p>
+                    {searchTerm && (
+                      <p className="text-gray-500 font-mono text-sm">
+                        Try adjusting your search or category filter
+                      </p>
+                    )}
+                    {!searchTerm && selectedCategory === 'all' && (
+                      <p className="text-gray-500 font-mono text-sm">
+                        Your inventory appears to be empty
+                      </p>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
           </div>
         </motion.div>
       </motion.div>
