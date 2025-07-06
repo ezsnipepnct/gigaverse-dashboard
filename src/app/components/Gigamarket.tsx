@@ -44,11 +44,14 @@ import {
   Copy,
   Check,
   Maximize2,
-  Minimize2
+  Minimize2,
+  Plus
 } from 'lucide-react'
 import { itemMetadataService } from '@/app/services/itemMetadata'
 import ItemIcon from './ItemIcon'
 import ItemTooltip from './ItemTooltip'
+import WalletConnect from '@/components/WalletConnect'
+import CreateListingModal from '@/components/CreateListingModal'
 
 interface GigamarketProps {
   isOpen: boolean
@@ -117,6 +120,8 @@ const Gigamarket: React.FC<GigamarketProps> = ({ isOpen, onClose }) => {
   const [showUsdPrices, setShowUsdPrices] = useState(false)
   const [ethPrice, setEthPrice] = useState<number>(0)
   const [lastCurrencyMode, setLastCurrencyMode] = useState<'eth' | 'usd'>('eth')
+  const [showCreateListingModal, setShowCreateListingModal] = useState(false)
+  const [itemToList, setItemToList] = useState<any>(null)
 
   // Fetch ETH price from CoinGecko API
   useEffect(() => {
@@ -462,9 +467,31 @@ const Gigamarket: React.FC<GigamarketProps> = ({ isOpen, onClose }) => {
     return Math.ceil(filteredData.length / itemsPerPage)
   }
 
+  // Handle opening the create listing modal
+  const handleCreateListing = (item: MarketItem) => {
+    setItemToList({
+      id: item.GAME_ITEM_ID_CID,
+      name: item.name || `Item #${item.GAME_ITEM_ID_CID}`,
+      quantity: 1, // Default quantity - could be dynamic based on inventory
+      image: item.imageUrl,
+      rarity: item.rarity
+    })
+    setShowCreateListingModal(true)
+  }
+
+  // Handle successful listing creation
+  const handleListingCreated = (listingData: any) => {
+    console.log('Listing created:', listingData)
+    // Could add toast notification here
+    // Could refresh marketplace data here
+    setShowCreateListingModal(false)
+    setItemToList(null)
+  }
+
   return (
-    <AnimatePresence>
-      {isOpen && (
+    <>
+      <AnimatePresence>
+        {isOpen && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -493,12 +520,15 @@ const Gigamarket: React.FC<GigamarketProps> = ({ isOpen, onClose }) => {
                     </p>
                   </div>
                 </div>
-                <button
-                  onClick={onClose}
-                  className="p-2 text-gray-400 hover:text-cyan-400 transition-colors"
-                >
-                  <X className="w-5 h-5" />
-                </button>
+                <div className="flex items-center space-x-3">
+                  <WalletConnect className="font-mono text-sm" />
+                  <button
+                    onClick={onClose}
+                    className="p-2 text-gray-400 hover:text-cyan-400 transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -861,12 +891,24 @@ const Gigamarket: React.FC<GigamarketProps> = ({ isOpen, onClose }) => {
                               </div>
                             </div>
                             
-                            {item.available && (
-                              <button className="w-full mt-2 px-3 py-2 bg-gradient-to-r from-green-400/20 to-emerald-400/20 border border-green-400/50 rounded-lg font-mono text-sm text-green-400 hover:bg-gradient-to-r hover:from-green-400/30 hover:to-emerald-400/30 hover:scale-105 transition-all duration-200">
-                                <ShoppingCart className="w-4 h-4 inline mr-2" />
-                                BUY NOW
+                            <div className="flex flex-col space-y-2 mt-2">
+                              {item.available && (
+                                <button className="w-full px-3 py-2 bg-gradient-to-r from-green-400/20 to-emerald-400/20 border border-green-400/50 rounded-lg font-mono text-sm text-green-400 hover:bg-gradient-to-r hover:from-green-400/30 hover:to-emerald-400/30 hover:scale-105 transition-all duration-200">
+                                  <ShoppingCart className="w-4 h-4 inline mr-2" />
+                                  BUY NOW
+                                </button>
+                              )}
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleCreateListing(item)
+                                }}
+                                className="w-full px-3 py-2 bg-gradient-to-r from-cyan-400/20 to-blue-400/20 border border-cyan-400/50 rounded-lg font-mono text-sm text-cyan-400 hover:bg-gradient-to-r hover:from-cyan-400/30 hover:to-blue-400/30 hover:scale-105 transition-all duration-200"
+                              >
+                                <Plus className="w-4 h-4 inline mr-2" />
+                                CREATE LISTING
                               </button>
-                            )}
+                            </div>
                           </>
                         ) : (
                           <>
@@ -964,6 +1006,16 @@ const Gigamarket: React.FC<GigamarketProps> = ({ isOpen, onClose }) => {
                                         BUY NOW
                                       </button>
                                     )}
+                                    <button 
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        handleCreateListing(item)
+                                      }}
+                                      className="px-4 py-2 bg-cyan-400/20 border border-cyan-400/50 rounded font-mono text-sm text-cyan-400 hover:bg-cyan-400/30 transition-colors"
+                                    >
+                                      <Plus className="w-4 h-4 inline mr-2" />
+                                      CREATE LISTING
+                                    </button>
                                   </div>
                                 </div>
                               </div>
@@ -1342,6 +1394,20 @@ const Gigamarket: React.FC<GigamarketProps> = ({ isOpen, onClose }) => {
         </motion.div>
       )}
     </AnimatePresence>
+
+    {/* Create Listing Modal */}
+    {showCreateListingModal && itemToList && (
+      <CreateListingModal
+        isOpen={showCreateListingModal}
+        onClose={() => {
+          setShowCreateListingModal(false)
+          setItemToList(null)
+        }}
+        item={itemToList}
+        onListingCreated={handleListingCreated}
+      />
+    )}
+    </>
   )
 }
 
