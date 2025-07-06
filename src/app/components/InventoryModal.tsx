@@ -22,6 +22,7 @@ import {
 import ItemCard from './ItemCard'
 import ItemIcon from './ItemIcon'
 import ItemTooltip from './ItemTooltip'
+import { itemMetadataService } from '../services/itemMetadata'
 
 interface InventoryModalProps {
   isOpen: boolean
@@ -40,6 +41,7 @@ interface InventoryItem {
   description?: string
   usedInRecipes?: string[]
   canCraft?: boolean
+  soulbound?: boolean
 }
 
 const WALLET_ADDRESS = "0xb0d90D52C7389824D4B22c06bcdcCD734E3162b7"
@@ -61,9 +63,10 @@ const InventoryModal: React.FC<InventoryModalProps> = ({
 }) => {
   const [gameItems, setGameItems] = useState<any[]>([])
   const [recipes, setRecipes] = useState<any[]>([])
+  const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([])
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [searchTerm, setSearchTerm] = useState('')
-  const [sortBy, setSortBy] = useState<'name' | 'quantity' | 'rarity'>('quantity')
+  const [sortBy, setSortBy] = useState<'name' | 'quantity' | 'rarity'>('rarity')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const [loading, setLoading] = useState(false)
   const [mounted, setMounted] = useState(false)
@@ -78,6 +81,25 @@ const InventoryModal: React.FC<InventoryModalProps> = ({
       fetchGameData()
     }
   }, [isOpen])
+
+  // Load inventory items when game data or player balances change
+  useEffect(() => {
+    if (gameItems.length > 0 && Object.keys(playerBalances).length > 0) {
+      loadInventoryItems()
+    }
+  }, [gameItems, recipes, playerBalances])
+
+  const loadInventoryItems = async () => {
+    try {
+      setLoading(true)
+      const items = await getInventoryItems()
+      setInventoryItems(items)
+    } catch (error) {
+      console.error('Failed to load inventory items:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const fetchGameData = async () => {
     try {
@@ -103,10 +125,10 @@ const InventoryModal: React.FC<InventoryModalProps> = ({
   }
 
   // Transform player balances into inventory items with enhanced metadata support
-  const getInventoryItems = (): InventoryItem[] => {
+  const getInventoryItems = async (): Promise<InventoryItem[]> => {
     const items: InventoryItem[] = []
     
-    Object.entries(playerBalances).forEach(([itemId, quantity]) => {
+    for (const [itemId, quantity] of Object.entries(playerBalances)) {
       if (quantity > 0) {
         const gameItem = gameItems.find(item => item.docId === itemId)
         const itemName = gameItem?.NAME_CID || `Item #${itemId}`
@@ -127,18 +149,34 @@ const InventoryModal: React.FC<InventoryModalProps> = ({
 
         // Basic rarity fallback (will be overridden by real metadata)
         let rarity = 0
-        if (quantity >= 10000) {
-          rarity = 0 // Common
-        } else if (quantity >= 2000) {
-          rarity = 1 // Uncommon
-        } else if (quantity >= 500) {
-          rarity = 2 // Rare
-        } else if (quantity >= 100) {
-          rarity = 3 // Epic
-        } else if (quantity >= 20) {
-          rarity = 4 // Legendary
-        } else {
-          rarity = 0 // Common
+        let soulbound = false
+        let description = gameItem?.DESCRIPTION_CID || `A valuable ${category.toLowerCase().slice(0, -1)}`
+        
+        // Fetch real metadata from the service
+        try {
+          const metadata = await itemMetadataService.getItem(parseInt(itemId))
+          if (metadata) {
+            rarity = metadata.rarity
+            soulbound = metadata.soulbound
+            description = metadata.description || description
+            category = metadata.category || category
+          }
+        } catch (error) {
+          console.warn(`Failed to fetch metadata for item ${itemId}:`, error)
+          // Use fallback values
+          if (quantity >= 10000) {
+            rarity = 0 // Common
+          } else if (quantity >= 2000) {
+            rarity = 1 // Uncommon
+          } else if (quantity >= 500) {
+            rarity = 2 // Rare
+          } else if (quantity >= 100) {
+            rarity = 3 // Epic
+          } else if (quantity >= 20) {
+            rarity = 4 // Legendary
+          } else {
+            rarity = 0 // Common
+          }
         }
 
         // Check if used in recipes
@@ -152,17 +190,16 @@ const InventoryModal: React.FC<InventoryModalProps> = ({
           quantity,
           category,
           rarity,
-          description: gameItem?.DESCRIPTION_CID || `A valuable ${category.toLowerCase().slice(0, -1)}`,
+          description,
           usedInRecipes,
-          canCraft: usedInRecipes.length > 0
+          canCraft: usedInRecipes.length > 0,
+          soulbound
         })
       }
-    })
+    }
 
     return items
   }
-
-  const inventoryItems = getInventoryItems()
 
   // Get unique categories for dropdown
   const getUniqueCategories = () => {
@@ -170,10 +207,31 @@ const InventoryModal: React.FC<InventoryModalProps> = ({
     return Array.from(categories)
   }
 
+  // Get filter options including soulbound
+  const getFilterOptions = () => {
+    const categories = getUniqueCategories()
+    const options = [
+      { value: 'all', label: 'All Categories' },
+      ...categories.map(cat => ({ value: cat, label: cat })),
+      { value: 'soulbound', label: 'Soulbound Items' },
+      { value: 'tradeable', label: 'Tradeable Items' }
+    ]
+    return options
+  }
+
   // Filter and sort items
   const filteredItems = inventoryItems
     .filter(item => {
-      const matchesCategory = selectedCategory === 'all' || item.category === selectedCategory
+      let matchesCategory = true
+      
+      if (selectedCategory === 'soulbound') {
+        matchesCategory = item.soulbound === true
+      } else if (selectedCategory === 'tradeable') {
+        matchesCategory = item.soulbound === false
+      } else if (selectedCategory !== 'all') {
+        matchesCategory = item.category === selectedCategory
+      }
+      
       const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase())
       return matchesCategory && matchesSearch
     })
@@ -272,9 +330,8 @@ const InventoryModal: React.FC<InventoryModalProps> = ({
                 onChange={(e) => setSelectedCategory(e.target.value)}
                 className="px-4 py-2 bg-gray-900/50 border border-cyan-400/20 rounded-lg text-white focus:border-cyan-400 focus:outline-none transition-colors font-mono text-sm"
               >
-                <option value="all">All Categories</option>
-                {getUniqueCategories().map(category => (
-                  <option key={category} value={category}>{category}</option>
+                {getFilterOptions().map(option => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
                 ))}
               </select>
               <select
@@ -286,12 +343,12 @@ const InventoryModal: React.FC<InventoryModalProps> = ({
                 }}
                 className="px-4 py-2 bg-gray-900/50 border border-cyan-400/20 rounded-lg text-white focus:border-cyan-400 focus:outline-none transition-colors font-mono text-sm"
               >
+                <option value="rarity-desc">Rarity ↓</option>
+                <option value="rarity-asc">Rarity ↑</option>
                 <option value="quantity-desc">Quantity ↓</option>
                 <option value="quantity-asc">Quantity ↑</option>
                 <option value="name-asc">Name A-Z</option>
                 <option value="name-desc">Name Z-A</option>
-                <option value="rarity-desc">Rarity ↓</option>
-                <option value="rarity-asc">Rarity ↑</option>
               </select>
             </div>
           </div>
