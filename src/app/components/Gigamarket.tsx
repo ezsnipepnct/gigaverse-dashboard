@@ -765,7 +765,7 @@ const Gigamarket: React.FC<GigamarketProps> = ({ isOpen, onClose }) => {
                              </div>
 
                             {/* Item Image - Enhanced Container */}
-                            <div className={`relative w-full h-20 mb-4 flex items-center justify-center bg-black/30 border border-${rarityStyle.border}/30 rounded-lg overflow-hidden group-hover:border-${rarityStyle.border}/50 transition-all duration-300`}>
+                            <div className={`relative w-full h-16 mb-3 flex items-center justify-center bg-black/30 border border-${rarityStyle.border}/30 rounded-lg overflow-hidden group-hover:border-${rarityStyle.border}/50 transition-all duration-300`}>
                               <ItemTooltip itemId={item.GAME_ITEM_ID_CID} position="right">
                                 <ItemIcon 
                                   itemId={item.GAME_ITEM_ID_CID}
@@ -779,31 +779,11 @@ const Gigamarket: React.FC<GigamarketProps> = ({ isOpen, onClose }) => {
                             </div>
 
                             {/* Item Name - Enhanced Typography */}
-                            <h4 className={`font-bold font-mono text-white mb-3 text-${rarityStyle.border.replace('border-', '')} group-hover:text-${rarityStyle.border.replace('border-', '')} transition-colors text-sm leading-tight`}>
+                            <h4 className={`font-bold font-mono text-white mb-2 text-${rarityStyle.border.replace('border-', '')} group-hover:text-${rarityStyle.border.replace('border-', '')} transition-colors text-sm leading-tight`}>
                               {item.name}
                             </h4>
 
-                            {/* Stats Preview - Enhanced Grid */}
-                            {item.stats && (
-                              <div className="grid grid-cols-2 gap-2 mb-4">
-                                <div className={`flex items-center space-x-2 p-2 bg-black/20 border border-red-400/30 rounded`}>
-                                  <Sword className="w-3 h-3 text-red-400" />
-                                  <span className="text-xs font-mono text-gray-300 font-semibold">{item.stats.attack}</span>
-                                </div>
-                                <div className={`flex items-center space-x-2 p-2 bg-black/20 border border-blue-400/30 rounded`}>
-                                  <Shield className="w-3 h-3 text-blue-400" />
-                                  <span className="text-xs font-mono text-gray-300 font-semibold">{item.stats.defense}</span>
-                                </div>
-                                <div className={`flex items-center space-x-2 p-2 bg-black/20 border border-yellow-400/30 rounded`}>
-                                  <Zap className="w-3 h-3 text-yellow-400" />
-                                  <span className="text-xs font-mono text-gray-300 font-semibold">{item.stats.speed}</span>
-                                </div>
-                                <div className={`flex items-center space-x-2 p-2 bg-black/20 border border-purple-400/30 rounded`}>
-                                  <Sparkles className="w-3 h-3 text-purple-400" />
-                                  <span className="text-xs font-mono text-gray-300 font-semibold">{item.stats.magic}</span>
-                                </div>
-                              </div>
-                            )}
+
 
                             {/* Price Section - Enhanced Design */}
                             <div className="mb-4">
@@ -926,20 +906,6 @@ const Gigamarket: React.FC<GigamarketProps> = ({ isOpen, onClose }) => {
                                 </div>
 
                                 <div className="flex items-center space-x-6">
-                                  {/* Stats */}
-                                  {item.stats && (
-                                    <div className="flex items-center space-x-4">
-                                      <div className="flex items-center space-x-1">
-                                        <Sword className="w-4 h-4 text-red-400" />
-                                        <span className="text-sm font-mono text-gray-400">{item.stats.attack}</span>
-                                      </div>
-                                      <div className="flex items-center space-x-1">
-                                        <Shield className="w-4 h-4 text-blue-400" />
-                                        <span className="text-sm font-mono text-gray-400">{item.stats.defense}</span>
-                                      </div>
-                                    </div>
-                                  )}
-
                                   {/* Price */}
                                   <div className="text-right">
                                     <div className="flex items-center space-x-2">
