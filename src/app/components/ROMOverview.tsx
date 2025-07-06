@@ -137,28 +137,53 @@ const ROMOverview: React.FC<ROMOverviewProps> = ({ isOpen, onClose }) => {
     }
   }
 
-  const getRarityColor = (rarity: string) => {
-    switch (rarity.toLowerCase()) {
-      case 'mythic': return 'text-red-400 border-red-400 bg-red-400/10'
-      case 'legendary': return 'text-yellow-400 border-yellow-400 bg-yellow-400/10'
-      case 'epic': return 'text-purple-400 border-purple-400 bg-purple-400/10'
-      case 'rare': return 'text-blue-400 border-blue-400 bg-blue-400/10'
-      case 'uncommon': return 'text-green-400 border-green-400 bg-green-400/10'
-      default: return 'text-gray-400 border-gray-400 bg-gray-400/10'
-    }
-  }
-
-  const getTierIcon = (tier: string) => {
+  const getTierStyling = (tier: string) => {
     switch (tier.toLowerCase()) {
-      case 'diamond':
-      case 'mythic': return <Award className="w-4 h-4 text-red-400" />
+      case 'giga':
+        return {
+          cardClass: 'bg-gradient-to-br from-purple-500/20 via-pink-500/20 to-cyan-500/20 border-2 border-purple-400/50 shadow-lg shadow-purple-400/20',
+          hoverClass: 'hover:border-purple-400/80 hover:shadow-purple-400/40 hover:scale-105',
+          textColor: 'text-purple-400',
+          badgeClass: 'bg-gradient-to-r from-purple-500/30 to-pink-500/30 border-purple-400/50 text-purple-300 font-bold shadow-lg',
+          icon: <Award className="w-4 h-4 text-purple-400" />,
+          accentColor: 'purple-400'
+        }
+      case 'void':
+        return {
+          cardClass: 'bg-gradient-to-br from-gray-800/50 to-black/50 border-2 border-gray-600/50 shadow-lg shadow-gray-600/20',
+          hoverClass: 'hover:border-gray-400/80 hover:shadow-gray-400/40 hover:scale-105',
+          textColor: 'text-gray-300',
+          badgeClass: 'bg-gradient-to-r from-gray-700/50 to-gray-900/50 border-gray-500/50 text-gray-300 font-bold shadow-lg',
+          icon: <Gem className="w-4 h-4 text-gray-400" />,
+          accentColor: 'gray-400'
+        }
       case 'gold':
-      case 'legendary': return <Star className="w-4 h-4 text-yellow-400" />
+        return {
+          cardClass: 'bg-gradient-to-br from-yellow-500/20 to-amber-600/20 border-2 border-yellow-400/50 shadow-lg shadow-yellow-400/20',
+          hoverClass: 'hover:border-yellow-400/80 hover:shadow-yellow-400/40 hover:scale-105',
+          textColor: 'text-yellow-400',
+          badgeClass: 'bg-gradient-to-r from-yellow-500/30 to-amber-500/30 border-yellow-400/50 text-yellow-300 font-bold shadow-lg',
+          icon: <Star className="w-4 h-4 text-yellow-400" />,
+          accentColor: 'yellow-400'
+        }
       case 'silver':
-      case 'epic': return <Gem className="w-4 h-4 text-purple-400" />
-      case 'bronze':
-      case 'rare': return <Sparkles className="w-4 h-4 text-blue-400" />
-      default: return <Package className="w-4 h-4 text-gray-400" />
+        return {
+          cardClass: 'bg-gradient-to-br from-slate-400/20 to-gray-500/20 border-2 border-slate-400/50 shadow-lg shadow-slate-400/20',
+          hoverClass: 'hover:border-slate-400/80 hover:shadow-slate-400/40 hover:scale-105',
+          textColor: 'text-slate-300',
+          badgeClass: 'bg-gradient-to-r from-slate-500/30 to-gray-500/30 border-slate-400/50 text-slate-300 font-bold shadow-lg',
+          icon: <Sparkles className="w-4 h-4 text-slate-400" />,
+          accentColor: 'slate-400'
+        }
+      default:
+        return {
+          cardClass: 'bg-gradient-to-br from-gray-500/20 to-gray-600/20 border border-gray-500/30 shadow-md',
+          hoverClass: 'hover:border-gray-500/50 hover:shadow-gray-500/30 hover:scale-102',
+          textColor: 'text-gray-400',
+          badgeClass: 'bg-gray-600/30 border-gray-500/50 text-gray-400',
+          icon: <Package className="w-4 h-4 text-gray-400" />,
+          accentColor: 'gray-400'
+        }
     }
   }
 
@@ -431,99 +456,139 @@ const ROMOverview: React.FC<ROMOverviewProps> = ({ isOpen, onClose }) => {
                         </p>
                       </div>
                     ) : (
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                        {roms.map((rom) => (
-                          <motion.div
-                            key={rom.romId}
-                            whileHover={{ scale: 1.02 }}
-                            className="bg-black/40 border border-cyan-400/30 p-3 rounded hover:border-cyan-400/50 transition-all duration-200"
-                          >
-                            {/* ROM Header */}
-                            <div className="flex items-center justify-between mb-2">
-                              <div className="flex items-center space-x-2">
-                                {getTierIcon(rom.tier)}
-                                <span className="font-mono text-sm text-gray-300">
-                                  ROM #{rom.romId}
-                                </span>
-                              </div>
-                              <span className={`px-2 py-1 text-xs font-mono border rounded ${getRarityColor(rom.tier)}`}>
-                                {rom.tier.toUpperCase()}
-                              </span>
-                            </div>
-
-                            {/* ROM Details */}
-                            {(rom.memory || rom.faction) && (
-                              <div className="mb-2 text-xs font-mono text-gray-400">
-                                {rom.memory && <span>{rom.memory}</span>}
-                                {rom.memory && rom.faction && <span> • </span>}
-                                {rom.faction && <span>{rom.faction}</span>}
-                              </div>
-                            )}
-
-                            {/* Clean Production Rates */}
-                            <div className="space-y-1 mb-2">
-                              <div className="flex items-center justify-between text-xs">
-                                <span className="text-yellow-400 font-mono flex items-center space-x-1">
-                                  <Battery className="w-3 h-3" />
-                                  <span>Energy</span>
-                                </span>
-                                <span className="text-yellow-400 font-mono">
-                                  {formatNumber(rom.energyRate)}/day
-                                </span>
-                              </div>
-                              <div className="flex items-center justify-between text-xs">
-                                <span className="text-purple-400 font-mono flex items-center space-x-1">
-                                  <Gem className="w-3 h-3" />
-                                  <span>Shards</span>
-                                </span>
-                                <span className="text-purple-400 font-mono">
-                                  {formatNumber(rom.shardsRate)}/day
-                                </span>
-                              </div>
-                              <div className="flex items-center justify-between text-xs">
-                                <span className="text-orange-400 font-mono flex items-center space-x-1">
-                                  <Sparkles className="w-3 h-3" />
-                                  <span>Dust</span>
-                                </span>
-                                <span className="text-orange-400 font-mono">
-                                  {formatNumber(rom.dustRate)}/day
-                                </span>
-                              </div>
-                            </div>
-
-                            {/* Claimable Amounts */}
-                            {(rom.energyClaimable > 0 || rom.shardsClaimable > 0 || rom.dustClaimable > 0) && (
-                              <div className="border-t border-cyan-400/20 pt-2">
-                                <div className="text-xs font-mono text-cyan-400 mb-1">CLAIMABLE</div>
-                                <div className="flex items-center justify-between text-xs">
-                                  {rom.energyClaimable > 0 && (
-                                    <span className="text-yellow-400 font-mono">
-                                      ⚡ {formatNumber(rom.energyClaimable)}
-                                    </span>
-                                  )}
-                                  {rom.shardsClaimable > 0 && (
-                                    <span className="text-purple-400 font-mono">
-                                      💎 {formatNumber(rom.shardsClaimable)}
-                                    </span>
-                                  )}
-                                  {rom.dustClaimable > 0 && (
-                                    <span className="text-orange-400 font-mono">
-                                      ✨ {formatNumber(rom.dustClaimable)}
-                                    </span>
-                                  )}
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {roms.map((rom) => {
+                          const tierStyle = getTierStyling(rom.tier)
+                          return (
+                            <motion.div
+                              key={rom.romId}
+                              whileHover={{ scale: 1.02 }}
+                              className={`relative overflow-hidden rounded-xl p-4 transition-all duration-300 ${tierStyle.cardClass} ${tierStyle.hoverClass}`}
+                            >
+                              {/* Subtle animated background overlay */}
+                              <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300" />
+                              
+                              {/* Content */}
+                              <div className="relative z-10">
+                                {/* Enhanced ROM Header */}
+                                <div className="flex items-center justify-between mb-3">
+                                  <div className="flex items-center space-x-3">
+                                    <div className="p-2 rounded-full bg-black/30 border border-white/20">
+                                      {tierStyle.icon}
+                                    </div>
+                                    <div>
+                                      <div className={`font-mono text-sm font-bold ${tierStyle.textColor}`}>
+                                        ROM #{rom.romId}
+                                      </div>
+                                      {rom.name && (
+                                        <div className="text-xs text-gray-400 font-mono">
+                                          {rom.name}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <span className={`px-3 py-1 text-xs font-mono border rounded-full ${tierStyle.badgeClass}`}>
+                                    {rom.tier.toUpperCase()}
+                                  </span>
                                 </div>
-                              </div>
-                            )}
 
-                            {/* Last Claim */}
-                            {rom.lastClaim && (
-                              <div className="text-xs text-gray-500 font-mono mt-2 flex items-center space-x-1">
-                                <Clock className="w-3 h-3" />
-                                <span>Last claim: {formatTimeAgo(rom.lastClaim)}</span>
+                                {/* ROM Details */}
+                                {(rom.memory || rom.faction) && (
+                                  <div className="mb-3 p-2 bg-black/20 rounded border border-white/10">
+                                    <div className="text-xs font-mono text-gray-400">
+                                      {rom.memory && <span className="text-cyan-400">{rom.memory}</span>}
+                                      {rom.memory && rom.faction && <span className="text-gray-500"> • </span>}
+                                      {rom.faction && <span className="text-blue-400">{rom.faction}</span>}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Enhanced Production Rates */}
+                                <div className="space-y-2 mb-3">
+                                  <div className="text-xs font-mono text-gray-300 font-bold">DAILY PRODUCTION</div>
+                                  
+                                  <div className="grid grid-cols-1 gap-2">
+                                    <div className="flex items-center justify-between p-2 bg-black/20 rounded border border-yellow-400/20">
+                                      <span className="text-yellow-400 font-mono flex items-center space-x-2">
+                                        <Battery className="w-3 h-3" />
+                                        <span>Energy</span>
+                                      </span>
+                                      <span className="text-yellow-400 font-mono font-bold">
+                                        {formatNumber(rom.energyRate)}
+                                      </span>
+                                    </div>
+                                    
+                                    <div className="flex items-center justify-between p-2 bg-black/20 rounded border border-purple-400/20">
+                                      <span className="text-purple-400 font-mono flex items-center space-x-2">
+                                        <Gem className="w-3 h-3" />
+                                        <span>Shards</span>
+                                      </span>
+                                      <span className="text-purple-400 font-mono font-bold">
+                                        {formatNumber(rom.shardsRate)}
+                                      </span>
+                                    </div>
+                                    
+                                    <div className="flex items-center justify-between p-2 bg-black/20 rounded border border-orange-400/20">
+                                      <span className="text-orange-400 font-mono flex items-center space-x-2">
+                                        <Sparkles className="w-3 h-3" />
+                                        <span>Dust</span>
+                                      </span>
+                                      <span className="text-orange-400 font-mono font-bold">
+                                        {formatNumber(rom.dustRate)}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Enhanced Claimable Amounts */}
+                                {(rom.energyClaimable > 0 || rom.shardsClaimable > 0 || rom.dustClaimable > 0) && (
+                                  <div className={`border-t border-${tierStyle.accentColor}/30 pt-3 mt-3`}>
+                                    <div className={`text-xs font-mono ${tierStyle.textColor} font-bold mb-2 flex items-center space-x-1`}>
+                                      <Zap className="w-3 h-3" />
+                                      <span>CLAIMABLE REWARDS</span>
+                                    </div>
+                                    <div className="grid grid-cols-3 gap-2 text-xs">
+                                      {rom.energyClaimable > 0 && (
+                                        <div className="text-center p-2 bg-yellow-400/10 rounded border border-yellow-400/30">
+                                          <div className="text-yellow-400 font-mono font-bold">
+                                            {formatNumber(rom.energyClaimable)}
+                                          </div>
+                                          <div className="text-yellow-400/70 font-mono text-xs">ENERGY</div>
+                                        </div>
+                                      )}
+                                      {rom.shardsClaimable > 0 && (
+                                        <div className="text-center p-2 bg-purple-400/10 rounded border border-purple-400/30">
+                                          <div className="text-purple-400 font-mono font-bold">
+                                            {formatNumber(rom.shardsClaimable)}
+                                          </div>
+                                          <div className="text-purple-400/70 font-mono text-xs">SHARDS</div>
+                                        </div>
+                                      )}
+                                      {rom.dustClaimable > 0 && (
+                                        <div className="text-center p-2 bg-orange-400/10 rounded border border-orange-400/30">
+                                          <div className="text-orange-400 font-mono font-bold">
+                                            {formatNumber(rom.dustClaimable)}
+                                          </div>
+                                          <div className="text-orange-400/70 font-mono text-xs">DUST</div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Enhanced Last Claim Info */}
+                                {rom.lastClaim && (
+                                  <div className="mt-3 pt-2 border-t border-gray-600/30">
+                                    <div className="text-xs text-gray-500 font-mono flex items-center justify-center space-x-1">
+                                      <Clock className="w-3 h-3" />
+                                      <span>Last claim: {formatTimeAgo(rom.lastClaim)}</span>
+                                    </div>
+                                  </div>
+                                )}
                               </div>
-                            )}
-                          </motion.div>
-                        ))}
+                            </motion.div>
+                          )
+                        })}
                       </div>
                     )}
                   </div>

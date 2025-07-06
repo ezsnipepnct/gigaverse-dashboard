@@ -422,113 +422,105 @@ const ROMProductionSummary = ({ setShowROMOverview }: { setShowROMOverview: (sho
   }
 
   return (
-    <RefinedCard 
-      glowColor="yellow" 
-      className="p-6 cursor-pointer card-gold-hover" 
+    <motion.div
+      whileHover={{ scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
       onClick={() => setShowROMOverview(true)}
+      className="relative overflow-hidden rounded-xl bg-gradient-to-br from-black/50 to-black/30 border border-cyan-400/30 hover:border-cyan-400/50 transition-all duration-300 cursor-pointer group"
     >
-      <h3 className="text-yellow-400 font-mono font-bold text-lg mb-4 flex items-center">
-        <Gem className="w-5 h-5 mr-2 icon-gold-hover" />
-        ROM PRODUCTION
-      </h3>
-      {loading ? (
-        <div className="flex items-center justify-center h-24">
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
-            className="w-8 h-8 border-2 border-yellow-400/30 border-t-yellow-400 rounded-full"
-          />
-        </div>
-      ) : romSummary ? (
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4 text-center">
-            <div>
-              <div className="text-2xl font-bold text-yellow-400 font-mono">
-                {romSummary.totalRoms}
-              </div>
-              <div className="text-xs text-gray-400 font-mono">TOTAL ROMS</div>
+      {/* Subtle background gradient */}
+      <div className="absolute inset-0 bg-gradient-to-r from-cyan-400/5 to-transparent opacity-50 group-hover:opacity-80 transition-opacity duration-300" />
+      
+      {/* Content */}
+      <div className="relative p-6">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center space-x-3">
+            <div className="p-2 rounded-full bg-cyan-400/10 border border-cyan-400/30 group-hover:border-cyan-400/50 transition-all duration-300">
+              <Cpu className="w-5 h-5 text-cyan-400 group-hover:text-cyan-300 transition-colors duration-300" />
             </div>
             <div>
-              <div className="text-2xl font-bold text-green-400 font-mono">
-                {formatNumber(romSummary.totalClaimable?.energy || 0)}
-              </div>
-              <div className="text-xs text-gray-400 font-mono">CLAIMABLE ⚡</div>
+              <h3 className="text-lg font-bold text-cyan-400 font-mono group-hover:text-cyan-300 transition-colors duration-300">
+                ROM COLLECTION
+              </h3>
+              <p className="text-cyan-400/70 font-mono text-sm group-hover:text-cyan-300/70 transition-colors duration-300">
+                Digital Asset Production
+              </p>
             </div>
           </div>
-          
-          {/* Production Stats Section */}
-          <div className="space-y-3 border-t border-cyan-400/20 pt-4">
-            <div className="text-cyan-400/80 font-mono text-xs font-bold">DAILY PRODUCTION</div>
-            
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <Zap className="w-4 h-4 text-yellow-400" />
-                <span className="text-yellow-400/70 font-mono text-xs">DAILY ENERGY</span>
+          <ChevronRight className="w-5 h-5 text-cyan-400/50 group-hover:text-cyan-400 transition-colors duration-300" />
+        </div>
+
+        {loading ? (
+          <div className="flex items-center justify-center h-24">
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+              className="w-8 h-8 border-2 border-cyan-400/30 border-t-cyan-400 rounded-full"
+            />
+          </div>
+        ) : romSummary ? (
+          <div className="space-y-4">
+            {/* Key Stats */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-black/20 rounded-lg p-3 border border-cyan-400/20">
+                <div className="text-2xl font-bold text-cyan-400 font-mono">
+                  {romSummary.totalRoms}
+                </div>
+                <div className="text-xs text-cyan-400/70 font-mono">TOTAL ROMS</div>
               </div>
-              <span className="text-yellow-400/70 font-mono font-bold text-xs">
-                {formatNumber(romSummary.dailyProduction?.energy || 0)}
-              </span>
+              <div className="bg-black/20 rounded-lg p-3 border border-cyan-400/20">
+                <div className="text-2xl font-bold text-cyan-400 font-mono">
+                  {formatNumber(romSummary.totalClaimable?.energy || 0)}
+                </div>
+                <div className="text-xs text-cyan-400/70 font-mono">CLAIMABLE ⚡</div>
+              </div>
             </div>
             
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <Gem className="w-4 h-4 text-yellow-400" />
-                <span className="text-blue-400/70 font-mono text-xs">DAILY SHARDS</span>
+            {/* Daily Production */}
+            <div className="space-y-3">
+              <div className="text-cyan-400/80 font-mono text-xs font-bold">DAILY PRODUCTION</div>
+              
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <Zap className="w-3 h-3 text-cyan-400" />
+                    <span className="text-cyan-400/70 font-mono text-xs">Energy</span>
+                  </div>
+                  <span className="text-cyan-400/70 font-mono font-bold text-xs">
+                    {formatNumber(romSummary.dailyProduction?.energy || 0)}
+                  </span>
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <Gem className="w-3 h-3 text-cyan-400" />
+                    <span className="text-cyan-400/70 font-mono text-xs">Shards</span>
+                  </div>
+                  <span className="text-cyan-400/70 font-mono font-bold text-xs">
+                    {formatNumber(romSummary.dailyProduction?.shards || 0)}
+                  </span>
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <Sparkles className="w-3 h-3 text-cyan-400" />
+                    <span className="text-cyan-400/70 font-mono text-xs">Dust</span>
+                  </div>
+                  <span className="text-cyan-400/70 font-mono font-bold text-xs">
+                    {formatNumber(romSummary.dailyProduction?.dust || 0)}
+                  </span>
+                </div>
               </div>
-              <span className="text-blue-400/70 font-mono font-bold text-xs">
-                {formatNumber(romSummary.dailyProduction?.shards || 0)}
-              </span>
-            </div>
-            
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <Sparkles className="w-4 h-4 text-yellow-400" />
-                <span className="text-purple-400/70 font-mono text-xs">DAILY DUST</span>
-              </div>
-              <span className="text-purple-400/70 font-mono font-bold text-xs">
-                {formatNumber(romSummary.dailyProduction?.dust || 0)}
-              </span>
-            </div>
-            
-            <div className="text-cyan-400/80 font-mono text-xs font-bold mt-4">WEEKLY PRODUCTION</div>
-            
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <Zap className="w-4 h-4 text-yellow-400" />
-                <span className="text-yellow-400/70 font-mono text-xs">WEEKLY ENERGY</span>
-              </div>
-              <span className="text-yellow-400/70 font-mono font-bold text-xs">
-                {formatNumber(romSummary.totalWeeklyProduction?.energy || 0)}
-              </span>
-            </div>
-            
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <Gem className="w-4 h-4 text-yellow-400" />
-                <span className="text-blue-400/70 font-mono text-xs">WEEKLY SHARDS</span>
-              </div>
-              <span className="text-blue-400/70 font-mono font-bold text-xs">
-                {formatNumber(romSummary.totalWeeklyProduction?.shards || 0)}
-              </span>
-            </div>
-            
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <Sparkles className="w-4 h-4 text-yellow-400" />
-                <span className="text-purple-400/70 font-mono text-xs">WEEKLY DUST</span>
-              </div>
-              <span className="text-purple-400/70 font-mono font-bold text-xs">
-                {formatNumber(romSummary.totalWeeklyProduction?.dust || 0)}
-              </span>
             </div>
           </div>
-        </div>
-      ) : (
-        <div className="text-center text-gray-400 font-mono text-sm">
-          No ROM data available
-        </div>
-      )}
-    </RefinedCard>
+        ) : (
+          <div className="text-center text-cyan-400/50 font-mono text-sm">
+            No ROM data available
+          </div>
+        )}
+      </div>
+    </motion.div>
   )
 }
 
