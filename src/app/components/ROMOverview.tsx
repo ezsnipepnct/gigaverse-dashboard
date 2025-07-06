@@ -81,6 +81,8 @@ const ROMOverview: React.FC<ROMOverviewProps> = ({ isOpen, onClose }) => {
   const [mounted, setMounted] = useState(false)
   const [claiming, setClaiming] = useState(false)
   const [claimMessage, setClaimMessage] = useState<string>('')
+  const [claimingRoms, setClaimingRoms] = useState<Set<string>>(new Set())
+  const [romClaimMessages, setRomClaimMessages] = useState<Record<string, string>>({})
 
   // Debug props
   useEffect(() => {
@@ -283,6 +285,87 @@ const ROMOverview: React.FC<ROMOverviewProps> = ({ isOpen, onClose }) => {
     }
   }
 
+  const claimFromROM = async (romId: string, claimId: 'energy' | 'dust' | 'shard', amount: number) => {
+    try {
+      // Add ROM to claiming set
+      setClaimingRoms(prev => new Set([...prev, `${romId}-${claimId}`]))
+      
+      // Clear any existing message for this ROM
+      setRomClaimMessages(prev => {
+        const newMessages = { ...prev }
+        delete newMessages[`${romId}-${claimId}`]
+        return newMessages
+      })
+      
+      const jwtToken = getJWTToken()
+      if (!jwtToken) {
+        setRomClaimMessages(prev => ({
+          ...prev,
+          [`${romId}-${claimId}`]: 'Authentication required'
+        }))
+        return
+      }
+
+      console.log(`Claiming ${claimId} from ROM ${romId}...`)
+      
+      const response = await fetch('/api/roms/claim', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${jwtToken}`,
+        },
+        body: JSON.stringify({
+          romId,
+          claimId
+        })
+      })
+
+      const result = await response.json()
+      
+      if (response.ok && result.success) {
+        console.log(`Successfully claimed ${amount} ${claimId} from ROM ${romId}`)
+        setRomClaimMessages(prev => ({
+          ...prev,
+          [`${romId}-${claimId}`]: `+${formatNumber(amount)} ${claimId.toUpperCase()}`
+        }))
+        
+        // Refresh ROM data to show updated claimable amounts
+        setTimeout(() => {
+          fetchROMData()
+        }, 1000)
+      } else {
+        console.error(`Failed to claim ${claimId} from ROM ${romId}:`, result.error)
+        setRomClaimMessages(prev => ({
+          ...prev,
+          [`${romId}-${claimId}`]: 'Failed to claim'
+        }))
+      }
+      
+    } catch (error) {
+      console.error(`Error claiming ${claimId} from ROM ${romId}:`, error)
+      setRomClaimMessages(prev => ({
+        ...prev,
+        [`${romId}-${claimId}`]: 'Error claiming'
+      }))
+    } finally {
+      // Remove ROM from claiming set
+      setClaimingRoms(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(`${romId}-${claimId}`)
+        return newSet
+      })
+      
+      // Clear message after 3 seconds
+      setTimeout(() => {
+        setRomClaimMessages(prev => {
+          const newMessages = { ...prev }
+          delete newMessages[`${romId}-${claimId}`]
+          return newMessages
+        })
+      }, 3000)
+    }
+  }
+
   // Don't render until mounted to prevent hydration issues
   if (!mounted) return null
 
@@ -456,45 +539,40 @@ const ROMOverview: React.FC<ROMOverviewProps> = ({ isOpen, onClose }) => {
                         </p>
                       </div>
                     ) : (
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-3">
                         {roms.map((rom) => {
                           const tierStyle = getTierStyling(rom.tier)
                           return (
                             <motion.div
                               key={rom.romId}
                               whileHover={{ scale: 1.02 }}
-                              className={`relative overflow-hidden rounded-xl p-4 transition-all duration-300 ${tierStyle.cardClass} ${tierStyle.hoverClass}`}
+                              className={`relative overflow-hidden rounded-lg p-3 transition-all duration-300 ${tierStyle.cardClass} ${tierStyle.hoverClass}`}
                             >
                               {/* Subtle animated background overlay */}
                               <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300" />
                               
                               {/* Content */}
                               <div className="relative z-10">
-                                {/* Enhanced ROM Header */}
-                                <div className="flex items-center justify-between mb-3">
-                                  <div className="flex items-center space-x-3">
-                                    <div className="p-2 rounded-full bg-black/30 border border-white/20">
+                                {/* Compact ROM Header */}
+                                <div className="flex items-center justify-between mb-2">
+                                  <div className="flex items-center space-x-2">
+                                    <div className="p-1 rounded-full bg-black/30 border border-white/20">
                                       {tierStyle.icon}
                                     </div>
                                     <div>
                                       <div className={`font-mono text-sm font-bold ${tierStyle.textColor}`}>
-                                        ROM #{rom.romId}
+                                        #{rom.romId}
                                       </div>
-                                      {rom.name && (
-                                        <div className="text-xs text-gray-400 font-mono">
-                                          {rom.name}
-                                        </div>
-                                      )}
                                     </div>
                                   </div>
-                                  <span className={`px-3 py-1 text-xs font-mono border rounded-full ${tierStyle.badgeClass}`}>
+                                  <span className={`px-2 py-1 text-xs font-mono border rounded-full ${tierStyle.badgeClass}`}>
                                     {rom.tier.toUpperCase()}
                                   </span>
                                 </div>
 
-                                {/* ROM Details */}
+                                {/* Compact ROM Details */}
                                 {(rom.memory || rom.faction) && (
-                                  <div className="mb-3 p-2 bg-black/20 rounded border border-white/10">
+                                  <div className="mb-2 p-1.5 bg-black/20 rounded border border-white/10">
                                     <div className="text-xs font-mono text-gray-400">
                                       {rom.memory && <span className="text-cyan-400">{rom.memory}</span>}
                                       {rom.memory && rom.faction && <span className="text-gray-500"> • </span>}
@@ -503,85 +581,120 @@ const ROMOverview: React.FC<ROMOverviewProps> = ({ isOpen, onClose }) => {
                                   </div>
                                 )}
 
-                                {/* Enhanced Production Rates */}
-                                <div className="space-y-2 mb-3">
+                                {/* Compact Production Rates */}
+                                <div className="space-y-1 mb-2">
                                   <div className="text-xs font-mono text-gray-300 font-bold">DAILY PRODUCTION</div>
                                   
-                                  <div className="grid grid-cols-1 gap-2">
-                                    <div className="flex items-center justify-between p-2 bg-black/20 rounded border border-yellow-400/20">
-                                      <span className="text-yellow-400 font-mono flex items-center space-x-2">
+                                  <div className="grid grid-cols-1 gap-1">
+                                    <div className="flex items-center justify-between p-1.5 bg-black/20 rounded border border-yellow-400/20">
+                                      <span className="text-yellow-400 font-mono flex items-center space-x-1 text-xs">
                                         <Battery className="w-3 h-3" />
                                         <span>Energy</span>
                                       </span>
-                                      <span className="text-yellow-400 font-mono font-bold">
+                                      <span className="text-yellow-400 font-mono font-bold text-xs">
                                         {formatNumber(rom.energyRate)}
                                       </span>
                                     </div>
                                     
-                                    <div className="flex items-center justify-between p-2 bg-black/20 rounded border border-purple-400/20">
-                                      <span className="text-purple-400 font-mono flex items-center space-x-2">
+                                    <div className="flex items-center justify-between p-1.5 bg-black/20 rounded border border-purple-400/20">
+                                      <span className="text-purple-400 font-mono flex items-center space-x-1 text-xs">
                                         <Gem className="w-3 h-3" />
                                         <span>Shards</span>
                                       </span>
-                                      <span className="text-purple-400 font-mono font-bold">
+                                      <span className="text-purple-400 font-mono font-bold text-xs">
                                         {formatNumber(rom.shardsRate)}
                                       </span>
                                     </div>
                                     
-                                    <div className="flex items-center justify-between p-2 bg-black/20 rounded border border-orange-400/20">
-                                      <span className="text-orange-400 font-mono flex items-center space-x-2">
+                                    <div className="flex items-center justify-between p-1.5 bg-black/20 rounded border border-orange-400/20">
+                                      <span className="text-orange-400 font-mono flex items-center space-x-1 text-xs">
                                         <Sparkles className="w-3 h-3" />
                                         <span>Dust</span>
                                       </span>
-                                      <span className="text-orange-400 font-mono font-bold">
+                                      <span className="text-orange-400 font-mono font-bold text-xs">
                                         {formatNumber(rom.dustRate)}
                                       </span>
                                     </div>
                                   </div>
                                 </div>
 
-                                {/* Enhanced Claimable Amounts */}
+                                {/* Interactive Claimable Amounts */}
                                 {(rom.energyClaimable > 0 || rom.shardsClaimable > 0 || rom.dustClaimable > 0) && (
-                                  <div className={`border-t border-${tierStyle.accentColor}/30 pt-3 mt-3`}>
-                                    <div className={`text-xs font-mono ${tierStyle.textColor} font-bold mb-2 flex items-center space-x-1`}>
+                                  <div className={`border-t border-${tierStyle.accentColor}/30 pt-2 mt-2`}>
+                                    <div className={`text-xs font-mono ${tierStyle.textColor} font-bold mb-1 flex items-center space-x-1`}>
                                       <Zap className="w-3 h-3" />
-                                      <span>CLAIMABLE REWARDS</span>
+                                      <span>CLAIMABLE</span>
                                     </div>
-                                    <div className="grid grid-cols-3 gap-2 text-xs">
+                                    <div className="grid grid-cols-3 gap-1 text-xs">
                                       {rom.energyClaimable > 0 && (
-                                        <div className="text-center p-2 bg-yellow-400/10 rounded border border-yellow-400/30">
-                                          <div className="text-yellow-400 font-mono font-bold">
-                                            {formatNumber(rom.energyClaimable)}
-                                          </div>
-                                          <div className="text-yellow-400/70 font-mono text-xs">ENERGY</div>
-                                        </div>
+                                        <button
+                                          onClick={() => claimFromROM(rom.romId, 'energy', rom.energyClaimable)}
+                                          disabled={claimingRoms.has(`${rom.romId}-energy`)}
+                                          className="relative text-center p-1.5 bg-yellow-400/10 rounded border border-yellow-400/30 hover:bg-yellow-400/20 hover:border-yellow-400/50 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed group"
+                                        >
+                                          {claimingRoms.has(`${rom.romId}-energy`) ? (
+                                            <div className="animate-spin w-3 h-3 border border-yellow-400/50 border-t-yellow-400 rounded-full mx-auto"></div>
+                                          ) : (
+                                            <>
+                                              <div className="text-yellow-400 font-mono font-bold text-xs group-hover:scale-105 transition-transform">
+                                                {formatNumber(rom.energyClaimable)}
+                                              </div>
+                                              <div className="text-yellow-400/70 font-mono text-xs">EN</div>
+                                            </>
+                                          )}
+                                          {romClaimMessages[`${rom.romId}-energy`] && (
+                                            <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 bg-yellow-400/90 text-black text-xs px-2 py-1 rounded font-bold whitespace-nowrap">
+                                              {romClaimMessages[`${rom.romId}-energy`]}
+                                            </div>
+                                          )}
+                                        </button>
                                       )}
                                       {rom.shardsClaimable > 0 && (
-                                        <div className="text-center p-2 bg-purple-400/10 rounded border border-purple-400/30">
-                                          <div className="text-purple-400 font-mono font-bold">
-                                            {formatNumber(rom.shardsClaimable)}
-                                          </div>
-                                          <div className="text-purple-400/70 font-mono text-xs">SHARDS</div>
-                                        </div>
+                                        <button
+                                          onClick={() => claimFromROM(rom.romId, 'shard', rom.shardsClaimable)}
+                                          disabled={claimingRoms.has(`${rom.romId}-shard`)}
+                                          className="relative text-center p-1.5 bg-purple-400/10 rounded border border-purple-400/30 hover:bg-purple-400/20 hover:border-purple-400/50 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed group"
+                                        >
+                                          {claimingRoms.has(`${rom.romId}-shard`) ? (
+                                            <div className="animate-spin w-3 h-3 border border-purple-400/50 border-t-purple-400 rounded-full mx-auto"></div>
+                                          ) : (
+                                            <>
+                                              <div className="text-purple-400 font-mono font-bold text-xs group-hover:scale-105 transition-transform">
+                                                {formatNumber(rom.shardsClaimable)}
+                                              </div>
+                                              <div className="text-purple-400/70 font-mono text-xs">SH</div>
+                                            </>
+                                          )}
+                                          {romClaimMessages[`${rom.romId}-shard`] && (
+                                            <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 bg-purple-400/90 text-black text-xs px-2 py-1 rounded font-bold whitespace-nowrap">
+                                              {romClaimMessages[`${rom.romId}-shard`]}
+                                            </div>
+                                          )}
+                                        </button>
                                       )}
                                       {rom.dustClaimable > 0 && (
-                                        <div className="text-center p-2 bg-orange-400/10 rounded border border-orange-400/30">
-                                          <div className="text-orange-400 font-mono font-bold">
-                                            {formatNumber(rom.dustClaimable)}
-                                          </div>
-                                          <div className="text-orange-400/70 font-mono text-xs">DUST</div>
-                                        </div>
+                                        <button
+                                          onClick={() => claimFromROM(rom.romId, 'dust', rom.dustClaimable)}
+                                          disabled={claimingRoms.has(`${rom.romId}-dust`)}
+                                          className="relative text-center p-1.5 bg-orange-400/10 rounded border border-orange-400/30 hover:bg-orange-400/20 hover:border-orange-400/50 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed group"
+                                        >
+                                          {claimingRoms.has(`${rom.romId}-dust`) ? (
+                                            <div className="animate-spin w-3 h-3 border border-orange-400/50 border-t-orange-400 rounded-full mx-auto"></div>
+                                          ) : (
+                                            <>
+                                              <div className="text-orange-400 font-mono font-bold text-xs group-hover:scale-105 transition-transform">
+                                                {formatNumber(rom.dustClaimable)}
+                                              </div>
+                                              <div className="text-orange-400/70 font-mono text-xs">DU</div>
+                                            </>
+                                          )}
+                                          {romClaimMessages[`${rom.romId}-dust`] && (
+                                            <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 bg-orange-400/90 text-black text-xs px-2 py-1 rounded font-bold whitespace-nowrap">
+                                              {romClaimMessages[`${rom.romId}-dust`]}
+                                            </div>
+                                          )}
+                                        </button>
                                       )}
-                                    </div>
-                                  </div>
-                                )}
-
-                                {/* Enhanced Last Claim Info */}
-                                {rom.lastClaim && (
-                                  <div className="mt-3 pt-2 border-t border-gray-600/30">
-                                    <div className="text-xs text-gray-500 font-mono flex items-center justify-center space-x-1">
-                                      <Clock className="w-3 h-3" />
-                                      <span>Last claim: {formatTimeAgo(rom.lastClaim)}</span>
                                     </div>
                                   </div>
                                 )}
