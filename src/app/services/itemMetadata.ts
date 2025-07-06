@@ -26,6 +26,9 @@ class ItemMetadataService {
   private activeRequests = 0;
 
   constructor() {
+    // Clear cache on startup to ensure fresh data with corrected parsing
+    this.clearAllCache();
+    
     // Preload common items after a short delay
     setTimeout(() => {
       this.preloadCommonItems();
@@ -269,10 +272,53 @@ class ItemMetadataService {
    */
   private parseItemMetadata(data: ItemMetadata): ParsedItemMetadata {
     try {
-      // Enhanced rarity parsing
-      const rarityLevel = typeof data.rarity === 'number' ? data.rarity : 0;
+      // Enhanced rarity parsing - check attributes first, then fallback to direct property
+      let rarityLevel = 0;
+      
+      if (data.attributes) {
+        const rarityAttribute = data.attributes.find(attr => attr.trait_type === 'Rarity');
+        if (rarityAttribute && rarityAttribute.value) {
+          const parsedRarity = parseInt(rarityAttribute.value, 10);
+          if (!isNaN(parsedRarity)) {
+            rarityLevel = parsedRarity;
+          }
+        }
+      } else if (typeof data.rarity === 'number') {
+        rarityLevel = data.rarity;
+      }
+      
       const rarityColor = this.getRarityColor(rarityLevel);
       const rarityName = this.getRarityName(rarityLevel);
+      
+      // Debug logging for rarity parsing
+      if (data.attributes) {
+        const rarityAttribute = data.attributes.find(attr => attr.trait_type === 'Rarity');
+        console.log(`[ItemMetadataService] Item ${data.id}: parsed rarity ${rarityLevel} from attribute value "${rarityAttribute?.value}"`);
+      } else {
+        console.log(`[ItemMetadataService] Item ${data.id}: using fallback rarity ${rarityLevel}`);
+      }
+
+      // Enhanced type parsing
+      let itemType = 'Unknown';
+      if (data.attributes) {
+        const typeAttribute = data.attributes.find(attr => attr.trait_type === 'Type');
+        if (typeAttribute && typeAttribute.value) {
+          itemType = typeAttribute.value;
+        }
+      } else if (data.type) {
+        itemType = data.type;
+      }
+
+      // Enhanced soulbound parsing
+      let isSoulbound = false;
+      if (data.attributes) {
+        const soulboundAttribute = data.attributes.find(attr => attr.trait_type === 'Soulbound');
+        if (soulboundAttribute && soulboundAttribute.value) {
+          isSoulbound = soulboundAttribute.value.toLowerCase() === 'true';
+        }
+      } else if (data.soulbound !== undefined) {
+        isSoulbound = Boolean(data.soulbound);
+      }
 
       return {
         id: data.id,
@@ -283,8 +329,8 @@ class ItemMetadataService {
         rarity: rarityLevel,
         rarityColor,
         rarityName,
-        type: data.type || 'Unknown',
-        soulbound: Boolean(data.soulbound),
+        type: itemType,
+        soulbound: isSoulbound,
         // Additional metadata
         category: data.category || 'Miscellaneous',
         subcategory: data.subcategory || '',
@@ -292,7 +338,7 @@ class ItemMetadataService {
         value: data.value || 0,
         weight: data.weight || 0,
         stackable: data.stackable !== false, // Default to true
-        tradeable: !data.soulbound // Inverse of soulbound
+        tradeable: !isSoulbound // Inverse of soulbound
       };
     } catch (error) {
       console.error('[ItemMetadataService] Error parsing item metadata:', error);
@@ -384,6 +430,15 @@ class ItemMetadataService {
     if (cleared > 0) {
       console.log(`[ItemMetadataService] Cleared ${cleared} expired cache entries`);
     }
+  }
+
+  /**
+   * Clear all cache entries (useful when fixing parsing logic)
+   */
+  clearAllCache() {
+    const size = this.cache.size;
+    this.cache.clear();
+    console.log(`[ItemMetadataService] Cleared all ${size} cache entries`);
   }
 }
 
