@@ -139,21 +139,48 @@ const Station = ({ icon: Icon, title, description, color, onClick }: {
       whileHover={{ scale: 1.02 }}
       whileTap={{ scale: 0.98 }}
       onClick={onClick}
-      className="p-4 bg-black/40 border border-cyan-400/30 rounded-lg cursor-pointer group hover:border-cyan-400/50 transition-all duration-200 hover:bg-black/60"
+      className="relative overflow-hidden p-6 bg-gradient-to-br from-black/60 to-gray-900/60 border border-cyan-400/30 rounded-xl cursor-pointer group hover:border-cyan-400/50 transition-all duration-300 hover:shadow-lg hover:shadow-cyan-400/10"
     >
-      <div className="flex flex-col items-center text-center space-y-3">
-        <div className="p-3 rounded-full bg-cyan-400/10 border border-cyan-400/30 group-hover:border-cyan-400/50 transition-all duration-200">
-          <Icon className="w-6 h-6 text-cyan-400 group-hover:text-cyan-300 transition-colors duration-200" />
+      {/* Animated gradient overlay */}
+      <div className="absolute inset-0 bg-gradient-to-br from-cyan-400/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+      
+      {/* Content */}
+      <div className="relative z-10">
+        {/* Header with icon and indicator */}
+        <div className="flex items-center justify-between mb-4">
+          <motion.div
+            animate={{ 
+              scale: [1, 1.05, 1],
+              rotate: [0, 2, -2, 0]
+            }}
+            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+            className="inline-flex items-center justify-center w-12 h-12 bg-cyan-400/20 rounded-full border border-cyan-400/40 group-hover:border-cyan-400/60 transition-all duration-300"
+          >
+            <Icon className="w-6 h-6 text-cyan-400 group-hover:text-cyan-300 transition-colors duration-300" />
+          </motion.div>
+          
+          <motion.div
+            initial={{ x: 4, opacity: 0.6 }}
+            whileHover={{ x: 8, opacity: 1 }}
+            className="text-cyan-400/60 group-hover:text-cyan-400 transition-all duration-300"
+          >
+            <ChevronRight className="w-5 h-5" />
+          </motion.div>
         </div>
-        <div>
-          <h3 className="text-lg font-bold text-cyan-400 font-mono group-hover:text-cyan-300 transition-colors duration-200">
+
+        {/* Title and description */}
+        <div className="space-y-2">
+          <h3 className="text-xl font-bold text-cyan-400 font-mono group-hover:text-cyan-300 transition-colors duration-300">
             {title}
           </h3>
-          <p className="text-gray-400 text-sm mt-1 font-mono group-hover:text-gray-300 transition-colors duration-200">
+          <p className="text-gray-400 text-sm font-mono group-hover:text-gray-300 transition-colors duration-300 leading-relaxed">
             {description}
           </p>
         </div>
       </div>
+      
+      {/* Subtle border glow */}
+      <div className="absolute inset-0 rounded-xl border border-cyan-400/0 group-hover:border-cyan-400/20 transition-all duration-300" />
     </motion.div>
   )
 }

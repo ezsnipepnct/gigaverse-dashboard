@@ -376,8 +376,8 @@ class ItemMetadataService {
       2: 'blue',    // Rare
       3: 'purple',  // Epic
       4: 'yellow',  // Legendary
-      5: 'orange',  // Mythic (if it exists)
-      6: 'red'      // Artifact (if it exists)
+      5: 'red',     // Relic (dark red)
+      6: 'violet'   // Artifact (if it exists)
     };
     
     return rarityColors[rarity as keyof typeof rarityColors] || 'gray';
@@ -393,7 +393,7 @@ class ItemMetadataService {
       2: 'Rare',
       3: 'Epic',
       4: 'Legendary',
-      5: 'Mythic',
+      5: 'Relic',
       6: 'Artifact'
     };
     

@@ -336,22 +336,24 @@ const CraftingStation: React.FC<CraftingStationProps> = ({ isOpen, onClose }) =>
 
   const getRarityColor = (rarity: number) => {
     switch (rarity) {
-      case 1: return 'text-gray-400'
-      case 2: return 'text-green-400'
-      case 3: return 'text-blue-400'
-      case 4: return 'text-purple-400'
-      case 5: return 'text-yellow-400'
+      case 0: return 'text-gray-400'
+      case 1: return 'text-green-400'
+      case 2: return 'text-blue-400'
+      case 3: return 'text-purple-400'
+      case 4: return 'text-yellow-400'
+      case 5: return 'text-violet-400'
       default: return 'text-gray-400'
     }
   }
 
   const getRarityName = (rarity: number) => {
     switch (rarity) {
-      case 1: return 'COMMON'
-      case 2: return 'UNCOMMON'
-      case 3: return 'RARE'
-      case 4: return 'EPIC'
-      case 5: return 'LEGENDARY'
+      case 0: return 'COMMON'
+      case 1: return 'UNCOMMON'
+      case 2: return 'RARE'
+      case 3: return 'EPIC'
+      case 4: return 'LEGENDARY'
+      case 5: return 'RELIC'
       default: return 'COMMON'
     }
   }

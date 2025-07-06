@@ -151,7 +151,9 @@ const ItemIcon: React.FC<ItemIconProps> = ({
       green: 'border-green-400 bg-gray-800',
       blue: 'border-blue-400 bg-gray-800',
       purple: 'border-purple-400 bg-gray-800',
-      yellow: 'border-yellow-400 bg-gray-800'
+      yellow: 'border-yellow-400 bg-gray-800',
+      red: 'border-red-600 bg-gray-800',
+      violet: 'border-violet-400 bg-gray-800'
     };
 
     console.log(`[ItemIcon] Item ${itemId} rarity color: ${item.rarityColor}`);

@@ -65,7 +65,9 @@ const ItemTooltip: React.FC<ItemTooltipProps> = ({
       green: 'border-green-400 bg-gray-900',
       blue: 'border-blue-400 bg-gray-900',
       purple: 'border-purple-400 bg-gray-900',
-      yellow: 'border-yellow-400 bg-gray-900'
+      yellow: 'border-yellow-400 bg-gray-900',
+      red: 'border-red-600 bg-gray-900',
+      violet: 'border-violet-400 bg-gray-900'
     };
 
     return colorMap[item.rarityColor as keyof typeof colorMap] || colorMap.gray;
@@ -79,7 +81,9 @@ const ItemTooltip: React.FC<ItemTooltipProps> = ({
       green: 'text-green-400',
       blue: 'text-blue-400',
       purple: 'text-purple-400',
-      yellow: 'text-yellow-400'
+      yellow: 'text-yellow-400',
+      red: 'text-red-500',
+      violet: 'text-violet-400'
     };
 
     return colorMap[item.rarityColor as keyof typeof colorMap] || colorMap.gray;
@@ -163,7 +167,7 @@ const ItemTooltip: React.FC<ItemTooltipProps> = ({
             
             <div className="flex items-center space-x-2 mt-1">
               <span className={`${getRarityTextClasses()} font-mono text-sm font-bold`}>
-                {item.rarityLabel}
+                {item.rarityName}
               </span>
               <span className="text-gray-500 font-mono text-xs">
                 {item.type}

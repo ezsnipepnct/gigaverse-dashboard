@@ -26,7 +26,6 @@ import {
   Settings,
   Bell,
   BarChart3,
-
   Download,
   Share,
   Bookmark,
@@ -47,6 +46,9 @@ import {
   Maximize2,
   Minimize2
 } from 'lucide-react'
+import { itemMetadataService } from '@/app/services/itemMetadata'
+import ItemIcon from './ItemIcon'
+import ItemTooltip from './ItemTooltip'
 
 interface GigamarketProps {
   isOpen: boolean
@@ -58,7 +60,7 @@ interface MarketItem {
   ETH_MINT_PRICE_CID: number
   name?: string
   description?: string
-  rarity?: string
+  rarity?: number
   rarityName?: string
   category?: string
   type?: string
@@ -87,21 +89,9 @@ interface MarketItem {
   expirationTime?: string
 }
 
-interface StaticItem {
-  ID_CID: number
-  NAME_CID: string
-  DESCRIPTION_CID?: string
-  RARITY_CID: number
-  RARITY_NAME: string
-  TYPE_CID: string
-  IMG_URL_CID?: string
-  ICON_URL_CID?: string
-}
-
 const Gigamarket: React.FC<GigamarketProps> = ({ isOpen, onClose }) => {
   const [marketData, setMarketData] = useState<MarketItem[]>([])
   const [filteredData, setFilteredData] = useState<MarketItem[]>([])
-  const [staticItems, setStaticItems] = useState<StaticItem[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [sortBy, setSortBy] = useState<'price' | 'id' | 'rarity' | 'name' | 'volume' | 'change'>('price')
@@ -124,8 +114,56 @@ const Gigamarket: React.FC<GigamarketProps> = ({ isOpen, onClose }) => {
   const [showPriceHistory, setShowPriceHistory] = useState(false)
   const [comparisonItems, setComparisonItems] = useState<Set<string>>(new Set())
   const [showComparison, setShowComparison] = useState(false)
+  const [showUsdPrices, setShowUsdPrices] = useState(false)
+  const [ethPrice, setEthPrice] = useState<number>(0)
+  const [lastCurrencyMode, setLastCurrencyMode] = useState<'eth' | 'usd'>('eth')
 
-  // Fetch both marketplace and static data
+  // Fetch ETH price from CoinGecko API
+  useEffect(() => {
+    const fetchEthPrice = async () => {
+      try {
+        const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd')
+        const data = await response.json()
+        setEthPrice(data.ethereum.usd)
+      } catch (error) {
+        console.error('Failed to fetch ETH price:', error)
+        setEthPrice(3000) // Fallback price
+      }
+    }
+    fetchEthPrice()
+  }, [])
+
+  // Auto-convert price range when switching currencies
+  useEffect(() => {
+    if (ethPrice > 0) {
+      const currentMode = showUsdPrices ? 'usd' : 'eth'
+      
+      if (lastCurrencyMode !== currentMode) {
+        if (currentMode === 'usd' && lastCurrencyMode === 'eth') {
+          // Converting from ETH to USD
+          setPriceRange(prev => ({
+            min: Math.round(prev.min * ethPrice * 100) / 100,
+            max: Math.round(prev.max * ethPrice * 100) / 100
+          }))
+        } else if (currentMode === 'eth' && lastCurrencyMode === 'usd') {
+          // Converting from USD to ETH
+          setPriceRange(prev => ({
+            min: Math.round((prev.min / ethPrice) * 10000) / 10000,
+            max: Math.round((prev.max / ethPrice) * 10000) / 10000
+          }))
+        }
+        setLastCurrencyMode(currentMode)
+        console.log(`💰 Converted price range from ${lastCurrencyMode} to ${currentMode}:`, {
+          ethPrice,
+          newRange: currentMode === 'usd' 
+            ? `$${(priceRange.min * ethPrice).toFixed(2)} - $${(priceRange.max * ethPrice).toFixed(2)}`
+            : `${(priceRange.min / ethPrice).toFixed(4)} - ${(priceRange.max / ethPrice).toFixed(4)} ETH`
+        })
+      }
+    }
+  }, [showUsdPrices, ethPrice, lastCurrencyMode])
+
+  // Fetch marketplace data and enhance with item metadata
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -135,64 +173,58 @@ const Gigamarket: React.FC<GigamarketProps> = ({ isOpen, onClose }) => {
         const marketResponse = await fetch('https://gigaverse.io/api/marketplace/item/floor/all')
         const marketData = await marketResponse.json()
         
-        // Fetch static item data for names, descriptions, etc.
-        const staticResponse = await fetch('https://gigaverse.io/api/offchain/static')
-        const staticData = await staticResponse.json()
+        console.log('Marketplace API response:', marketData)
         
-        setStaticItems(staticData.items || [])
-        
-        // Create a lookup map for static items
-        const staticItemMap = new Map<number, StaticItem>()
-        if (staticData.items) {
-          staticData.items.forEach((item: StaticItem) => {
-            staticItemMap.set(item.ID_CID, item)
-          })
-        }
-        
-        // Process and merge the data
-        const processedData = marketData.entities.map((item: MarketItem, index: number) => {
-          const staticItem = staticItemMap.get(item.GAME_ITEM_ID_CID)
-          const basePrice = item.ETH_MINT_PRICE_CID / 1000000000000000000
-          
-          return {
-            ...item,
-            priceInEth: basePrice,
-            name: staticItem?.NAME_CID || `Item #${item.GAME_ITEM_ID_CID}`,
-            description: staticItem?.DESCRIPTION_CID || '',
-            rarity: getRarityFromNumber(staticItem?.RARITY_CID || 0),
-            rarityName: staticItem?.RARITY_NAME || 'Unknown',
-            type: staticItem?.TYPE_CID || 'Unknown',
-            category: getCategoryFromType(staticItem?.TYPE_CID || 'Unknown'),
-            imageUrl: staticItem?.IMG_URL_CID || '',
-            iconUrl: staticItem?.ICON_URL_CID || '',
-            // Mock additional data for demo purposes
-            volume: Math.floor(Math.random() * 1000) + 10,
-            priceChange: (Math.random() - 0.5) * 20,
-            priceHistory: Array.from({length: 7}, () => basePrice * (0.8 + Math.random() * 0.4)),
-            lastSale: basePrice * (0.9 + Math.random() * 0.2),
-            available: Math.random() > 0.2,
-            owner: `0x${Math.random().toString(16).substr(2, 8)}...`,
-            stats: {
-              attack: Math.floor(Math.random() * 100) + 1,
-              defense: Math.floor(Math.random() * 100) + 1,
-              speed: Math.floor(Math.random() * 100) + 1,
-              magic: Math.floor(Math.random() * 100) + 1,
-            },
-            attributes: ['Rare', 'Enchanted', 'Battle-tested'].slice(0, Math.floor(Math.random() * 3) + 1),
-            tradingVolume24h: Math.random() * 50,
-            floorPrice: basePrice * 0.8,
-            avgPrice: basePrice * 1.1,
-            totalSupply: Math.floor(Math.random() * 10000) + 100,
-            holders: Math.floor(Math.random() * 500) + 10,
-            listingTime: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString(),
-            expirationTime: new Date(Date.now() + Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString()
-          }
-        })
+        // Process and enhance the data with item metadata
+        const processedData = await Promise.all(
+          marketData.entities
+            .filter((item: any) => item.ETH_MINT_PRICE_CID > 0) // Only show items with prices
+            .map(async (item: any) => {
+              const basePrice = item.ETH_MINT_PRICE_CID / 1000000000000000000 // Convert from wei to ETH
+              
+              // Get item metadata
+              const metadata = await itemMetadataService.getItem(item.GAME_ITEM_ID_CID)
+              
+              return {
+                ...item,
+                priceInEth: basePrice,
+                name: metadata?.name || `Item #${item.GAME_ITEM_ID_CID}`,
+                description: metadata?.description || '',
+                rarity: metadata?.rarity || 0,
+                rarityName: getRarityName(metadata?.rarity || 0),
+                                 type: metadata?.type || 'Unknown',
+                 category: getCategoryFromType(metadata?.type || 'Unknown'),
+                imageUrl: metadata?.image || '',
+                iconUrl: metadata?.icon || '',
+                // Mock additional data for demo purposes
+                volume: Math.floor(Math.random() * 1000) + 10,
+                priceChange: (Math.random() - 0.5) * 20,
+                priceHistory: Array.from({length: 7}, () => basePrice * (0.8 + Math.random() * 0.4)),
+                lastSale: basePrice * (0.9 + Math.random() * 0.2),
+                available: Math.random() > 0.2,
+                owner: `0x${Math.random().toString(16).substr(2, 8)}...`,
+                stats: {
+                  attack: Math.floor(Math.random() * 100) + 1,
+                  defense: Math.floor(Math.random() * 100) + 1,
+                  speed: Math.floor(Math.random() * 100) + 1,
+                  magic: Math.floor(Math.random() * 100) + 1,
+                },
+                attributes: ['Rare', 'Enchanted', 'Battle-tested'].slice(0, Math.floor(Math.random() * 3) + 1),
+                tradingVolume24h: Math.random() * 50,
+                floorPrice: basePrice * 0.8,
+                avgPrice: basePrice * 1.1,
+                totalSupply: Math.floor(Math.random() * 10000) + 100,
+                holders: Math.floor(Math.random() * 500) + 10,
+                listingTime: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString(),
+                expirationTime: new Date(Date.now() + Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString()
+              }
+            })
+        )
         
         setMarketData(processedData)
         setFilteredData(processedData)
       } catch (error) {
-        console.error('Failed to fetch data:', error)
+        console.error('Failed to fetch marketplace data:', error)
       } finally {
         setLoading(false)
       }
@@ -203,94 +235,86 @@ const Gigamarket: React.FC<GigamarketProps> = ({ isOpen, onClose }) => {
     }
   }, [isOpen])
 
-  const getRarityFromNumber = (rarityNum: number): string => {
-    const rarities = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic']
-    return rarities[rarityNum] || 'common'
+  const getRarityName = (rarity: number): string => {
+    const rarityNames = ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary', 'Relic']
+    return rarityNames[rarity] || 'Unknown'
   }
 
   const getCategoryFromType = (type: string): string => {
     const typeMap: { [key: string]: string } = {
-      'Gear': 'gear',
-      'Skin': 'cosmetic',
-      'Consumable': 'consumable',
-      'Material': 'material',
-      'Collectable': 'collectible',
-      'Unknown': 'misc'
+      'Consumable': 'consumables',
+      'Material': 'materials',
+      'Collectable': 'collectables',
+      'Equipment': 'equipment',
+      'Weapon': 'weapons',
+      'Armor': 'armor'
     }
-    return typeMap[type] || 'misc'
+    return typeMap[type] || 'other'
   }
 
-  const getRarityColor = (rarity: string) => {
-    switch (rarity.toLowerCase()) {
-      case 'mythic': return 'text-red-400 border-red-400 bg-red-400/10'
-      case 'legendary': return 'text-yellow-400 border-yellow-400 bg-yellow-400/10'
-      case 'epic': return 'text-purple-400 border-purple-400 bg-purple-400/10'
-      case 'rare': return 'text-blue-400 border-blue-400 bg-blue-400/10'
-      case 'uncommon': return 'text-green-400 border-green-400 bg-green-400/10'
-      default: return 'text-gray-400 border-gray-400 bg-gray-400/10'
-    }
+  const getRarityColor = (rarity: number) => {
+    const colors = [
+      'from-gray-400 to-gray-600',      // Common
+      'from-green-400 to-green-600',    // Uncommon
+      'from-blue-400 to-blue-600',      // Rare
+      'from-purple-400 to-purple-600',  // Epic
+      'from-yellow-400 to-yellow-600',  // Legendary
+      'from-red-600 to-red-800'         // Relic (dark red)
+    ]
+    return colors[rarity] || colors[0]
   }
 
-  const getRarityCardStyling = (rarity: string) => {
-    switch (rarity.toLowerCase()) {
-      case 'mythic':
-        return {
-          cardClass: 'bg-gradient-to-br from-red-950/40 via-red-900/30 to-pink-900/20 border-red-500/60',
-          accentColor: 'red-400',
-          textColor: 'text-red-300',
-          glowClass: 'hover:shadow-red-500/40 hover:shadow-2xl',
-          hoverClass: 'hover:border-red-400/80 hover:bg-gradient-to-br hover:from-red-900/50 hover:via-red-800/40 hover:to-pink-800/30'
-        }
-      case 'legendary':
-        return {
-          cardClass: 'bg-gradient-to-br from-yellow-950/40 via-yellow-900/30 to-amber-900/20 border-yellow-500/60',
-          accentColor: 'yellow-400',
-          textColor: 'text-yellow-300',
-          glowClass: 'hover:shadow-yellow-500/40 hover:shadow-2xl',
-          hoverClass: 'hover:border-yellow-400/80 hover:bg-gradient-to-br hover:from-yellow-900/50 hover:via-yellow-800/40 hover:to-amber-800/30'
-        }
-      case 'epic':
-        return {
-          cardClass: 'bg-gradient-to-br from-purple-950/40 via-purple-900/30 to-violet-900/20 border-purple-500/60',
-          accentColor: 'purple-400',
-          textColor: 'text-purple-300',
-          glowClass: 'hover:shadow-purple-500/40 hover:shadow-2xl',
-          hoverClass: 'hover:border-purple-400/80 hover:bg-gradient-to-br hover:from-purple-900/50 hover:via-purple-800/40 hover:to-violet-800/30'
-        }
-      case 'rare':
-        return {
-          cardClass: 'bg-gradient-to-br from-blue-950/40 via-blue-900/30 to-cyan-900/20 border-blue-500/60',
-          accentColor: 'blue-400',
-          textColor: 'text-blue-300',
-          glowClass: 'hover:shadow-blue-500/40 hover:shadow-2xl',
-          hoverClass: 'hover:border-blue-400/80 hover:bg-gradient-to-br hover:from-blue-900/50 hover:via-blue-800/40 hover:to-cyan-800/30'
-        }
-      case 'uncommon':
-        return {
-          cardClass: 'bg-gradient-to-br from-green-950/40 via-green-900/30 to-emerald-900/20 border-green-500/60',
-          accentColor: 'green-400',
-          textColor: 'text-green-300',
-          glowClass: 'hover:shadow-green-500/40 hover:shadow-2xl',
-          hoverClass: 'hover:border-green-400/80 hover:bg-gradient-to-br hover:from-green-900/50 hover:via-green-800/40 hover:to-emerald-800/30'
-        }
-      default:
-        return {
-          cardClass: 'bg-gradient-to-br from-gray-950/40 via-gray-900/30 to-slate-900/20 border-gray-500/60',
-          accentColor: 'gray-400',
-          textColor: 'text-gray-300',
-          glowClass: 'hover:shadow-gray-500/40 hover:shadow-2xl',
-          hoverClass: 'hover:border-gray-400/80 hover:bg-gradient-to-br hover:from-gray-900/50 hover:via-gray-800/40 hover:to-slate-800/30'
-        }
-    }
+  const getRarityCardStyling = (rarity: number) => {
+    const rarityStyles = [
+      {
+        border: 'border-gray-300',
+        glow: 'shadow-gray-500/20',
+        background: 'bg-gradient-to-br from-gray-50 to-gray-100',
+        hover: 'hover:shadow-gray-500/30'
+      },
+      {
+        border: 'border-green-300',
+        glow: 'shadow-green-500/20',
+        background: 'bg-gradient-to-br from-green-50 to-green-100',
+        hover: 'hover:shadow-green-500/30'
+      },
+      {
+        border: 'border-blue-300',
+        glow: 'shadow-blue-500/20',
+        background: 'bg-gradient-to-br from-blue-50 to-blue-100',
+        hover: 'hover:shadow-blue-500/30'
+      },
+      {
+        border: 'border-purple-300',
+        glow: 'shadow-purple-500/20',
+        background: 'bg-gradient-to-br from-purple-50 to-purple-100',
+        hover: 'hover:shadow-purple-500/30'
+      },
+      {
+        border: 'border-yellow-300',
+        glow: 'shadow-yellow-500/20',
+        background: 'bg-gradient-to-br from-yellow-50 to-yellow-100',
+        hover: 'hover:shadow-yellow-500/30'
+      },
+      {
+        border: 'border-red-600',
+        glow: 'shadow-red-500/30',
+        background: 'bg-gradient-to-br from-red-50 to-red-100',
+        hover: 'hover:shadow-red-500/40'
+      }
+    ]
+    
+    return rarityStyles[rarity] || rarityStyles[0]
   }
 
   const getCategoryIcon = (category: string) => {
     switch (category) {
-      case 'gear': return Shield
-      case 'cosmetic': return Sparkles
-      case 'consumable': return Beaker
-      case 'material': return Package
-      case 'collectible': return Star
+      case 'consumables': return Beaker
+      case 'materials': return Package
+      case 'collectables': return Star
+      case 'equipment': return Shield
+      case 'weapons': return Sword
+      case 'armor': return Shield
       default: return Zap
     }
   }
@@ -300,8 +324,9 @@ const Gigamarket: React.FC<GigamarketProps> = ({ isOpen, onClose }) => {
     let filtered = marketData.filter(item => {
       const matchesSearch = item.name?.toLowerCase().includes(searchTerm.toLowerCase())
       const matchesCategory = selectedCategory === 'all' || item.category === selectedCategory
-      const matchesRarity = selectedRarity === 'all' || item.rarity === selectedRarity
-      const matchesPrice = (item.priceInEth || 0) >= priceRange.min && (item.priceInEth || 0) <= priceRange.max
+      const matchesRarity = selectedRarity === 'all' || item.rarity === parseInt(selectedRarity)
+      const itemPrice = showUsdPrices && ethPrice > 0 ? (item.priceInEth || 0) * ethPrice : (item.priceInEth || 0)
+      const matchesPrice = itemPrice >= priceRange.min && itemPrice <= priceRange.max
               const matchesFavorites = !showFavorites || favorites.has(item.GAME_ITEM_ID_CID.toString())
       const matchesAvailable = !showOnlyAvailable || item.available
       const matchesOwner = selectedOwner === 'all' || item.owner === selectedOwner
@@ -330,20 +355,37 @@ const Gigamarket: React.FC<GigamarketProps> = ({ isOpen, onClose }) => {
           comparison = (a.priceChange || 0) - (b.priceChange || 0)
           break
         case 'rarity':
-          const rarityOrder = { common: 1, uncommon: 2, rare: 3, epic: 4, legendary: 5, mythic: 6 }
-          comparison = (rarityOrder[a.rarity as keyof typeof rarityOrder] || 0) - 
-                      (rarityOrder[b.rarity as keyof typeof rarityOrder] || 0)
+          comparison = (a.rarity || 0) - (b.rarity || 0)
           break
       }
       return sortOrder === 'asc' ? comparison : -comparison
     })
 
     setFilteredData(filtered)
-  }, [marketData, searchTerm, sortBy, sortOrder, selectedCategory, selectedRarity, priceRange, showFavorites, favorites, showOnlyAvailable, selectedOwner])
+  }, [marketData, searchTerm, sortBy, sortOrder, selectedCategory, selectedRarity, priceRange, showFavorites, favorites, showOnlyAvailable, selectedOwner, showUsdPrices, ethPrice])
 
   const formatPrice = (price: number) => {
     if (price === 0) return 'FREE'
-    if (price < 0.001) return `${(price * 1000).toFixed(3)} mETH`
+    
+    if (showUsdPrices && ethPrice > 0) {
+      const usdPrice = price * ethPrice
+      if (usdPrice < 0.01) return `$${usdPrice.toFixed(4)}`
+      if (usdPrice < 1) return `$${usdPrice.toFixed(3)}`
+      if (usdPrice < 100) return `$${usdPrice.toFixed(2)}`
+      return `$${Math.round(usdPrice).toLocaleString()}`
+    }
+    
+    // ETH formatting with scientific notation for small values
+    if (price < 0.0001) {
+      const exponent = Math.floor(Math.log10(price))
+      const mantissa = price / Math.pow(10, exponent)
+      return `${mantissa.toFixed(2)} × 10^${exponent} ETH`
+    }
+    
+    if (price < 0.001) {
+      return `${(price * 1000).toFixed(2)} mETH`
+    }
+    
     return `${price.toFixed(4)} ETH`
   }
 
@@ -353,7 +395,7 @@ const Gigamarket: React.FC<GigamarketProps> = ({ isOpen, onClose }) => {
   }
 
   const getUniqueRarities = () => {
-    const rarities = new Set(marketData.map(item => item.rarity).filter(Boolean) as string[])
+    const rarities = new Set(marketData.map(item => item.rarity).filter(Boolean) as number[])
     return Array.from(rarities)
   }
 
@@ -508,6 +550,25 @@ const Gigamarket: React.FC<GigamarketProps> = ({ isOpen, onClose }) => {
                     <List className="w-4 h-4" />
                   </button>
                 </div>
+
+                {/* Currency Toggle */}
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => setShowUsdPrices(!showUsdPrices)}
+                    className={`px-3 py-2 rounded border transition-colors font-mono text-sm ${
+                      showUsdPrices 
+                        ? 'bg-green-400/20 border-green-400/50 text-green-400' 
+                        : 'bg-black/60 border-cyan-400/30 text-cyan-400 hover:bg-cyan-400/10'
+                    }`}
+                  >
+                    {showUsdPrices ? 'USD' : 'ETH'}
+                  </button>
+                  {ethPrice > 0 && (
+                    <span className="text-xs text-gray-400 font-mono">
+                      ETH: ${ethPrice.toFixed(0)}
+                    </span>
+                  )}
+                </div>
               </div>
 
               {/* Filter Tags */}
@@ -547,22 +608,31 @@ const Gigamarket: React.FC<GigamarketProps> = ({ isOpen, onClose }) => {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {/* Price Range */}
                   <div>
-                    <label className="block text-sm font-mono text-gray-400 mb-2">Price Range (ETH)</label>
+                    <label className="block text-sm font-mono text-gray-400 mb-2">
+                      Price Range ({showUsdPrices ? 'USD' : 'ETH'})
+                      {showUsdPrices && ethPrice > 0 && (
+                        <span className="ml-2 text-xs text-cyan-400">
+                          (ETH: ${ethPrice.toFixed(0)})
+                        </span>
+                      )}
+                    </label>
                     <div className="flex items-center space-x-2">
                       <input
                         type="number"
-                        placeholder="Min"
+                        placeholder={showUsdPrices ? "Min USD" : "Min ETH"}
                         value={priceRange.min}
                         onChange={(e) => setPriceRange({...priceRange, min: Number(e.target.value)})}
                         className="w-full px-3 py-2 bg-black/60 border border-gray-600 rounded font-mono text-sm text-white focus:border-purple-400 focus:outline-none"
+                        step={showUsdPrices ? "1" : "0.0001"}
                       />
                       <span className="text-gray-400">-</span>
                       <input
                         type="number"
-                        placeholder="Max"
+                        placeholder={showUsdPrices ? "Max USD" : "Max ETH"}
                         value={priceRange.max}
                         onChange={(e) => setPriceRange({...priceRange, max: Number(e.target.value)})}
                         className="w-full px-3 py-2 bg-black/60 border border-gray-600 rounded font-mono text-sm text-white focus:border-purple-400 focus:outline-none"
+                        step={showUsdPrices ? "1" : "0.0001"}
                       />
                     </div>
                   </div>
@@ -626,8 +696,8 @@ const Gigamarket: React.FC<GigamarketProps> = ({ isOpen, onClose }) => {
                   : "space-y-4"
                 }>
                   {getPaginatedItems().map((item, index) => {
-                    const CategoryIcon = getCategoryIcon(item.category || 'misc')
-                    const rarityStyle = getRarityCardStyling(item.rarity || 'common')
+                    const CategoryIcon = getCategoryIcon(item.category || 'other')
+                    const rarityStyle = getRarityCardStyling(item.rarity || 0)
                     
                     return (
                       <motion.div
@@ -640,7 +710,7 @@ const Gigamarket: React.FC<GigamarketProps> = ({ isOpen, onClose }) => {
                           viewMode === 'grid' ? 'p-5' : 'p-4 flex items-center space-x-4'
                         } ${!item.available ? 'opacity-60' : ''} ${
                           comparisonItems.has(item.GAME_ITEM_ID_CID.toString()) ? 'ring-2 ring-blue-400' : ''
-                        } ${rarityStyle.cardClass} ${rarityStyle.hoverClass} ${rarityStyle.glowClass}`}
+                        } ${rarityStyle.border} ${rarityStyle.glow}`}
                         onClick={() => {
                           setSelectedItem(item)
                           setShowItemModal(true)
@@ -650,7 +720,7 @@ const Gigamarket: React.FC<GigamarketProps> = ({ isOpen, onClose }) => {
                         <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                         
                         {/* Rarity corner accent */}
-                        <div className={`absolute top-0 right-0 w-0 h-0 border-l-[20px] border-l-transparent border-t-[20px] border-t-${rarityStyle.accentColor}/60`} />
+                        <div className={`absolute top-0 right-0 w-0 h-0 border-l-[20px] border-l-transparent border-t-[20px] border-t-${rarityStyle.border.replace('border-', '')}/60`} />
                         
                         {viewMode === 'grid' ? (
                           <>
@@ -658,8 +728,8 @@ const Gigamarket: React.FC<GigamarketProps> = ({ isOpen, onClose }) => {
                             {/* Item Header with better styling */}
                             <div className="relative z-10 flex items-center justify-between mb-4">
                               <div className="flex items-center space-x-2">
-                                <div className={`p-1.5 rounded-lg bg-${rarityStyle.accentColor}/20 border border-${rarityStyle.accentColor}/40`}>
-                                  <CategoryIcon className={`w-3.5 h-3.5 text-${rarityStyle.accentColor}`} />
+                                <div className={`p-1.5 rounded-lg bg-${rarityStyle.background} border border-${rarityStyle.border}`}>
+                                  <CategoryIcon className={`w-3.5 h-3.5 text-${rarityStyle.border.replace('border-', '')}`} />
                                 </div>
                                 <div className="flex flex-col">
                                   <span className="text-xs font-mono text-gray-300">#{item.GAME_ITEM_ID_CID}</span>
@@ -689,31 +759,27 @@ const Gigamarket: React.FC<GigamarketProps> = ({ isOpen, onClose }) => {
                             </div>
 
                             {/* Rarity Badge - Prominent */}
-                            <div className={`inline-flex items-center px-3 py-1.5 mb-4 bg-${rarityStyle.accentColor}/20 border border-${rarityStyle.accentColor}/50 rounded-lg ${rarityStyle.textColor} font-mono text-xs font-bold`}>
-                              <div className={`w-2 h-2 bg-${rarityStyle.accentColor} rounded-full mr-2 animate-pulse`} />
-                              {(item.rarityName || item.rarity || 'COMMON').toUpperCase()}
-                            </div>
+                                                         <div className={`inline-flex items-center px-3 py-1.5 mb-4 bg-${rarityStyle.background} border border-${rarityStyle.border}/50 rounded-lg text-${rarityStyle.border.replace('border-', '')} font-mono text-xs font-bold`}>
+                               <div className={`w-2 h-2 bg-${rarityStyle.border.replace('border-', '')} rounded-full mr-2 animate-pulse`} />
+                               {(item.rarityName || getRarityName(item.rarity || 0) || 'COMMON').toUpperCase()}
+                             </div>
 
                             {/* Item Image - Enhanced Container */}
-                            <div className={`relative w-full h-20 mb-4 flex items-center justify-center bg-black/30 border border-${rarityStyle.accentColor}/30 rounded-lg overflow-hidden group-hover:border-${rarityStyle.accentColor}/50 transition-all duration-300`}>
-                              {item.iconUrl ? (
-                                <img 
-                                  src={item.iconUrl} 
-                                  alt={item.name}
-                                  className="max-h-16 max-w-16 object-contain group-hover:scale-110 transition-transform duration-300"
-                                  onError={(e) => {
-                                    e.currentTarget.style.display = 'none'
-                                  }}
+                            <div className={`relative w-full h-20 mb-4 flex items-center justify-center bg-black/30 border border-${rarityStyle.border}/30 rounded-lg overflow-hidden group-hover:border-${rarityStyle.border}/50 transition-all duration-300`}>
+                              <ItemTooltip itemId={item.GAME_ITEM_ID_CID} position="right">
+                                <ItemIcon 
+                                  itemId={item.GAME_ITEM_ID_CID}
+                                  size="large"
+                                  showRarity={true}
+                                  className="group-hover:scale-110 transition-transform duration-300"
                                 />
-                              ) : (
-                                <CategoryIcon className={`w-12 h-12 text-${rarityStyle.accentColor}/60`} />
-                              )}
+                              </ItemTooltip>
                               {/* Subtle glow effect */}
-                              <div className={`absolute inset-0 bg-gradient-to-t from-${rarityStyle.accentColor}/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
+                              <div className={`absolute inset-0 bg-gradient-to-t from-${rarityStyle.border.replace('border-', '')}/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
                             </div>
 
                             {/* Item Name - Enhanced Typography */}
-                            <h4 className={`font-bold font-mono text-white mb-3 ${rarityStyle.textColor} group-hover:text-${rarityStyle.accentColor} transition-colors text-sm leading-tight`}>
+                            <h4 className={`font-bold font-mono text-white mb-3 text-${rarityStyle.border.replace('border-', '')} group-hover:text-${rarityStyle.border.replace('border-', '')} transition-colors text-sm leading-tight`}>
                               {item.name}
                             </h4>
 
@@ -780,7 +846,7 @@ const Gigamarket: React.FC<GigamarketProps> = ({ isOpen, onClose }) => {
                                   setSelectedItem(item)
                                   setShowItemModal(true)
                                 }}
-                                className={`flex items-center justify-center px-3 py-2 bg-${rarityStyle.accentColor}/20 border border-${rarityStyle.accentColor}/50 rounded-lg font-mono text-xs ${rarityStyle.textColor} hover:bg-${rarityStyle.accentColor}/30 hover:scale-105 transition-all duration-200`}
+                                className={`flex items-center justify-center px-3 py-2 bg-${rarityStyle.border.replace('border-', '')}/20 border border-${rarityStyle.border}/50 rounded-lg font-mono text-xs text-${rarityStyle.border.replace('border-', '')} hover:bg-${rarityStyle.border.replace('border-', '')}/30 hover:scale-105 transition-all duration-200`}
                               >
                                 <Eye className="w-3 h-3 mr-1" />
                                 VIEW
@@ -826,20 +892,14 @@ const Gigamarket: React.FC<GigamarketProps> = ({ isOpen, onClose }) => {
                           <>
                             {/* List View */}
                             <div className="flex-shrink-0">
-                              {item.iconUrl ? (
-                                <img 
-                                  src={item.iconUrl} 
-                                  alt={item.name}
-                                  className="w-16 h-16 object-contain bg-gray-800/50 rounded p-2"
-                                  onError={(e) => {
-                                    e.currentTarget.style.display = 'none'
-                                  }}
+                              <ItemTooltip itemId={item.GAME_ITEM_ID_CID} position="right">
+                                <ItemIcon 
+                                  itemId={item.GAME_ITEM_ID_CID}
+                                  size="medium"
+                                  showRarity={true}
+                                  className="w-16 h-16"
                                 />
-                              ) : (
-                                <div className="w-16 h-16 bg-gray-800/50 rounded flex items-center justify-center">
-                                  <CategoryIcon className="w-8 h-8 text-purple-400" />
-                                </div>
-                              )}
+                              </ItemTooltip>
                             </div>
 
                             <div className="flex-grow min-w-0">
@@ -850,8 +910,8 @@ const Gigamarket: React.FC<GigamarketProps> = ({ isOpen, onClose }) => {
                                   </h4>
                                   <div className="flex items-center space-x-4 mt-1">
                                     <span className="text-sm font-mono text-gray-400">#{item.GAME_ITEM_ID_CID}</span>
-                                    <span className={`px-2 py-1 text-xs font-mono border rounded ${getRarityColor(item.rarity || 'common')}`}>
-                                      {(item.rarityName || item.rarity || 'COMMON').toUpperCase()}
+                                    <span className={`px-2 py-1 text-xs font-mono border rounded ${rarityStyle.border}`}>
+                                      {(item.rarityName || getRarityName(item.rarity || 0) || 'COMMON').toUpperCase()}
                                     </span>
                                     <span className="text-sm font-mono text-gray-500">{item.type}</span>
                                     {!item.available && (
@@ -1007,17 +1067,17 @@ const Gigamarket: React.FC<GigamarketProps> = ({ isOpen, onClose }) => {
                     Page {currentPage} of {getTotalPages()}
                   </div>
                   <div className="text-gray-400">
-                    {staticItems.length} total items in database
+                    {marketData.length} total items in database
                   </div>
                 </div>
 
                 {/* Center Stats */}
                 <div className="space-y-2">
                   <div className="text-purple-400">
-                    Total Volume: {filteredData.reduce((sum, item) => sum + (item.priceInEth || 0), 0).toFixed(2)} ETH
+                    Total Volume: {formatPrice(filteredData.reduce((sum, item) => sum + (item.priceInEth || 0), 0))}
                   </div>
                   <div className="text-blue-400">
-                    Avg Price: {filteredData.length > 0 ? (filteredData.reduce((sum, item) => sum + (item.priceInEth || 0), 0) / filteredData.length).toFixed(4) : '0'} ETH
+                    Avg Price: {filteredData.length > 0 ? formatPrice(filteredData.reduce((sum, item) => sum + (item.priceInEth || 0), 0) / filteredData.length) : 'N/A'}
                   </div>
                   <div className="text-green-400">
                     Available: {filteredData.filter(item => item.available).length} items
@@ -1068,28 +1128,20 @@ const Gigamarket: React.FC<GigamarketProps> = ({ isOpen, onClose }) => {
             <div className="border-b border-purple-400/30 p-6 bg-gradient-to-r from-purple-400/10 to-transparent">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
-                  <div className="w-16 h-16 bg-gray-800/50 rounded flex items-center justify-center">
-                    {selectedItem.iconUrl ? (
-                      <img 
-                        src={selectedItem.iconUrl} 
-                        alt={selectedItem.name}
-                        className="max-h-12 max-w-12 object-contain"
-                        onError={(e) => {
-                          e.currentTarget.style.display = 'none'
-                        }}
-                      />
-                    ) : (
-                      <Package className="w-8 h-8 text-purple-400" />
-                    )}
-                  </div>
+                  <ItemIcon 
+                    itemId={selectedItem.GAME_ITEM_ID_CID}
+                    size="large"
+                    showRarity={true}
+                    className="w-16 h-16"
+                  />
                   <div>
                     <h2 className="text-2xl font-bold text-white font-mono">
                       {selectedItem.name}
                     </h2>
                     <div className="flex items-center space-x-4 mt-1">
                       <span className="text-gray-400 font-mono">#{selectedItem.GAME_ITEM_ID_CID}</span>
-                      <span className={`px-2 py-1 text-xs font-mono border rounded ${getRarityColor(selectedItem.rarity || 'common')}`}>
-                        {(selectedItem.rarityName || selectedItem.rarity || 'COMMON').toUpperCase()}
+                      <span className={`px-2 py-1 text-xs font-mono border rounded ${getRarityCardStyling(selectedItem.rarity || 0).border}`}>
+                        {(selectedItem.rarityName || getRarityName(selectedItem.rarity || 0) || 'COMMON').toUpperCase()}
                       </span>
                       <span className="text-gray-500 font-mono">{selectedItem.type}</span>
                     </div>
@@ -1229,7 +1281,7 @@ const Gigamarket: React.FC<GigamarketProps> = ({ isOpen, onClose }) => {
                       <div className="bg-black/40 border border-gray-600 rounded p-3">
                         <div className="text-gray-400 font-mono text-xs mb-1">VOLUME (24H)</div>
                         <div className="text-white font-mono font-bold">
-                          {selectedItem.tradingVolume24h?.toFixed(2)} ETH
+                          {formatPrice(selectedItem.tradingVolume24h || 0)}
                         </div>
                       </div>
                       <div className="bg-black/40 border border-gray-600 rounded p-3">
@@ -1327,4 +1379,4 @@ const Gigamarket: React.FC<GigamarketProps> = ({ isOpen, onClose }) => {
   )
 }
 
-export default Gigamarket 
+export default Gigamarket

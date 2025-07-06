@@ -143,12 +143,12 @@ const ROMOverview: React.FC<ROMOverviewProps> = ({ isOpen, onClose }) => {
     switch (tier.toLowerCase()) {
       case 'giga':
         return {
-          cardClass: 'bg-gradient-to-br from-purple-500/20 via-pink-500/20 to-cyan-500/20 border-2 border-purple-400/50 shadow-lg shadow-purple-400/20',
-          hoverClass: 'hover:border-purple-400/80 hover:shadow-purple-400/40 hover:scale-105',
-          textColor: 'text-purple-400',
-          badgeClass: 'bg-gradient-to-r from-purple-500/30 to-pink-500/30 border-purple-400/50 text-purple-300 font-bold shadow-lg',
-          icon: <Award className="w-4 h-4 text-purple-400" />,
-          accentColor: 'purple-400'
+          cardClass: 'bg-gradient-to-br from-red-800/20 via-red-900/20 to-red-700/20 border-2 border-red-600/50 shadow-lg shadow-red-600/20',
+          hoverClass: 'hover:border-red-600/80 hover:shadow-red-600/40 hover:scale-105',
+          textColor: 'text-red-500',
+          badgeClass: 'bg-gradient-to-r from-red-800/30 to-red-900/30 border-red-600/50 text-red-400 font-bold shadow-lg',
+          icon: <Award className="w-4 h-4 text-red-500" />,
+          accentColor: 'red-600'
         }
       case 'void':
         return {
