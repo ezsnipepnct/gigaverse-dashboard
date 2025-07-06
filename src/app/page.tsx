@@ -27,7 +27,8 @@ import {
   Battery,
   Waves,
   Fish,
-  Tag
+  Tag,
+  ChevronRight
 } from 'lucide-react'
 import CraftingStation from './components/CraftingStation'
 import Gigamarket from './components/Gigamarket'
@@ -158,91 +159,122 @@ const Station = ({ icon: Icon, title, description, color, onClick }: {
 }
 
 // GameMode component with distinctive styling
-const GameMode = ({ icon: Icon, title, description, color, accent, onClick }: {
+const GameMode = ({ icon: Icon, title, description, color, accent, onClick, isDungeon, dungeonData }: {
   icon: any
   title: string
   description: string
   color: string
   accent: string
   onClick: () => void
+  isDungeon?: boolean
+  dungeonData?: any
 }) => {
+  const accentColor = color === 'purple' ? 'cyan' : color
+  
   return (
     <motion.div
-      whileHover={{ scale: 1.02, y: -5 }}
+      whileHover={{ scale: 1.02, y: -2 }}
       whileTap={{ scale: 0.98 }}
       onClick={onClick}
       className={`
-        relative p-8 rounded-2xl bg-gradient-to-br from-black/90 to-gray-900/90 
-        border-2 border-${color}-400/40 cursor-pointer group overflow-hidden
-        backdrop-blur-sm hover:border-${color}-400/70 transition-all duration-500
-        shadow-2xl hover:shadow-${color}-400/20
+        relative p-6 rounded-lg bg-black/90 
+        border border-${accentColor}-400/50 cursor-pointer group overflow-hidden
+        backdrop-blur-sm hover:border-${accentColor}-400 transition-all duration-300
+        shadow-lg hover:shadow-${accentColor}-400/20
       `}
     >
-      {/* Animated background gradient */}
-      <div className={`absolute inset-0 bg-gradient-to-br from-${color}-400/5 to-${accent}-400/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
+      {/* Minimal background glow */}
+      <div className={`absolute inset-0 bg-${accentColor}-400/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
       
-      {/* Corner accent lines */}
-      <div className={`absolute top-0 left-0 w-8 h-8 border-l-2 border-t-2 border-${color}-400/60`} />
-      <div className={`absolute top-0 right-0 w-8 h-8 border-r-2 border-t-2 border-${color}-400/60`} />
-      <div className={`absolute bottom-0 left-0 w-8 h-8 border-l-2 border-b-2 border-${color}-400/60`} />
-      <div className={`absolute bottom-0 right-0 w-8 h-8 border-r-2 border-b-2 border-${color}-400/60`} />
-      
-      {/* Content */}
-      <div className="relative z-10 flex flex-col items-center text-center space-y-6">
-        {/* Icon with animated glow */}
-        <div className="relative">
-          <motion.div
-            animate={{ 
-              boxShadow: [
-                `0 0 20px ${color === 'purple' ? '#8b5cf6' : '#3b82f6'}40`,
-                `0 0 40px ${color === 'purple' ? '#8b5cf6' : '#3b82f6'}60`,
-                `0 0 20px ${color === 'purple' ? '#8b5cf6' : '#3b82f6'}40`
-              ]
-            }}
-            transition={{ duration: 2, repeat: Infinity }}
-            className={`p-6 rounded-2xl bg-${color}-400/10 border-2 border-${color}-400/50 group-hover:border-${color}-400/80 transition-all duration-300`}
-          >
-            <Icon className={`w-12 h-12 text-${color}-400 group-hover:text-${color}-300 transition-colors duration-300`} />
-          </motion.div>
-          
-          {/* Pulse rings */}
-          <motion.div
-            className={`absolute inset-0 rounded-2xl border-2 border-${color}-400/30`}
-            animate={{ scale: [1, 1.2, 1], opacity: [0.8, 0, 0.8] }}
-            transition={{ duration: 3, repeat: Infinity, delay: 0.5 }}
-          />
-          <motion.div
-            className={`absolute inset-0 rounded-2xl border-2 border-${color}-400/20`}
-            animate={{ scale: [1, 1.4, 1], opacity: [0.6, 0, 0.6] }}
-            transition={{ duration: 3, repeat: Infinity, delay: 1 }}
-          />
+      {/* Clean header section */}
+      <div className="relative z-10 flex items-start justify-between mb-4">
+        <div className="flex items-center space-x-3">
+          <div className={`p-2 rounded bg-${accentColor}-400/10 border border-${accentColor}-400/30 group-hover:border-${accentColor}-400/50 transition-all duration-300`}>
+            <Icon className={`w-5 h-5 text-${accentColor}-400`} />
+          </div>
+          <div>
+            <h3 className={`text-lg font-bold font-mono text-${accentColor}-400 leading-tight`}>
+              {title}
+            </h3>
+            <p className="text-gray-400 font-mono text-xs mt-1 max-w-xs leading-relaxed">
+              {description}
+            </p>
+          </div>
         </div>
         
-        {/* Title and description */}
-        <div className="space-y-3">
-          <h3 className={`text-2xl font-bold font-mono text-${color}-400 group-hover:text-${color}-300 transition-colors duration-300`}>
-            {title}
-          </h3>
-          <p className="text-gray-400 font-mono text-sm group-hover:text-gray-300 transition-colors duration-300 max-w-xs">
-            {description}
-          </p>
-        </div>
-        
-        {/* Status indicator */}
-        <div className="flex items-center space-x-2">
-          <motion.div
-            className={`w-2 h-2 rounded-full bg-${color}-400`}
-            animate={{ scale: [1, 1.3, 1], opacity: [0.8, 1, 0.8] }}
-            transition={{ duration: 2, repeat: Infinity }}
-          />
-          <span className="text-xs font-mono text-gray-400 uppercase tracking-wider">
-            Ready to Launch
-          </span>
-        </div>
+        {/* Status dot */}
+        <motion.div
+          className={`w-2 h-2 rounded-full bg-${accentColor}-400 mt-2`}
+          animate={{ scale: [1, 1.2, 1], opacity: [0.6, 1, 0.6] }}
+          transition={{ duration: 2, repeat: Infinity }}
+        />
       </div>
       
-      {/* Hover effect overlay */}
-      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 transform -skew-x-12" />
+      {/* Dungeon-specific progress section */}
+      {isDungeon && dungeonData && (
+        <div className="relative z-10 space-y-3 border-t border-cyan-400/20 pt-4">
+          <div className="text-cyan-400/80 font-mono text-xs font-bold">TODAY'S PROGRESS</div>
+          
+          {/* Progress summary */}
+          <div className="flex items-center justify-between">
+            <span className="text-gray-400 font-mono text-xs">Total Runs</span>
+            <span className="text-cyan-400 font-mono text-sm font-bold">
+              {dungeonData.normal?.completed + dungeonData.gigus?.completed + dungeonData.underhaul?.completed || 0}/
+              {((dungeonData.normal?.isJuiced ? dungeonData.normal?.juicedMax : dungeonData.normal?.total) || 0) +
+               ((dungeonData.gigus?.isJuiced ? dungeonData.gigus?.juicedMax : dungeonData.gigus?.total) || 0) +
+               ((dungeonData.underhaul?.isJuiced ? dungeonData.underhaul?.juicedMax : dungeonData.underhaul?.total) || 0)}
+            </span>
+          </div>
+          
+          {/* Quick dungeon status */}
+          <div className="grid grid-cols-3 gap-2">
+            {dungeonData.normal && (
+              <div className="text-center">
+                <div className="text-cyan-400 font-mono text-xs font-bold">
+                  {dungeonData.normal.completed}/{dungeonData.normal.isJuiced ? dungeonData.normal.juicedMax : dungeonData.normal.total}
+                </div>
+                <div className="text-gray-500 font-mono text-xs">NORMAL</div>
+                {dungeonData.normal.isJuiced && (
+                  <div className="text-yellow-400 font-mono text-xs">⚡</div>
+                )}
+              </div>
+            )}
+            {dungeonData.gigus && (
+              <div className="text-center">
+                <div className="text-purple-400 font-mono text-xs font-bold">
+                  {dungeonData.gigus.completed}/{dungeonData.gigus.isJuiced ? dungeonData.gigus.juicedMax : dungeonData.gigus.total}
+                </div>
+                <div className="text-gray-500 font-mono text-xs">GIGUS</div>
+                {dungeonData.gigus.isJuiced && (
+                  <div className="text-yellow-400 font-mono text-xs">⚡</div>
+                )}
+              </div>
+            )}
+            {dungeonData.underhaul && (
+              <div className="text-center">
+                <div className="text-red-400 font-mono text-xs font-bold">
+                  {dungeonData.underhaul.completed}/{dungeonData.underhaul.isJuiced ? dungeonData.underhaul.juicedMax : dungeonData.underhaul.total}
+                </div>
+                <div className="text-gray-500 font-mono text-xs">UNDER</div>
+                {dungeonData.underhaul.isJuiced && (
+                  <div className="text-yellow-400 font-mono text-xs">⚡</div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+      
+      {/* Clean status footer */}
+      <div className="relative z-10 flex items-center justify-between mt-4 pt-3 border-t border-gray-700/50">
+        <span className="text-xs font-mono text-gray-500 uppercase tracking-wider">
+          Ready to Launch
+        </span>
+        <ChevronRight className={`w-4 h-4 text-gray-500 group-hover:text-${accentColor}-400 transition-colors duration-300`} />
+      </div>
+      
+      {/* Subtle hover effect */}
+      <div className={`absolute inset-0 bg-gradient-to-r from-transparent via-${accentColor}-400/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
     </motion.div>
   )
 }
@@ -470,9 +502,12 @@ const GameProgress = () => {
         const data = await response.json()
         if (data.dungeonDataEntities) {
           const getDungeonById = (id: number) => data.dungeonDataEntities.find((d: any) => d.ID_CID === id)
-          const getCompletedRuns = (dungeon: any) => {
-            if (!dungeon || dungeon.CHECKPOINT_CID === undefined) return 0
-            return Math.max(0, dungeon.CHECKPOINT_CID)
+          const getCompletedRuns = (dungeonId: number) => {
+            // Find progress data for this dungeon ID
+            const progressData = data.dayProgressEntities?.find((p: any) => 
+              parseInt(p.ID_CID) === dungeonId
+            )
+            return progressData ? (progressData.UINT256_CID || 0) : 0
           }
           const isPlayerJuiced = (dungeon: any) => {
             if (!dungeon) return false
@@ -489,7 +524,7 @@ const GameProgress = () => {
             normal: {
               name: dungeon1?.NAME_CID || "Dungetron 5000",
               energy: dungeon1?.ENERGY_CID || 40,
-              completed: getCompletedRuns(dungeon1),
+              completed: getCompletedRuns(1),
               total: dungeon1?.UINT256_CID || 10,
               juicedMax: dungeon1?.juicedMaxRunsPerDay || 12,
               isJuiced: isPlayerJuiced(dungeon1)
@@ -497,7 +532,7 @@ const GameProgress = () => {
             gigus: {
               name: dungeon2?.NAME_CID || "Gigus Dungeon",
               energy: dungeon2?.ENERGY_CID || 200,
-              completed: getCompletedRuns(dungeon2),
+              completed: getCompletedRuns(2),
               total: dungeon2?.UINT256_CID || 30,
               juicedMax: dungeon2?.juicedMaxRunsPerDay || 30,
               isJuiced: isPlayerJuiced(dungeon2)
@@ -505,7 +540,7 @@ const GameProgress = () => {
             underhaul: {
               name: dungeon3?.NAME_CID || "Dungetron Underhaul",
               energy: dungeon3?.ENERGY_CID || 40,
-              completed: getCompletedRuns(dungeon3),
+              completed: getCompletedRuns(3),
               total: dungeon3?.UINT256_CID || 8,
               juicedMax: dungeon3?.juicedMaxRunsPerDay || 9,
               isJuiced: isPlayerJuiced(dungeon3)
@@ -742,16 +777,21 @@ export default function GigaverseDashboard() {
     regenerationRate: number
     isPlayerJuiced: boolean
   } | null>(null)
+  const [dungeonData, setDungeonData] = useState<any>(null)
 
   useEffect(() => {
     setMounted(true)
   }, [])
 
-  // Fetch energy data
+  // Fetch energy data and dungeon data
   useEffect(() => {
     if (mounted) {
       fetchEnergyData()
-      const interval = setInterval(fetchEnergyData, 30000) // Update every 30 seconds
+      fetchDungeonData()
+      const interval = setInterval(() => {
+        fetchEnergyData()
+        fetchDungeonData()
+      }, 30000) // Update every 30 seconds
       return () => clearInterval(interval)
     }
   }, [mounted])
@@ -835,6 +875,78 @@ export default function GigaverseDashboard() {
 
     } catch (error) {
       console.error('Failed to fetch energy:', error)
+    }
+  }
+
+  const fetchDungeonData = async () => {
+    try {
+      const jwtToken = getJWTToken()
+      if (!jwtToken) {
+        console.error('No JWT token for dungeon fetch')
+        return
+      }
+
+      const response = await fetch('/api/dungeon/progress', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${jwtToken}`,
+        }
+      })
+
+      if (!response.ok) {
+        console.error('Failed to fetch dungeon progress:', response.status)
+        return
+      }
+
+      const data = await response.json()
+      if (data.dungeonDataEntities) {
+        const getDungeonById = (id: number) => data.dungeonDataEntities.find((d: any) => d.ID_CID === id)
+        const getCompletedRuns = (dungeonId: number) => {
+          const progressEntity = data.dayProgressEntities?.find((p: any) => p.ID_CID === dungeonId.toString())
+          return progressEntity ? progressEntity.UINT256_CID : 0
+        }
+        const isPlayerJuiced = (dungeon: any) => {
+          if (!dungeon) return false
+          const standardRuns = dungeon.UINT256_CID || 0
+          const juicedRuns = dungeon.juicedMaxRunsPerDay || 0
+          return juicedRuns > standardRuns
+        }
+
+        const dungeon1 = getDungeonById(1)
+        const dungeon2 = getDungeonById(2)
+        const dungeon3 = getDungeonById(3)
+
+        const parsedData = {
+          normal: {
+            name: dungeon1?.NAME_CID || "Dungetron 5000",
+            completed: getCompletedRuns(1),
+            total: dungeon1?.UINT256_CID || 10,
+            energy: dungeon1?.ENERGY_CID || 40,
+            juicedMax: dungeon1?.juicedMaxRunsPerDay || 12,
+            isJuiced: isPlayerJuiced(dungeon1)
+          },
+          gigus: {
+            name: dungeon2?.NAME_CID || "Gigus Dungeon",
+            completed: getCompletedRuns(2),
+            total: dungeon2?.UINT256_CID || 30,
+            energy: dungeon2?.ENERGY_CID || 200,
+            juicedMax: dungeon2?.juicedMaxRunsPerDay || 30,
+            isJuiced: isPlayerJuiced(dungeon2)
+          },
+          underhaul: {
+            name: dungeon3?.NAME_CID || "Dungetron Underhaul",
+            completed: getCompletedRuns(3),
+            total: dungeon3?.UINT256_CID || 8,
+            energy: dungeon3?.ENERGY_CID || 40,
+            juicedMax: dungeon3?.juicedMaxRunsPerDay || 9,
+            isJuiced: isPlayerJuiced(dungeon3)
+          }
+        }
+
+        setDungeonData(parsedData)
+      }
+    } catch (error) {
+      console.error('Failed to fetch dungeon data:', error)
     }
   }
 
@@ -1252,6 +1364,8 @@ export default function GigaverseDashboard() {
                       description={mode.description}
                       color={mode.color}
                       accent={mode.accent}
+                      isDungeon={mode.id === 'dungeon'}
+                      dungeonData={mode.id === 'dungeon' ? dungeonData : undefined}
                       onClick={() => {
                         setActiveStation(mode.id)
                         if (mode.id === 'dungeon') {

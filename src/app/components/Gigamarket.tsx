@@ -553,7 +553,6 @@ const Gigamarket: React.FC<GigamarketProps> = ({ isOpen, onClose }) => {
                 </div>
               </motion.div>
             )}
-          </div>
 
             {/* Market Items Grid */}
             <div className="p-6 max-h-[calc(90vh-300px)] overflow-y-auto">
@@ -578,14 +577,14 @@ const Gigamarket: React.FC<GigamarketProps> = ({ isOpen, onClose }) => {
                     
                     return (
                       <motion.div
-                        key={item.GAME_ITEM_ID_CID_CID}
+                        key={item.GAME_ITEM_ID_CID}
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: index * 0.02 }}
                         className={`bg-black/60 border border-gray-600 hover:border-purple-400/50 rounded transition-all duration-300 hover:shadow-lg hover:shadow-purple-400/20 group cursor-pointer ${
                           viewMode === 'grid' ? 'p-4' : 'p-4 flex items-center space-x-4'
                         } ${!item.available ? 'opacity-50' : ''} ${
-                          comparisonItems.has(item.GAME_ITEM_ID_CID_CID.toString()) ? 'ring-2 ring-blue-400' : ''
+                          comparisonItems.has(item.GAME_ITEM_ID_CID.toString()) ? 'ring-2 ring-blue-400' : ''
                         }`}
                         style={viewMode === 'grid' ? {
                           clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)'
@@ -602,7 +601,7 @@ const Gigamarket: React.FC<GigamarketProps> = ({ isOpen, onClose }) => {
                             <div className="flex items-center justify-between mb-3">
                               <div className="flex items-center space-x-2">
                                 <CategoryIcon className="w-4 h-4 text-purple-400" />
-                                <span className="text-xs font-mono text-gray-400">#{item.GAME_ITEM_ID_CID_CID}</span>
+                                <span className="text-xs font-mono text-gray-400">#{item.GAME_ITEM_ID_CID}</span>
                                 <span className="text-xs font-mono text-gray-500">{item.type}</span>
                                 {!item.available && (
                                   <span className="text-xs font-mono text-red-400">SOLD</span>
@@ -612,10 +611,10 @@ const Gigamarket: React.FC<GigamarketProps> = ({ isOpen, onClose }) => {
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation()
-                                    toggleFavorite(item.GAME_ITEM_ID_CID_CID.toString())
+                                    toggleFavorite(item.GAME_ITEM_ID_CID.toString())
                                   }}
                                   className={`p-1 rounded transition-colors ${
-                                    favorites.has(item.GAME_ITEM_ID_CID_CID.toString()) 
+                                    favorites.has(item.GAME_ITEM_ID_CID.toString()) 
                                       ? 'text-red-400 hover:text-red-300' 
                                       : 'text-gray-400 hover:text-red-400'
                                   }`}
@@ -715,10 +714,10 @@ const Gigamarket: React.FC<GigamarketProps> = ({ isOpen, onClose }) => {
                               <button 
                                 onClick={(e) => {
                                   e.stopPropagation()
-                                  toggleComparison(item.GAME_ITEM_ID_CID_CID.toString())
+                                  toggleComparison(item.GAME_ITEM_ID_CID.toString())
                                 }}
                                 className={`px-2 py-1 rounded font-mono text-xs transition-colors ${
-                                  comparisonItems.has(item.GAME_ITEM_ID_CID_CID.toString())
+                                  comparisonItems.has(item.GAME_ITEM_ID_CID.toString())
                                     ? 'bg-blue-400/30 border border-blue-400/50 text-blue-400'
                                     : 'bg-gray-400/20 border border-gray-400/50 text-gray-400 hover:bg-gray-400/30'
                                 }`}
@@ -728,10 +727,10 @@ const Gigamarket: React.FC<GigamarketProps> = ({ isOpen, onClose }) => {
                               <button 
                                 onClick={(e) => {
                                   e.stopPropagation()
-                                  toggleWatchlist(item.GAME_ITEM_ID_CID_CID.toString())
+                                  toggleWatchlist(item.GAME_ITEM_ID_CID.toString())
                                 }}
                                 className={`px-2 py-1 rounded font-mono text-xs transition-colors ${
-                                  watchlist.has(item.GAME_ITEM_ID_CID_CID.toString())
+                                  watchlist.has(item.GAME_ITEM_ID_CID.toString())
                                     ? 'bg-yellow-400/30 border border-yellow-400/50 text-yellow-400'
                                     : 'bg-gray-400/20 border border-gray-400/50 text-gray-400 hover:bg-gray-400/30'
                                 }`}
@@ -773,7 +772,7 @@ const Gigamarket: React.FC<GigamarketProps> = ({ isOpen, onClose }) => {
                                     {item.name}
                                   </h4>
                                   <div className="flex items-center space-x-4 mt-1">
-                                    <span className="text-sm font-mono text-gray-400">#{item.GAME_ITEM_ID_CID_CID}</span>
+                                    <span className="text-sm font-mono text-gray-400">#{item.GAME_ITEM_ID_CID}</span>
                                     <span className={`px-2 py-1 text-xs font-mono border rounded ${getRarityColor(item.rarity || 'common')}`}>
                                       {(item.rarityName || item.rarity || 'COMMON').toUpperCase()}
                                     </span>
@@ -833,10 +832,10 @@ const Gigamarket: React.FC<GigamarketProps> = ({ isOpen, onClose }) => {
                                     <button
                                       onClick={(e) => {
                                         e.stopPropagation()
-                                        toggleFavorite(item.GAME_ITEM_ID_CID_CID.toString())
+                                        toggleFavorite(item.GAME_ITEM_ID_CID.toString())
                                       }}
                                       className={`p-2 rounded transition-colors ${
-                                        favorites.has(item.GAME_ITEM_ID_CID_CID.toString()) 
+                                        favorites.has(item.GAME_ITEM_ID_CID.toString()) 
                                           ? 'text-red-400 hover:text-red-300' 
                                           : 'text-gray-400 hover:text-red-400'
                                       }`}
@@ -846,10 +845,10 @@ const Gigamarket: React.FC<GigamarketProps> = ({ isOpen, onClose }) => {
                                     <button 
                                       onClick={(e) => {
                                         e.stopPropagation()
-                                        toggleComparison(item.GAME_ITEM_ID_CID_CID.toString())
+                                        toggleComparison(item.GAME_ITEM_ID_CID.toString())
                                       }}
                                       className={`p-2 rounded transition-colors ${
-                                        comparisonItems.has(item.GAME_ITEM_ID_CID_CID.toString())
+                                        comparisonItems.has(item.GAME_ITEM_ID_CID.toString())
                                           ? 'bg-blue-400/30 text-blue-400'
                                           : 'text-gray-400 hover:text-blue-400'
                                       }`}
@@ -1011,7 +1010,7 @@ const Gigamarket: React.FC<GigamarketProps> = ({ isOpen, onClose }) => {
                       {selectedItem.name}
                     </h2>
                     <div className="flex items-center space-x-4 mt-1">
-                      <span className="text-gray-400 font-mono">#{selectedItem.GAME_ITEM_ID_CID_CID}</span>
+                      <span className="text-gray-400 font-mono">#{selectedItem.GAME_ITEM_ID_CID}</span>
                       <span className={`px-2 py-1 text-xs font-mono border rounded ${getRarityColor(selectedItem.rarity || 'common')}`}>
                         {(selectedItem.rarityName || selectedItem.rarity || 'COMMON').toUpperCase()}
                       </span>
@@ -1196,20 +1195,20 @@ const Gigamarket: React.FC<GigamarketProps> = ({ isOpen, onClose }) => {
                   <div className="space-y-3">
                     <div className="grid grid-cols-2 gap-3">
                       <button
-                        onClick={() => toggleFavorite(selectedItem.GAME_ITEM_ID_CID_CID.toString())}
+                        onClick={() => toggleFavorite(selectedItem.GAME_ITEM_ID_CID.toString())}
                         className={`flex items-center justify-center space-x-2 px-4 py-3 rounded font-mono text-sm transition-colors ${
-                          favorites.has(selectedItem.GAME_ITEM_ID_CID_CID.toString())
+                          favorites.has(selectedItem.GAME_ITEM_ID_CID.toString())
                             ? 'bg-red-400/30 border border-red-400/50 text-red-400'
                             : 'bg-black/60 border border-gray-600 text-gray-400 hover:text-red-400'
                         }`}
                       >
                         <Heart className="w-4 h-4" />
-                        <span>{favorites.has(selectedItem.GAME_ITEM_ID_CID_CID.toString()) ? 'FAVORITED' : 'FAVORITE'}</span>
+                        <span>{favorites.has(selectedItem.GAME_ITEM_ID_CID.toString()) ? 'FAVORITED' : 'FAVORITE'}</span>
                       </button>
                       <button
-                        onClick={() => toggleWatchlist(selectedItem.GAME_ITEM_ID_CID_CID.toString())}
+                        onClick={() => toggleWatchlist(selectedItem.GAME_ITEM_ID_CID.toString())}
                         className={`flex items-center justify-center space-x-2 px-4 py-3 rounded font-mono text-sm transition-colors ${
-                          watchlist.has(selectedItem.GAME_ITEM_ID_CID_CID.toString())
+                          watchlist.has(selectedItem.GAME_ITEM_ID_CID.toString())
                             ? 'bg-yellow-400/30 border border-yellow-400/50 text-yellow-400'
                             : 'bg-black/60 border border-gray-600 text-gray-400 hover:text-yellow-400'
                         }`}
