@@ -70,9 +70,21 @@ const InventoryModal: React.FC<InventoryModalProps> = ({
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const [loading, setLoading] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [windowWidth, setWindowWidth] = useState(0)
 
   useEffect(() => {
     setMounted(true)
+    
+    // Set initial window width
+    setWindowWidth(window.innerWidth)
+    
+    // Listen for window resize
+    const handleResize = () => {
+      setWindowWidth(window.innerWidth)
+    }
+    
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
   }, [])
 
   // Fetch game items and recipes for context
@@ -255,6 +267,24 @@ const InventoryModal: React.FC<InventoryModalProps> = ({
     return inventoryItems.reduce((total, item) => total + item.quantity, 0)
   }
 
+  // Calculate grid columns based on window width (matching Tailwind responsive classes)
+  const getGridColumns = () => {
+    if (windowWidth >= 1280) return 8      // xl:grid-cols-8
+    if (windowWidth >= 1024) return 7      // lg:grid-cols-7
+    if (windowWidth >= 768) return 6       // md:grid-cols-6
+    if (windowWidth >= 640) return 5       // sm:grid-cols-5
+    return 4                               // grid-cols-4
+  }
+
+  // Calculate tooltip position based on item index in grid
+  const getTooltipPosition = (index: number) => {
+    const columns = getGridColumns()
+    const row = Math.floor(index / columns) + 1  // Row number (1-based)
+    
+    // Use 'bottom' position for items in top 2 rows to avoid cutoff
+    return row <= 2 ? 'bottom' : 'top'
+  }
+
   if (!mounted || !isOpen) return null
 
   return (
@@ -271,7 +301,7 @@ const InventoryModal: React.FC<InventoryModalProps> = ({
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.8, opacity: 0, y: 50 }}
           transition={{ type: 'spring', damping: 20, stiffness: 300 }}
-          className="bg-gradient-to-br from-gray-900/95 to-black/95 border-2 border-cyan-400/50 rounded-xl max-w-[95vw] w-full mx-4 backdrop-blur-md max-h-[95vh] overflow-hidden shadow-2xl shadow-cyan-400/10"
+          className="bg-gradient-to-br from-gray-900/95 to-black/95 border-2 border-cyan-400/50 rounded-xl max-w-5xl w-full mx-4 backdrop-blur-md max-h-[95vh] overflow-hidden shadow-2xl shadow-cyan-400/10"
           style={{
             backgroundImage: `radial-gradient(circle at 50% 50%, rgba(6, 182, 212, 0.03) 0%, transparent 50%)`
           }}
@@ -370,9 +400,9 @@ const InventoryModal: React.FC<InventoryModalProps> = ({
             ) : (
               <>
                 {filteredItems.length > 0 ? (
-                  <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-12 xl:grid-cols-14 2xl:grid-cols-16 gap-4">
-                    {filteredItems.map(item => (
-                      <ItemTooltip key={item.id} itemId={parseInt(item.id)} position="top">
+                  <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-7 xl:grid-cols-8 gap-4">
+                    {filteredItems.map((item, index) => (
+                      <ItemTooltip key={item.id} itemId={parseInt(item.id)} position={getTooltipPosition(index) as 'top' | 'bottom'}>
                         <div className="group">
                           {/* Item Card Container */}
                           <div className="bg-gray-900/40 border border-gray-700/50 rounded-lg p-3 hover:bg-gray-800/60 hover:border-cyan-400/40 transition-all duration-200 hover:shadow-lg hover:shadow-cyan-400/10">
