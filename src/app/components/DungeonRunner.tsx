@@ -774,7 +774,7 @@ const DungeonRunner: React.FC<DungeonRunnerProps> = ({ isOpen, onClose }) => {
   const getMoveColor = (move: string) => {
     switch (move) {
       case 'rock': return 'text-red-400 border-red-400 bg-red-400/10'
-      case 'paper': return 'text-blue-400 border-blue-400 bg-blue-400/10'
+      case 'paper': return 'text-cyan-400 border-cyan-400 bg-cyan-400/10'
       case 'scissor': return 'text-yellow-400 border-yellow-400 bg-yellow-400/10'
       default: return 'text-gray-400 border-gray-400 bg-gray-400/10'
     }
@@ -893,7 +893,7 @@ const DungeonRunner: React.FC<DungeonRunnerProps> = ({ isOpen, onClose }) => {
                     </button>
                   </div>
 
-                  {/* Run Count (only show when multi-run is enabled) */}
+                                        {/* Run Count (only show when multi-run is enabled) */}
                   {multiRunMode && (
                     <div className="flex items-center space-x-2">
                       <span className="text-gray-400 font-mono text-sm">Runs:</span>
@@ -981,8 +981,8 @@ const DungeonRunner: React.FC<DungeonRunnerProps> = ({ isOpen, onClose }) => {
                 {gameState ? (
                   <>
                     {/* Combat Display */}
-                    <div className="bg-black/60 border border-cyan-400/30 p-6 rounded">
-                      <h3 className="text-xl font-bold text-cyan-400 font-mono mb-6 flex items-center space-x-2">
+                                <div className="bg-black/60 border border-cyan-400/30 p-6 rounded">
+              <h3 className="text-xl font-bold text-cyan-400 font-mono mb-6 flex items-center space-x-2">
                         <Crosshair className="w-5 h-5" />
                         <span>COMBAT STATUS</span>
                       </h3>
@@ -1010,11 +1010,11 @@ const DungeonRunner: React.FC<DungeonRunnerProps> = ({ isOpen, onClose }) => {
                           <div className="space-y-2">
                             <div className="flex justify-between text-sm font-mono">
                               <span className="text-gray-400">Shield</span>
-                              <span className="text-blue-400">{gameState.player_shield}/{gameState.player_max_shield}</span>
+                              <span className="text-cyan-400">{gameState.player_shield}/{gameState.player_max_shield}</span>
                             </div>
                             <div className="h-3 bg-gray-800 rounded-full overflow-hidden">
                               <div 
-                                className="h-full bg-gradient-to-r from-blue-600 to-blue-400 transition-all duration-500"
+                                                                  className="h-full bg-gradient-to-r from-cyan-600 to-cyan-400 transition-all duration-500"
                                 style={{ width: `${getHealthPercentage(gameState.player_shield, gameState.player_max_shield)}%` }}
                               />
                             </div>
@@ -1171,8 +1171,8 @@ const DungeonRunner: React.FC<DungeonRunnerProps> = ({ isOpen, onClose }) => {
               {/* Round History & Stats */}
               <div className="space-y-6">
                 {/* Round History */}
-                <div className="bg-black/60 border border-cyan-400/30 p-4 rounded">
-                  <h4 className="text-cyan-400 font-mono font-bold mb-4 flex items-center space-x-2">
+                            <div className="bg-black/60 border border-cyan-400/30 p-4 rounded">
+              <h4 className="text-cyan-400 font-mono font-bold mb-4 flex items-center space-x-2">
                     <Activity className="w-4 h-4" />
                                           <span>COMBAT HISTORY</span>
                   </h4>
@@ -1254,7 +1254,7 @@ const DungeonRunner: React.FC<DungeonRunnerProps> = ({ isOpen, onClose }) => {
                               <div className="text-cyan-400 font-bold mb-2">BEST RUN:</div>
                               <div className="flex justify-between">
                                 <span className="text-gray-400">Location:</span>
-                                <span className="text-cyan-400">Floor {bestRun.final_floor}, Room {bestRun.final_room}</span>
+                                                                  <span className="text-cyan-400">Floor {bestRun.final_floor}, Room {bestRun.final_room}</span>
                               </div>
                               <div className="flex justify-between">
                                 <span className="text-gray-400">Enemies:</span>

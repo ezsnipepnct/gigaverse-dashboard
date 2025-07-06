@@ -159,7 +159,7 @@ const Station = ({ icon: Icon, title, description, color, onClick }: {
 }
 
 // GameMode component with distinctive styling
-const GameMode = ({ icon: Icon, title, description, color, accent, onClick, isDungeon, dungeonData }: {
+const GameMode = ({ icon: Icon, title, description, color, accent, onClick, isDungeon, dungeonData, isFishing, fishingData }: {
   icon: any
   title: string
   description: string
@@ -168,6 +168,8 @@ const GameMode = ({ icon: Icon, title, description, color, accent, onClick, isDu
   onClick: () => void
   isDungeon?: boolean
   dungeonData?: any
+  isFishing?: boolean
+  fishingData?: any
 }) => {
   const accentColor = color === 'purple' ? 'cyan' : color
   
@@ -177,7 +179,7 @@ const GameMode = ({ icon: Icon, title, description, color, accent, onClick, isDu
       whileTap={{ scale: 0.98 }}
       onClick={onClick}
       className={`
-        relative p-6 rounded-lg bg-black/90 
+        relative p-6 rounded-lg bg-black/90 h-112 flex flex-col
         border border-${accentColor}-400/50 cursor-pointer group overflow-hidden
         backdrop-blur-sm hover:border-${accentColor}-400 transition-all duration-300
         shadow-lg hover:shadow-${accentColor}-400/20
@@ -196,15 +198,12 @@ const GameMode = ({ icon: Icon, title, description, color, accent, onClick, isDu
             <h3 className={`text-lg font-bold font-mono text-${accentColor}-400 leading-tight`}>
               {title}
             </h3>
-            <p className="text-gray-400 font-mono text-xs mt-1 max-w-xs leading-relaxed">
-              {description}
-            </p>
           </div>
         </div>
         
         {/* Status dot */}
         <motion.div
-          className={`w-2 h-2 rounded-full bg-${accentColor}-400 mt-2`}
+          className={`w-3 h-3 rounded-full bg-${accentColor}-400 mt-2`}
           animate={{ scale: [1, 1.2, 1], opacity: [0.6, 1, 0.6] }}
           transition={{ duration: 2, repeat: Infinity }}
         />
@@ -212,13 +211,13 @@ const GameMode = ({ icon: Icon, title, description, color, accent, onClick, isDu
       
       {/* Dungeon-specific progress section */}
       {isDungeon && dungeonData && (
-        <div className="relative z-10 space-y-3 border-t border-cyan-400/20 pt-4">
-          <div className="text-cyan-400/80 font-mono text-xs font-bold">TODAY'S PROGRESS</div>
+        <div className="relative z-10 space-y-3 border-t border-blue-400/20 pt-4 flex-1">
+          <div className="text-blue-400/80 font-mono text-sm font-bold">TODAY'S PROGRESS</div>
           
           {/* Progress summary */}
-          <div className="flex items-center justify-between">
-            <span className="text-gray-400 font-mono text-xs">Total Runs</span>
-            <span className="text-cyan-400 font-mono text-sm font-bold">
+          <div className="flex items-center justify-between bg-blue-400/5 p-3 rounded border border-blue-400/20">
+            <span className="text-gray-400 font-mono text-sm">Total Runs</span>
+            <span className="text-blue-400 font-mono text-lg font-bold">
               {dungeonData.normal?.completed + dungeonData.gigus?.completed + dungeonData.underhaul?.completed || 0}/
               {((dungeonData.normal?.isJuiced ? dungeonData.normal?.juicedMax : dungeonData.normal?.total) || 0) +
                ((dungeonData.gigus?.isJuiced ? dungeonData.gigus?.juicedMax : dungeonData.gigus?.total) || 0) +
@@ -226,51 +225,143 @@ const GameMode = ({ icon: Icon, title, description, color, accent, onClick, isDu
             </span>
           </div>
           
-          {/* Quick dungeon status */}
-          <div className="grid grid-cols-3 gap-2">
+          {/* Quick dungeon status with progress bars */}
+          <div className="space-y-1">
             {dungeonData.normal && (
-              <div className="text-center">
-                <div className="text-cyan-400 font-mono text-xs font-bold">
-                  {dungeonData.normal.completed}/{dungeonData.normal.isJuiced ? dungeonData.normal.juicedMax : dungeonData.normal.total}
+              <div className="space-y-2 bg-black/30 p-3 rounded border border-blue-400/10">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <span className="text-blue-400 font-mono text-sm font-bold">NORMAL</span>
+                    {dungeonData.normal.isJuiced && (
+                      <span className="text-yellow-400 font-mono text-xs bg-yellow-400/20 px-2 py-1 rounded">⚡</span>
+                    )}
+                  </div>
+                  <span className="text-blue-400 font-mono text-sm font-bold">
+                    {dungeonData.normal.completed}/{dungeonData.normal.isJuiced ? dungeonData.normal.juicedMax : dungeonData.normal.total}
+                  </span>
                 </div>
-                <div className="text-gray-500 font-mono text-xs">NORMAL</div>
-                {dungeonData.normal.isJuiced && (
-                  <div className="text-yellow-400 font-mono text-xs">⚡</div>
-                )}
+                <div className="w-full bg-gray-800/60 rounded-full h-1.5">
+                  <div 
+                    className="bg-blue-400 h-1.5 rounded-full transition-all duration-300"
+                    style={{ 
+                      width: `${(dungeonData.normal.isJuiced ? dungeonData.normal.juicedMax : dungeonData.normal.total) > 0 ? (dungeonData.normal.completed / (dungeonData.normal.isJuiced ? dungeonData.normal.juicedMax : dungeonData.normal.total)) * 100 : 0}%` 
+                    }}
+                  />
+                </div>
               </div>
             )}
             {dungeonData.gigus && (
-              <div className="text-center">
-                <div className="text-purple-400 font-mono text-xs font-bold">
-                  {dungeonData.gigus.completed}/{dungeonData.gigus.isJuiced ? dungeonData.gigus.juicedMax : dungeonData.gigus.total}
+              <div className="space-y-2 bg-black/30 p-3 rounded border border-blue-400/10">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <span className="text-blue-400 font-mono text-sm font-bold">GIGUS</span>
+                    {dungeonData.gigus.isJuiced && (
+                      <span className="text-yellow-400 font-mono text-xs bg-yellow-400/20 px-2 py-1 rounded">⚡</span>
+                    )}
+                  </div>
+                  <span className="text-blue-400 font-mono text-sm font-bold">
+                    {dungeonData.gigus.completed}/{dungeonData.gigus.isJuiced ? dungeonData.gigus.juicedMax : dungeonData.gigus.total}
+                  </span>
                 </div>
-                <div className="text-gray-500 font-mono text-xs">GIGUS</div>
-                {dungeonData.gigus.isJuiced && (
-                  <div className="text-yellow-400 font-mono text-xs">⚡</div>
-                )}
+                <div className="w-full bg-gray-800/60 rounded-full h-1.5">
+                  <div 
+                    className="bg-blue-400 h-1.5 rounded-full transition-all duration-300"
+                    style={{ 
+                      width: `${(dungeonData.gigus.isJuiced ? dungeonData.gigus.juicedMax : dungeonData.gigus.total) > 0 ? (dungeonData.gigus.completed / (dungeonData.gigus.isJuiced ? dungeonData.gigus.juicedMax : dungeonData.gigus.total)) * 100 : 0}%` 
+                    }}
+                  />
+                </div>
               </div>
             )}
             {dungeonData.underhaul && (
-              <div className="text-center">
-                <div className="text-red-400 font-mono text-xs font-bold">
-                  {dungeonData.underhaul.completed}/{dungeonData.underhaul.isJuiced ? dungeonData.underhaul.juicedMax : dungeonData.underhaul.total}
+              <div className="space-y-2 bg-black/30 p-3 rounded border border-blue-400/10">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <span className="text-blue-400 font-mono text-sm font-bold">UNDERHAUL</span>
+                    {dungeonData.underhaul.isJuiced && (
+                      <span className="text-yellow-400 font-mono text-xs bg-yellow-400/20 px-2 py-1 rounded">⚡</span>
+                    )}
+                  </div>
+                  <span className="text-blue-400 font-mono text-sm font-bold">
+                    {dungeonData.underhaul.completed}/{dungeonData.underhaul.isJuiced ? dungeonData.underhaul.juicedMax : dungeonData.underhaul.total}
+                  </span>
                 </div>
-                <div className="text-gray-500 font-mono text-xs">UNDER</div>
-                {dungeonData.underhaul.isJuiced && (
-                  <div className="text-yellow-400 font-mono text-xs">⚡</div>
-                )}
+                <div className="w-full bg-gray-800/60 rounded-full h-1.5">
+                  <div 
+                    className="bg-blue-400 h-1.5 rounded-full transition-all duration-300"
+                    style={{ 
+                      width: `${(dungeonData.underhaul.isJuiced ? dungeonData.underhaul.juicedMax : dungeonData.underhaul.total) > 0 ? (dungeonData.underhaul.completed / (dungeonData.underhaul.isJuiced ? dungeonData.underhaul.juicedMax : dungeonData.underhaul.total)) * 100 : 0}%` 
+                    }}
+                  />
+                </div>
               </div>
             )}
           </div>
         </div>
       )}
       
+      {/* Fishing-specific progress section */}
+      {isFishing && fishingData && (
+        <div className="relative z-10 space-y-4 border-t border-blue-400/20 pt-6 flex-1">
+          <div className="text-blue-400/80 font-mono text-sm font-bold">TODAY'S PROGRESS</div>
+          
+          {/* Progress summary */}
+          <div className="flex items-center justify-between bg-blue-400/5 p-3 rounded border border-blue-400/20">
+            <span className="text-gray-400 font-mono text-sm">Total Runs</span>
+            <span className="text-blue-400 font-mono text-lg font-bold">
+              {fishingData.completed || 0}/{fishingData.total || 0}
+            </span>
+          </div>
+          
+          {/* Fishing main progress section */}
+          <div className="space-y-4 bg-black/30 p-4 rounded border border-blue-400/10">
+            <div className="flex items-center justify-between">
+              <span className="text-blue-400 font-mono text-sm font-bold">TACTICAL FISHING</span>
+              <span className="text-blue-400 font-mono text-sm font-bold">
+                {Math.round(fishingData.total > 0 ? (fishingData.completed / fishingData.total) * 100 : 0)}% Complete
+              </span>
+            </div>
+            
+            {/* Main fishing progress bar */}
+            <div className="w-full bg-gray-800/60 rounded-full h-2">
+              <div 
+                className="bg-gradient-to-r from-blue-600 to-blue-400 h-2 rounded-full transition-all duration-300 relative overflow-hidden"
+                style={{ 
+                  width: `${Math.max(5, fishingData.total > 0 ? (fishingData.completed / fishingData.total) * 100 : 0)}%` 
+                }}
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse" />
+              </div>
+            </div>
+            
+            {/* Status indicators */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                {fishingData.hasActiveGame && (
+                  <span className="text-green-400 font-mono text-xs bg-green-400/20 px-2 py-1 rounded">
+                    ACTIVE
+                  </span>
+                )}
+                {fishingData.isJuiced && (
+                  <span className="text-yellow-400 font-mono text-xs bg-yellow-400/20 px-2 py-1 rounded">
+                    ⚡ JUICED
+                  </span>
+                )}
+              </div>
+              <div className="text-gray-400 font-mono text-sm">
+                {Math.max(0, (fishingData.total || 0) - (fishingData.completed || 0))} remaining
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
       {/* Clean status footer */}
-      <div className="relative z-10 flex items-center justify-between mt-4 pt-3 border-t border-gray-700/50">
-        <span className="text-xs font-mono text-gray-500 uppercase tracking-wider">
+      <div className="relative z-10 flex items-center justify-between pt-4 border-t border-gray-700/50 mt-auto">
+        <span className="text-sm font-mono text-gray-500 uppercase tracking-wider font-bold">
           Ready to Launch
         </span>
-        <ChevronRight className={`w-4 h-4 text-gray-500 group-hover:text-${accentColor}-400 transition-colors duration-300`} />
+        <ChevronRight className={`w-5 h-5 text-gray-500 group-hover:text-${accentColor}-400 transition-colors duration-300`} />
       </div>
       
       {/* Subtle hover effect */}
@@ -574,12 +665,12 @@ const GameProgress = () => {
 
   if (loading) {
     return (
-      <RefinedCard glowColor="cyan" className="p-4">
+      <RefinedCard glowColor="blue" className="p-4">
         <div className="flex items-center justify-center h-32">
           <motion.div
             animate={{ rotate: 360 }}
             transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-            className="w-6 h-6 border-2 border-cyan-400 border-t-transparent rounded-full"
+            className="w-6 h-6 border-2 border-blue-400 border-t-transparent rounded-full"
           />
         </div>
       </RefinedCard>
@@ -597,7 +688,7 @@ const GameProgress = () => {
   const totalDungeonMax = dungeonModes.reduce((sum, mode) => sum + (mode.isJuiced ? mode.juicedMax : mode.total), 0)
 
   return (
-    <RefinedCard glowColor="cyan" className="p-4">
+    <RefinedCard glowColor="blue" className="p-4">
       {/* Tab Headers */}
       <div className="flex items-center space-x-1 mb-4">
         <motion.button
@@ -619,8 +710,8 @@ const GameProgress = () => {
           onClick={() => setActiveTab('dungeons')}
           className={`flex-1 py-2 px-3 rounded-lg font-mono text-sm font-bold transition-all ${
             activeTab === 'dungeons' 
-              ? 'bg-cyan-400/20 text-cyan-400 border border-cyan-400/30' 
-              : 'text-gray-400 hover:text-cyan-400 hover:bg-cyan-400/10'
+              ? 'bg-blue-400/20 text-blue-400 border border-blue-400/30' 
+              : 'text-gray-400 hover:text-blue-400 hover:bg-blue-400/10'
           }`}
         >
           <Target className="w-4 h-4 inline mr-2" />
@@ -694,20 +785,20 @@ const GameProgress = () => {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="space-y-4"
+            className="space-y-2"
           >
             {/* Dungeon Summary */}
             <div className="flex items-center justify-between">
-              <span className="text-cyan-400 font-mono text-sm font-bold">DUNGEON RUNS</span>
+              <span className="text-blue-400 font-mono text-sm font-bold">DUNGEON RUNS</span>
               <div className="text-right">
-                <div className="text-cyan-400 font-mono text-lg font-bold">
+                <div className="text-blue-400 font-mono text-lg font-bold">
                   {totalDungeonRuns}/{totalDungeonMax}
                 </div>
               </div>
             </div>
 
             {/* Dungeon List */}
-            <div className="space-y-3">
+            <div className="space-y-1">
               {dungeonModes.map((mode) => {
                 const actualTotal = mode.isJuiced ? mode.juicedMax : mode.total
                 const progress = actualTotal > 0 ? mode.completed / actualTotal : 0
@@ -726,7 +817,7 @@ const GameProgress = () => {
                       )}
                     </div>
                     <div className="flex items-center space-x-2">
-                      <div className={`w-16 h-2 bg-gray-900/50 rounded-full border border-gray-600`}>
+                      <div className={`w-16 h-1.5 bg-gray-900/50 rounded-full border border-gray-600`}>
                         <div 
                           className={`h-full bg-gradient-to-r from-${mode.color}-600 to-${mode.color}-400 rounded-full transition-all duration-300`}
                           style={{ width: `${Math.max(5, progress * 100)}%` }}
@@ -742,7 +833,7 @@ const GameProgress = () => {
             </div>
 
             {/* Dungeon Summary */}
-            <div className="pt-2 border-t border-cyan-400/20">
+            <div className="pt-1 border-t border-blue-400/20">
               <div className="flex justify-between text-xs font-mono text-gray-400">
                 <span>Total: {totalDungeonRuns} runs</span>
                 <span>Max: {totalDungeonMax}</span>
@@ -778,19 +869,22 @@ export default function GigaverseDashboard() {
     isPlayerJuiced: boolean
   } | null>(null)
   const [dungeonData, setDungeonData] = useState<any>(null)
+  const [fishingData, setFishingData] = useState<any>(null)
 
   useEffect(() => {
     setMounted(true)
   }, [])
 
-  // Fetch energy data and dungeon data
+  // Fetch energy data, dungeon data, and fishing data
   useEffect(() => {
     if (mounted) {
       fetchEnergyData()
       fetchDungeonData()
+      fetchFishingData()
       const interval = setInterval(() => {
         fetchEnergyData()
         fetchDungeonData()
+        fetchFishingData()
       }, 30000) // Update every 30 seconds
       return () => clearInterval(interval)
     }
@@ -950,6 +1044,50 @@ export default function GigaverseDashboard() {
     }
   }
 
+  const fetchFishingData = async () => {
+    try {
+      const jwtToken = getJWTToken()
+      if (!jwtToken) {
+        console.error('No JWT token for fishing fetch')
+        return
+      }
+
+      const WALLET_ADDRESS = "0xb0d90D52C7389824D4B22c06bcdcCD734E3162b7"
+      const response = await fetch(`https://gigaverse.io/api/fishing/state/${WALLET_ADDRESS}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${jwtToken}`,
+          'Content-Type': 'application/json',
+        }
+      })
+
+      if (!response.ok) {
+        console.error('Failed to fetch fishing state:', response.status)
+        return
+      }
+
+      const data = await response.json()
+      console.log('🎣 Fishing API response:', data)
+      
+      // Parse fishing data similar to how it's done in the Fishing component
+      const dailyRuns = data.dayDoc?.UINT256_CID || 0
+      const maxRuns = data.maxPerDayJuiced || data.maxPerDay || 10
+      const isGameActive = data.gameState?.COMPLETE_CID === null || data.gameState?.COMPLETE_CID === false
+      const isJuiced = maxRuns > 10 // Standard max is 10, juiced is higher
+      
+      const fishingProgressData = {
+        completed: dailyRuns,
+        total: maxRuns,
+        hasActiveGame: isGameActive,
+        isJuiced: isJuiced
+      }
+      
+      setFishingData(fishingProgressData)
+    } catch (error) {
+      console.error('Failed to fetch fishing data:', error)
+    }
+  }
+
   // State for energy claiming
   const [energyClaimLoading, setEnergyClaimLoading] = useState(false)
   const [energyClaimMessage, setEnergyClaimMessage] = useState('')
@@ -1076,8 +1214,8 @@ export default function GigaverseDashboard() {
       icon: Target,
       title: 'DUNGEON RUNNER',
       description: 'AI-powered dungeon exploration',
-      color: 'purple',
-      accent: 'purple'
+      color: 'blue',
+      accent: 'blue'
     },
     {
       id: 'fishing',
@@ -1366,6 +1504,8 @@ export default function GigaverseDashboard() {
                       accent={mode.accent}
                       isDungeon={mode.id === 'dungeon'}
                       dungeonData={mode.id === 'dungeon' ? dungeonData : undefined}
+                      isFishing={mode.id === 'fishing'}
+                      fishingData={mode.id === 'fishing' ? fishingData : undefined}
                       onClick={() => {
                         setActiveStation(mode.id)
                         if (mode.id === 'dungeon') {
