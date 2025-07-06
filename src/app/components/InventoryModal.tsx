@@ -19,6 +19,9 @@ import {
   Filter,
   ArrowUpDown
 } from 'lucide-react'
+import ItemCard from './ItemCard'
+import ItemIcon from './ItemIcon'
+import ItemTooltip from './ItemTooltip'
 
 interface InventoryModalProps {
   isOpen: boolean
@@ -63,6 +66,7 @@ const InventoryModal: React.FC<InventoryModalProps> = ({
   const [sortBy, setSortBy] = useState<'name' | 'quantity' | 'rarity'>('quantity')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const [loading, setLoading] = useState(false)
+  const [viewMode, setViewMode] = useState<'cards' | 'grid'>('cards')
 
   // Fetch game items and recipes for context
   useEffect(() => {
@@ -94,7 +98,7 @@ const InventoryModal: React.FC<InventoryModalProps> = ({
     }
   }
 
-  // Transform player balances into inventory items
+  // Transform player balances into inventory items with enhanced metadata support
   const getInventoryItems = (): InventoryItem[] => {
     const items: InventoryItem[] = []
     
@@ -103,7 +107,7 @@ const InventoryModal: React.FC<InventoryModalProps> = ({
         const gameItem = gameItems.find(item => item.docId === itemId)
         const itemName = gameItem?.NAME_CID || `Item #${itemId}`
         
-        // Categorize items based on ID ranges and names
+        // Enhanced categorization - these will be supplemented by real metadata
         let category = 'Materials'
         if (itemName.toLowerCase().includes('potion') || itemName.toLowerCase().includes('juice')) {
           category = 'Consumables'
@@ -117,12 +121,10 @@ const InventoryModal: React.FC<InventoryModalProps> = ({
           category = 'Scrolls'
         }
 
-        // Determine rarity based on quantity (corrected logic)
-        let rarity = 0 // Default to common
-        
-        // Fixed quantity-based rarity - higher quantities = more common
+        // Basic rarity fallback (will be overridden by real metadata)
+        let rarity = 0
         if (quantity >= 10000) {
-          rarity = 0 // Common - very abundant
+          rarity = 0 // Common
         } else if (quantity >= 2000) {
           rarity = 1 // Uncommon
         } else if (quantity >= 500) {
@@ -132,7 +134,7 @@ const InventoryModal: React.FC<InventoryModalProps> = ({
         } else if (quantity >= 20) {
           rarity = 4 // Legendary
         } else {
-          rarity = 0 // Common - very low quantities are usually common materials you haven't collected much of
+          rarity = 0 // Common
         }
 
         // Check if used in recipes
@@ -158,7 +160,7 @@ const InventoryModal: React.FC<InventoryModalProps> = ({
 
   const inventoryItems = getInventoryItems()
 
-  // Get unique categories
+  // Get unique categories - will be enhanced by real metadata
   const categories = [
     { id: 'all', name: 'All Items', icon: Package, count: inventoryItems.length },
     { id: 'Consumables', name: 'Consumables', icon: Beaker, count: inventoryItems.filter(i => i.category === 'Consumables').length },
@@ -238,17 +240,17 @@ const InventoryModal: React.FC<InventoryModalProps> = ({
           className="bg-black/90 border border-cyan-400/50 rounded-lg max-w-7xl w-full max-h-[90vh] overflow-hidden"
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Streamlined Header */}
+          {/* Enhanced Header */}
           <div className="border-b border-cyan-400/20 p-4 bg-cyan-400/5">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <Package className="w-6 h-6 text-cyan-400" />
                 <div>
                   <h2 className="text-xl font-bold text-cyan-400 font-mono">
-                    INVENTORY
+                    ENHANCED INVENTORY
                   </h2>
                   <p className="text-cyan-400/70 font-mono text-sm">
-                    {inventoryItems.length} items • {getTotalValue().toLocaleString()} total
+                    {inventoryItems.length} items • {getTotalValue().toLocaleString()} total • With Metadata
                   </p>
                 </div>
               </div>
@@ -261,7 +263,7 @@ const InventoryModal: React.FC<InventoryModalProps> = ({
             </div>
           </div>
 
-          {/* Streamlined Controls */}
+          {/* Enhanced Controls */}
           <div className="p-4 border-b border-cyan-400/20 bg-black/20">
             <div className="flex items-center gap-4">
               {/* Search */}
@@ -274,6 +276,30 @@ const InventoryModal: React.FC<InventoryModalProps> = ({
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 bg-black/60 border border-cyan-400/30 rounded font-mono text-sm text-white placeholder-gray-500 focus:border-cyan-400 focus:outline-none"
                 />
+              </div>
+
+              {/* View Mode Toggle */}
+              <div className="flex border border-cyan-400/30 rounded overflow-hidden">
+                <button
+                  onClick={() => setViewMode('cards')}
+                  className={`px-3 py-2 font-mono text-xs transition-colors ${
+                    viewMode === 'cards' 
+                      ? 'bg-cyan-400/20 text-cyan-400' 
+                      : 'text-gray-400 hover:text-cyan-400'
+                  }`}
+                >
+                  CARDS
+                </button>
+                <button
+                  onClick={() => setViewMode('grid')}
+                  className={`px-3 py-2 font-mono text-xs transition-colors border-l border-cyan-400/30 ${
+                    viewMode === 'grid' 
+                      ? 'bg-cyan-400/20 text-cyan-400' 
+                      : 'text-gray-400 hover:text-cyan-400'
+                  }`}
+                >
+                  GRID
+                </button>
               </div>
 
               {/* Sort */}
@@ -311,7 +337,7 @@ const InventoryModal: React.FC<InventoryModalProps> = ({
             <div className="w-48 border-r border-cyan-400/20 bg-black/10 p-3">
               <h3 className="text-sm font-bold text-cyan-400 font-mono mb-3">CATEGORIES</h3>
               <div className="space-y-1">
-                {categories.map((category) => {
+                {categories.map(category => {
                   const Icon = category.icon
                   const isSelected = selectedCategory === category.id
                   
@@ -342,7 +368,7 @@ const InventoryModal: React.FC<InventoryModalProps> = ({
               </div>
             </div>
 
-            {/* Clean Items Grid */}
+            {/* Enhanced Items Display */}
             <div className="flex-1 p-4 overflow-y-auto">
               {loading ? (
                 <div className="flex items-center justify-center h-64">
@@ -352,54 +378,59 @@ const InventoryModal: React.FC<InventoryModalProps> = ({
                       transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
                       className="w-12 h-12 border-2 border-cyan-400/30 border-t-cyan-400 rounded-full mx-auto mb-3"
                     />
-                    <p className="text-cyan-400 font-mono text-sm">LOADING...</p>
+                    <p className="text-cyan-400 font-mono text-sm">LOADING METADATA...</p>
                   </div>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3">
-                  {filteredItems.map((item) => (
-                    <motion.div
-                      key={item.id}
-                      whileHover={{ scale: 1.02 }}
-                      className={`
-                        p-3 border bg-black/40 rounded transition-all duration-200
-                        ${getRarityColor(item.rarity)}
-                        ${item.canCraft ? 'ring-1 ring-green-400/30' : ''}
-                        hover:bg-black/60
-                      `}
-                    >
-                      {/* Item Header */}
-                      <div className="flex items-start justify-between mb-2">
-                        <h4 className="font-mono text-sm font-bold text-white line-clamp-2 flex-1 pr-2">
-                          {item.name}
-                        </h4>
-                        <div className="text-right flex-shrink-0">
-                          <div className="text-lg font-bold font-mono text-cyan-400">
-                            {item.quantity > 999 ? `${(item.quantity / 1000).toFixed(1)}K` : item.quantity}
+                <>
+                  {viewMode === 'cards' ? (
+                    // Enhanced Card View with real metadata
+                    <div className="space-y-3">
+                      {filteredItems.map(item => (
+                        <ItemCard
+                          key={item.id}
+                          itemId={parseInt(item.id)}
+                          quantity={item.quantity}
+                          showDescription
+                          onClick={(itemMetadata) => {
+                            if (itemMetadata) {
+                              console.log('Item clicked:', itemMetadata)
+                              // Could open detailed item modal here
+                            }
+                          }}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    // Enhanced Grid View with tooltips
+                    <div className="grid grid-cols-8 md:grid-cols-10 lg:grid-cols-12 xl:grid-cols-16 gap-3">
+                      {filteredItems.map(item => (
+                        <ItemTooltip key={item.id} itemId={parseInt(item.id)} position="top">
+                          <div className="relative">
+                            <ItemIcon
+                              itemId={parseInt(item.id)}
+                              size="medium"
+                              showRarity
+                              onClick={(itemMetadata) => {
+                                if (itemMetadata) {
+                                  console.log('Item clicked:', itemMetadata)
+                                }
+                              }}
+                            />
+                            {/* Quantity overlay */}
+                            <div className="absolute -bottom-1 -right-1 bg-cyan-500 text-white text-xs font-bold rounded px-1 min-w-[16px] text-center">
+                              {item.quantity > 999 ? `${Math.floor(item.quantity / 1000)}k` : item.quantity}
+                            </div>
+                            {/* Crafting indicator */}
+                            {item.canCraft && (
+                              <div className="absolute -top-1 -left-1 w-3 h-3 bg-green-400 rounded-full border border-gray-800" />
+                            )}
                           </div>
-                        </div>
-                      </div>
-                      
-                      {/* Minimal Tags */}
-                      <div className="flex items-center justify-between text-xs font-mono mb-2">
-                        <span className={`px-2 py-0.5 rounded ${getRarityColor(item.rarity)}`}>
-                          {getRarityName(item.rarity)}
-                        </span>
-                        <span className="text-gray-400">
-                          {item.category}
-                        </span>
-                      </div>
-
-                      {/* Crafting Indicator */}
-                      {item.canCraft && (
-                        <div className="flex items-center space-x-1 text-xs text-green-400 font-mono">
-                          <Wrench className="w-3 h-3" />
-                          <span>CRAFTING</span>
-                        </div>
-                      )}
-                    </motion.div>
-                  ))}
-                </div>
+                        </ItemTooltip>
+                      ))}
+                    </div>
+                  )}
+                </>
               )}
 
               {!loading && filteredItems.length === 0 && (
@@ -408,6 +439,14 @@ const InventoryModal: React.FC<InventoryModalProps> = ({
                   <p className="text-gray-400 font-mono">No items found</p>
                 </div>
               )}
+            </div>
+          </div>
+
+          {/* Enhanced Info Footer */}
+          <div className="border-t border-cyan-400/20 p-3 bg-black/20">
+            <div className="flex items-center justify-between text-xs font-mono text-gray-400">
+              <span>Enhanced with Gigaverse Metadata API</span>
+              <span>Hover items in grid mode for detailed tooltips</span>
             </div>
           </div>
         </motion.div>

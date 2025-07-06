@@ -2,10 +2,13 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500;600&display=swap');
 
 @import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #0a0a0a;
+  --foreground: #ededed;
   
   /* Refined Tron Color Palette */
   --color-primary: #00d4ff;        /* Softer cyan */
@@ -47,13 +50,26 @@
   }
 }
 
+/* Custom animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-in-out forwards;
+}
+
 body {
-  background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-display);
-  font-weight: 400;
-  line-height: 1.6;
-  letter-spacing: -0.025em;
+  background: var(--background);
+  font-family: Arial, Helvetica, sans-serif;
 }
 
 /* Better dark mode colors */

@@ -18,6 +18,9 @@ import {
   Wrench,
   Battery
 } from 'lucide-react'
+import ItemIcon from './ItemIcon'
+import ItemTooltip from './ItemTooltip'
+import { itemMetadataService } from '../services/itemMetadata'
 
 interface CraftingStationProps {
   isOpen: boolean
@@ -97,6 +100,22 @@ const CraftingStation: React.FC<CraftingStationProps> = ({ isOpen, onClose }) =>
       fetchData()
     }
   }, [isOpen])
+
+  // Add preloading effect for recipe items
+  useEffect(() => {
+    if (selectedRecipe) {
+      // Preload all item images for the selected recipe
+      const allItemIds = [
+        ...(selectedRecipe.REQUIREMENTS_CID?.map(req => req.itemId) || []),
+        ...(selectedRecipe.REWARDS_CID?.map(reward => reward.itemId) || [])
+      ];
+      
+      if (allItemIds.length > 0) {
+        console.log(`[CraftingStation] Preloading ${allItemIds.length} items for recipe ${selectedRecipe.NAME_CID}`);
+        itemMetadataService.preloadItems(allItemIds).catch(console.error);
+      }
+    }
+  }, [selectedRecipe]);
 
   const fetchPlayerBalances = async () => {
     try {
@@ -649,11 +668,11 @@ const CraftingStation: React.FC<CraftingStationProps> = ({ isOpen, onClose }) =>
                       </div>
                     </div>
 
-                    {/* Materials Required */}
+                    {/* Enhanced Materials Required */}
                     {selectedRecipe.REQUIREMENTS_CID && selectedRecipe.REQUIREMENTS_CID.length > 0 && (
                       <div>
                         <h4 className="text-cyan-400 font-mono text-sm font-bold mb-3 uppercase">Materials Required</h4>
-                        <div className="space-y-2">
+                        <div className="space-y-3">
                           {selectedRecipe.REQUIREMENTS_CID.map((req, index) => {
                             const available = getPlayerBalance(req.itemId)
                             const needed = req.amount * craftingQuantity
@@ -661,18 +680,37 @@ const CraftingStation: React.FC<CraftingStationProps> = ({ isOpen, onClose }) =>
                             
                             return (
                               <div key={index} className={`
-                                p-3 rounded-lg border ${hasEnough ? 'bg-green-400/10 border-green-400/30' : 'bg-red-400/10 border-red-400/30'}
+                                p-3 rounded-lg border transition-all duration-200
+                                ${hasEnough ? 'bg-green-400/10 border-green-400/30' : 'bg-red-400/10 border-red-400/30'}
                               `}>
-                                <div className="flex items-center justify-between">
-                                  <span className="text-white font-mono text-sm">{req.name}</span>
-                                  {hasEnough ? (
-                                    <CheckCircle className="w-4 h-4 text-green-400" />
-                                  ) : (
-                                    <AlertCircle className="w-4 h-4 text-red-400" />
-                                  )}
-                                </div>
-                                <div className={`text-xs font-mono mt-1 ${hasEnough ? 'text-green-400' : 'text-red-400'}`}>
-                                  {available.toLocaleString()} / {needed.toLocaleString()}
+                                <div className="flex items-center space-x-3">
+                                  <ItemTooltip itemId={req.itemId} position="right">
+                                    <ItemIcon 
+                                      itemId={req.itemId} 
+                                      size="small" 
+                                      showRarity
+                                      className="flex-shrink-0"
+                                    />
+                                  </ItemTooltip>
+                                  
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-white font-mono text-sm truncate">{req.name}</span>
+                                      {hasEnough ? (
+                                        <CheckCircle className="w-4 h-4 text-green-400 flex-shrink-0 ml-2" />
+                                      ) : (
+                                        <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 ml-2" />
+                                      )}
+                                    </div>
+                                    <div className="flex items-center justify-between mt-1">
+                                      <div className={`text-xs font-mono ${hasEnough ? 'text-green-400' : 'text-red-400'}`}>
+                                        {available.toLocaleString()} / {needed.toLocaleString()}
+                                      </div>
+                                      <div className="text-xs font-mono text-cyan-400">
+                                        x{needed.toLocaleString()}
+                                      </div>
+                                    </div>
+                                  </div>
                                 </div>
                               </div>
                             )
@@ -681,21 +719,39 @@ const CraftingStation: React.FC<CraftingStationProps> = ({ isOpen, onClose }) =>
                       </div>
                     )}
 
-                    {/* Rewards */}
+                    {/* Enhanced Rewards */}
                     {selectedRecipe.REWARDS_CID && selectedRecipe.REWARDS_CID.length > 0 && (
                       <div>
                         <h4 className="text-cyan-400 font-mono text-sm font-bold mb-3 uppercase">Rewards</h4>
-                        <div className="space-y-2">
+                        <div className="space-y-3">
                           {selectedRecipe.REWARDS_CID.map((reward, index) => (
-                            <div key={index} className="p-3 bg-gray-900/50 rounded-lg border border-cyan-400/20">
-                              <div className="flex items-center justify-between">
-                                <span className="text-white font-mono text-sm">{reward.name}</span>
-                                <span className="text-cyan-400 font-mono text-sm font-bold">
-                                  x{reward.amount * craftingQuantity}
-                                </span>
-                              </div>
-                              <div className="text-xs font-mono text-gray-400 mt-1">
-                                Item ID: {reward.itemId}
+                            <div key={index} className="p-3 bg-gray-900/50 rounded-lg border border-cyan-400/20 hover:border-cyan-400/40 transition-all duration-200">
+                              <div className="flex items-center space-x-3">
+                                <ItemTooltip itemId={reward.itemId} position="right">
+                                  <ItemIcon 
+                                    itemId={reward.itemId} 
+                                    size="small" 
+                                    showRarity
+                                    className="flex-shrink-0"
+                                  />
+                                </ItemTooltip>
+                                
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-white font-mono text-sm truncate">{reward.name}</span>
+                                    <span className="text-cyan-400 font-mono text-sm font-bold flex-shrink-0 ml-2">
+                                      x{reward.amount * craftingQuantity}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center justify-between mt-1">
+                                    <div className="text-xs font-mono text-gray-400">
+                                      Item ID: {reward.itemId}
+                                    </div>
+                                    <div className="text-xs font-mono text-green-400">
+                                      +{(reward.amount * craftingQuantity).toLocaleString()}
+                                    </div>
+                                  </div>
+                                </div>
                               </div>
                             </div>
                           ))}
