@@ -231,6 +231,59 @@ const Gigamarket: React.FC<GigamarketProps> = ({ isOpen, onClose }) => {
     }
   }
 
+  const getRarityCardStyling = (rarity: string) => {
+    switch (rarity.toLowerCase()) {
+      case 'mythic':
+        return {
+          cardClass: 'bg-gradient-to-br from-red-950/40 via-red-900/30 to-pink-900/20 border-red-500/60',
+          accentColor: 'red-400',
+          textColor: 'text-red-300',
+          glowClass: 'hover:shadow-red-500/40 hover:shadow-2xl',
+          hoverClass: 'hover:border-red-400/80 hover:bg-gradient-to-br hover:from-red-900/50 hover:via-red-800/40 hover:to-pink-800/30'
+        }
+      case 'legendary':
+        return {
+          cardClass: 'bg-gradient-to-br from-yellow-950/40 via-yellow-900/30 to-amber-900/20 border-yellow-500/60',
+          accentColor: 'yellow-400',
+          textColor: 'text-yellow-300',
+          glowClass: 'hover:shadow-yellow-500/40 hover:shadow-2xl',
+          hoverClass: 'hover:border-yellow-400/80 hover:bg-gradient-to-br hover:from-yellow-900/50 hover:via-yellow-800/40 hover:to-amber-800/30'
+        }
+      case 'epic':
+        return {
+          cardClass: 'bg-gradient-to-br from-purple-950/40 via-purple-900/30 to-violet-900/20 border-purple-500/60',
+          accentColor: 'purple-400',
+          textColor: 'text-purple-300',
+          glowClass: 'hover:shadow-purple-500/40 hover:shadow-2xl',
+          hoverClass: 'hover:border-purple-400/80 hover:bg-gradient-to-br hover:from-purple-900/50 hover:via-purple-800/40 hover:to-violet-800/30'
+        }
+      case 'rare':
+        return {
+          cardClass: 'bg-gradient-to-br from-blue-950/40 via-blue-900/30 to-cyan-900/20 border-blue-500/60',
+          accentColor: 'blue-400',
+          textColor: 'text-blue-300',
+          glowClass: 'hover:shadow-blue-500/40 hover:shadow-2xl',
+          hoverClass: 'hover:border-blue-400/80 hover:bg-gradient-to-br hover:from-blue-900/50 hover:via-blue-800/40 hover:to-cyan-800/30'
+        }
+      case 'uncommon':
+        return {
+          cardClass: 'bg-gradient-to-br from-green-950/40 via-green-900/30 to-emerald-900/20 border-green-500/60',
+          accentColor: 'green-400',
+          textColor: 'text-green-300',
+          glowClass: 'hover:shadow-green-500/40 hover:shadow-2xl',
+          hoverClass: 'hover:border-green-400/80 hover:bg-gradient-to-br hover:from-green-900/50 hover:via-green-800/40 hover:to-emerald-800/30'
+        }
+      default:
+        return {
+          cardClass: 'bg-gradient-to-br from-gray-950/40 via-gray-900/30 to-slate-900/20 border-gray-500/60',
+          accentColor: 'gray-400',
+          textColor: 'text-gray-300',
+          glowClass: 'hover:shadow-gray-500/40 hover:shadow-2xl',
+          hoverClass: 'hover:border-gray-400/80 hover:bg-gradient-to-br hover:from-gray-900/50 hover:via-gray-800/40 hover:to-slate-800/30'
+        }
+    }
+  }
+
   const getCategoryIcon = (category: string) => {
     switch (category) {
       case 'gear': return Shield
@@ -574,6 +627,7 @@ const Gigamarket: React.FC<GigamarketProps> = ({ isOpen, onClose }) => {
                 }>
                   {getPaginatedItems().map((item, index) => {
                     const CategoryIcon = getCategoryIcon(item.category || 'misc')
+                    const rarityStyle = getRarityCardStyling(item.rarity || 'common')
                     
                     return (
                       <motion.div
@@ -581,30 +635,40 @@ const Gigamarket: React.FC<GigamarketProps> = ({ isOpen, onClose }) => {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: index * 0.02 }}
-                        className={`bg-black/60 border border-gray-600 hover:border-purple-400/50 rounded transition-all duration-300 hover:shadow-lg hover:shadow-purple-400/20 group cursor-pointer ${
-                          viewMode === 'grid' ? 'p-4' : 'p-4 flex items-center space-x-4'
-                        } ${!item.available ? 'opacity-50' : ''} ${
+                        whileHover={{ scale: 1.03, y: -5 }}
+                        className={`relative overflow-hidden rounded-xl cursor-pointer group transition-all duration-300 ${
+                          viewMode === 'grid' ? 'p-5' : 'p-4 flex items-center space-x-4'
+                        } ${!item.available ? 'opacity-60' : ''} ${
                           comparisonItems.has(item.GAME_ITEM_ID_CID.toString()) ? 'ring-2 ring-blue-400' : ''
-                        }`}
-                        style={viewMode === 'grid' ? {
-                          clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)'
-                        } : {}}
+                        } ${rarityStyle.cardClass} ${rarityStyle.hoverClass} ${rarityStyle.glowClass}`}
                         onClick={() => {
                           setSelectedItem(item)
                           setShowItemModal(true)
                         }}
                       >
+                        {/* Subtle animated background overlay */}
+                        <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                        
+                        {/* Rarity corner accent */}
+                        <div className={`absolute top-0 right-0 w-0 h-0 border-l-[20px] border-l-transparent border-t-[20px] border-t-${rarityStyle.accentColor}/60`} />
+                        
                         {viewMode === 'grid' ? (
                           <>
-                            {/* Grid View */}
-                            {/* Item Header */}
-                            <div className="flex items-center justify-between mb-3">
+                            {/* Grid View - Enhanced Design */}
+                            {/* Item Header with better styling */}
+                            <div className="relative z-10 flex items-center justify-between mb-4">
                               <div className="flex items-center space-x-2">
-                                <CategoryIcon className="w-4 h-4 text-purple-400" />
-                                <span className="text-xs font-mono text-gray-400">#{item.GAME_ITEM_ID_CID}</span>
-                                <span className="text-xs font-mono text-gray-500">{item.type}</span>
+                                <div className={`p-1.5 rounded-lg bg-${rarityStyle.accentColor}/20 border border-${rarityStyle.accentColor}/40`}>
+                                  <CategoryIcon className={`w-3.5 h-3.5 text-${rarityStyle.accentColor}`} />
+                                </div>
+                                <div className="flex flex-col">
+                                  <span className="text-xs font-mono text-gray-300">#{item.GAME_ITEM_ID_CID}</span>
+                                  <span className="text-xs font-mono text-gray-500">{item.type}</span>
+                                </div>
                                 {!item.available && (
-                                  <span className="text-xs font-mono text-red-400">SOLD</span>
+                                  <span className="px-2 py-0.5 text-xs font-mono text-red-400 bg-red-400/20 border border-red-400/40 rounded">
+                                    SOLD
+                                  </span>
                                 )}
                               </div>
                               <div className="flex items-center space-x-2">
@@ -613,137 +677,150 @@ const Gigamarket: React.FC<GigamarketProps> = ({ isOpen, onClose }) => {
                                     e.stopPropagation()
                                     toggleFavorite(item.GAME_ITEM_ID_CID.toString())
                                   }}
-                                  className={`p-1 rounded transition-colors ${
+                                  className={`p-1.5 rounded-lg transition-all duration-200 ${
                                     favorites.has(item.GAME_ITEM_ID_CID.toString()) 
-                                      ? 'text-red-400 hover:text-red-300' 
-                                      : 'text-gray-400 hover:text-red-400'
+                                      ? 'text-red-400 bg-red-400/20 border border-red-400/40 hover:scale-110' 
+                                      : 'text-gray-400 bg-gray-400/10 border border-gray-400/30 hover:text-red-400 hover:bg-red-400/10 hover:scale-110'
                                   }`}
                                 >
                                   <Heart className="w-3 h-3" />
                                 </button>
-                                <span className={`px-2 py-1 text-xs font-mono border rounded ${getRarityColor(item.rarity || 'common')}`}>
-                                  {(item.rarityName || item.rarity || 'COMMON').toUpperCase()}
-                                </span>
                               </div>
                             </div>
 
-                            {/* Item Image */}
-                            {item.iconUrl && (
-                              <div className="w-full h-16 mb-3 flex items-center justify-center bg-gray-800/50 rounded">
+                            {/* Rarity Badge - Prominent */}
+                            <div className={`inline-flex items-center px-3 py-1.5 mb-4 bg-${rarityStyle.accentColor}/20 border border-${rarityStyle.accentColor}/50 rounded-lg ${rarityStyle.textColor} font-mono text-xs font-bold`}>
+                              <div className={`w-2 h-2 bg-${rarityStyle.accentColor} rounded-full mr-2 animate-pulse`} />
+                              {(item.rarityName || item.rarity || 'COMMON').toUpperCase()}
+                            </div>
+
+                            {/* Item Image - Enhanced Container */}
+                            <div className={`relative w-full h-20 mb-4 flex items-center justify-center bg-black/30 border border-${rarityStyle.accentColor}/30 rounded-lg overflow-hidden group-hover:border-${rarityStyle.accentColor}/50 transition-all duration-300`}>
+                              {item.iconUrl ? (
                                 <img 
                                   src={item.iconUrl} 
                                   alt={item.name}
-                                  className="max-h-12 max-w-12 object-contain"
+                                  className="max-h-16 max-w-16 object-contain group-hover:scale-110 transition-transform duration-300"
                                   onError={(e) => {
                                     e.currentTarget.style.display = 'none'
                                   }}
                                 />
-                              </div>
-                            )}
+                              ) : (
+                                <CategoryIcon className={`w-12 h-12 text-${rarityStyle.accentColor}/60`} />
+                              )}
+                              {/* Subtle glow effect */}
+                              <div className={`absolute inset-0 bg-gradient-to-t from-${rarityStyle.accentColor}/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
+                            </div>
 
-                            {/* Item Name */}
-                            <h4 className="font-bold font-mono text-white mb-2 group-hover:text-purple-400 transition-colors text-sm leading-tight">
+                            {/* Item Name - Enhanced Typography */}
+                            <h4 className={`font-bold font-mono text-white mb-3 ${rarityStyle.textColor} group-hover:text-${rarityStyle.accentColor} transition-colors text-sm leading-tight`}>
                               {item.name}
                             </h4>
 
-                            {/* Stats Preview */}
+                            {/* Stats Preview - Enhanced Grid */}
                             {item.stats && (
-                              <div className="grid grid-cols-2 gap-1 mb-3">
-                                <div className="flex items-center space-x-1">
+                              <div className="grid grid-cols-2 gap-2 mb-4">
+                                <div className={`flex items-center space-x-2 p-2 bg-black/20 border border-red-400/30 rounded`}>
                                   <Sword className="w-3 h-3 text-red-400" />
-                                  <span className="text-xs font-mono text-gray-400">{item.stats.attack}</span>
+                                  <span className="text-xs font-mono text-gray-300 font-semibold">{item.stats.attack}</span>
                                 </div>
-                                <div className="flex items-center space-x-1">
+                                <div className={`flex items-center space-x-2 p-2 bg-black/20 border border-blue-400/30 rounded`}>
                                   <Shield className="w-3 h-3 text-blue-400" />
-                                  <span className="text-xs font-mono text-gray-400">{item.stats.defense}</span>
+                                  <span className="text-xs font-mono text-gray-300 font-semibold">{item.stats.defense}</span>
                                 </div>
-                                <div className="flex items-center space-x-1">
+                                <div className={`flex items-center space-x-2 p-2 bg-black/20 border border-yellow-400/30 rounded`}>
                                   <Zap className="w-3 h-3 text-yellow-400" />
-                                  <span className="text-xs font-mono text-gray-400">{item.stats.speed}</span>
+                                  <span className="text-xs font-mono text-gray-300 font-semibold">{item.stats.speed}</span>
                                 </div>
-                                <div className="flex items-center space-x-1">
+                                <div className={`flex items-center space-x-2 p-2 bg-black/20 border border-purple-400/30 rounded`}>
                                   <Sparkles className="w-3 h-3 text-purple-400" />
-                                  <span className="text-xs font-mono text-gray-400">{item.stats.magic}</span>
+                                  <span className="text-xs font-mono text-gray-300 font-semibold">{item.stats.magic}</span>
                                 </div>
                               </div>
                             )}
 
-                            {/* Price and Change */}
-                            <div className="flex items-center justify-between mb-3">
-                              <div className="flex items-center space-x-2">
-                                <Coins className="w-4 h-4 text-yellow-400" />
-                                <span className="font-mono text-yellow-400 font-bold text-sm">
-                                  {formatPrice(item.priceInEth || 0)}
-                                </span>
+                            {/* Price Section - Enhanced Design */}
+                            <div className="mb-4">
+                              <div className="flex items-center justify-center mb-2">
+                                <div className={`flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-yellow-400/20 to-amber-400/20 border border-yellow-400/50 rounded-lg`}>
+                                  <Coins className="w-4 h-4 text-yellow-400" />
+                                  <span className="font-mono text-yellow-400 font-bold text-lg">
+                                    {formatPrice(item.priceInEth || 0)}
+                                  </span>
+                                </div>
                               </div>
                               
-                              <div className="flex items-center space-x-2">
+                              {/* Market Stats */}
+                              <div className="flex items-center justify-between text-xs">
                                 {item.priceChange !== undefined && (
-                                  <div className={`flex items-center space-x-1 ${
-                                    item.priceChange >= 0 ? 'text-green-400' : 'text-red-400'
+                                  <div className={`flex items-center space-x-1 px-2 py-1 rounded ${
+                                    item.priceChange >= 0 ? 'text-green-400 bg-green-400/20' : 'text-red-400 bg-red-400/20'
                                   }`}>
                                     {item.priceChange >= 0 ? (
                                       <TrendingUp className="w-3 h-3" />
                                     ) : (
                                       <TrendingDown className="w-3 h-3" />
                                     )}
-                                    <span className="text-xs font-mono">
+                                    <span className="font-mono font-semibold">
                                       {item.priceChange >= 0 ? '+' : ''}{item.priceChange.toFixed(1)}%
                                     </span>
                                   </div>
                                 )}
-                                <span className="text-xs font-mono text-gray-400">
+                                <span className="font-mono text-gray-400">
                                   Vol: {item.volume}
                                 </span>
                               </div>
                             </div>
 
-                            {/* Action Buttons */}
-                            <div className="flex space-x-1">
+                            {/* Action Buttons - Enhanced Design */}
+                            <div className="grid grid-cols-2 gap-2">
                               <button 
                                 onClick={(e) => {
                                   e.stopPropagation()
                                   setSelectedItem(item)
                                   setShowItemModal(true)
                                 }}
-                                className="flex-1 px-2 py-1 bg-purple-400/20 border border-purple-400/50 rounded font-mono text-xs text-purple-400 hover:bg-purple-400/30 transition-colors"
+                                className={`flex items-center justify-center px-3 py-2 bg-${rarityStyle.accentColor}/20 border border-${rarityStyle.accentColor}/50 rounded-lg font-mono text-xs ${rarityStyle.textColor} hover:bg-${rarityStyle.accentColor}/30 hover:scale-105 transition-all duration-200`}
                               >
-                                <Eye className="w-3 h-3 inline mr-1" />
+                                <Eye className="w-3 h-3 mr-1" />
                                 VIEW
                               </button>
-                              <button 
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  toggleComparison(item.GAME_ITEM_ID_CID.toString())
-                                }}
-                                className={`px-2 py-1 rounded font-mono text-xs transition-colors ${
-                                  comparisonItems.has(item.GAME_ITEM_ID_CID.toString())
-                                    ? 'bg-blue-400/30 border border-blue-400/50 text-blue-400'
-                                    : 'bg-gray-400/20 border border-gray-400/50 text-gray-400 hover:bg-gray-400/30'
-                                }`}
-                              >
-                                <BarChart3 className="w-3 h-3" />
-                              </button>
-                              <button 
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  toggleWatchlist(item.GAME_ITEM_ID_CID.toString())
-                                }}
-                                className={`px-2 py-1 rounded font-mono text-xs transition-colors ${
-                                  watchlist.has(item.GAME_ITEM_ID_CID.toString())
-                                    ? 'bg-yellow-400/30 border border-yellow-400/50 text-yellow-400'
-                                    : 'bg-gray-400/20 border border-gray-400/50 text-gray-400 hover:bg-gray-400/30'
-                                }`}
-                              >
-                                <Bell className="w-3 h-3" />
-                              </button>
-                              {item.available && (
-                                <button className="flex-1 px-2 py-1 bg-green-400/20 border border-green-400/50 rounded font-mono text-xs text-green-400 hover:bg-green-400/30 transition-colors">
-                                  <ShoppingCart className="w-3 h-3 inline mr-1" />
-                                  BUY
+                              <div className="flex space-x-1">
+                                <button 
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    toggleComparison(item.GAME_ITEM_ID_CID.toString())
+                                  }}
+                                  className={`flex-1 p-2 rounded-lg font-mono text-xs transition-all duration-200 hover:scale-105 ${
+                                    comparisonItems.has(item.GAME_ITEM_ID_CID.toString())
+                                      ? 'bg-blue-400/30 border border-blue-400/50 text-blue-400'
+                                      : 'bg-gray-400/20 border border-gray-400/50 text-gray-400 hover:bg-gray-400/30'
+                                  }`}
+                                >
+                                  <BarChart3 className="w-3 h-3" />
                                 </button>
-                              )}
+                                <button 
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    toggleWatchlist(item.GAME_ITEM_ID_CID.toString())
+                                  }}
+                                  className={`flex-1 p-2 rounded-lg font-mono text-xs transition-all duration-200 hover:scale-105 ${
+                                    watchlist.has(item.GAME_ITEM_ID_CID.toString())
+                                      ? 'bg-yellow-400/30 border border-yellow-400/50 text-yellow-400'
+                                      : 'bg-gray-400/20 border border-gray-400/50 text-gray-400 hover:bg-gray-400/30'
+                                  }`}
+                                >
+                                  <Bell className="w-3 h-3" />
+                                </button>
+                              </div>
                             </div>
+                            
+                            {item.available && (
+                              <button className="w-full mt-2 px-3 py-2 bg-gradient-to-r from-green-400/20 to-emerald-400/20 border border-green-400/50 rounded-lg font-mono text-sm text-green-400 hover:bg-gradient-to-r hover:from-green-400/30 hover:to-emerald-400/30 hover:scale-105 transition-all duration-200">
+                                <ShoppingCart className="w-4 h-4 inline mr-2" />
+                                BUY NOW
+                              </button>
+                            )}
                           </>
                         ) : (
                           <>
