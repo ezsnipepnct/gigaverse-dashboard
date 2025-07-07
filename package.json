@@ -9,19 +9,24 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@abstract-foundation/agw-client": "^1.8.6",
+    "@abstract-foundation/agw-react": "^1.8.6",
     "@radix-ui/react-dialog": "^1.1.14",
     "@radix-ui/react-progress": "^1.1.7",
     "@radix-ui/react-tabs": "^1.1.12",
     "@radix-ui/react-tooltip": "^1.2.7",
     "@react-three/drei": "^10.2.0",
     "@react-three/fiber": "^9.1.2",
+    "@tanstack/react-query": "^5.81.5",
     "framer-motion": "^12.18.1",
     "lucide-react": "^0.515.0",
     "next": "15.3.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-spring": "^10.0.1",
-    "three": "^0.177.0"
+    "three": "^0.177.0",
+    "viem": "^2.31.7",
+    "wagmi": "^2.15.6"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

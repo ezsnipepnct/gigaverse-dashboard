@@ -23,6 +23,7 @@ import ItemCard from './ItemCard'
 import ItemIcon from './ItemIcon'
 import ItemTooltip from './ItemTooltip'
 import { itemMetadataService } from '../services/itemMetadata'
+import { agwAuthService } from '@/lib/agw-auth'
 
 interface InventoryModalProps {
   isOpen: boolean
@@ -49,7 +50,7 @@ const WALLET_ADDRESS = "0xb0d90D52C7389824D4B22c06bcdcCD734E3162b7"
 // JWT Token management
 const getJWTToken = () => {
   if (typeof window !== 'undefined') {
-    return localStorage.getItem('jwt_token') || ''
+    return agwAuthService.getJWT() || ''
   }
   return ''
 }

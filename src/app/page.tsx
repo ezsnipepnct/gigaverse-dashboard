@@ -39,6 +39,8 @@ import Fishing from './components/Fishing'
 import TokenManager from './components/TokenManager'
 import ROMOverview from './components/ROMOverview'
 import DealsModal from './components/DealsModal'
+import WalletConnect from '@/components/WalletConnect'
+import { agwAuthService } from '@/lib/agw-auth'
 
 // Refined minimal button component with gold hover theme
 const RefinedButton = ({ children, onClick, variant = 'primary', className = '', disabled = false, goldHover = false }: {
@@ -403,10 +405,7 @@ const ROMProductionSummary = ({ setShowROMOverview }: { setShowROMOverview: (sho
   const [loading, setLoading] = useState(false)
 
   const getJWTToken = () => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('jwt_token') || ''
-    }
-    return ''
+    return agwAuthService.getJWT() || ''
   }
 
   const fetchROMSummary = async () => {
@@ -560,10 +559,7 @@ const GameProgress = () => {
 
   // Use the same JWT token function as other components
   const getJWTToken = () => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('jwt_token') || ''
-    }
-    return ''
+    return agwAuthService.getJWT() || ''
   }
 
   // Fetch fishing progress data
@@ -911,10 +907,7 @@ export default function GigaverseDashboard() {
 
   // JWT Token management
   const getJWTToken = () => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('jwt_token') || ''
-    }
-    return ''
+    return agwAuthService.getJWT() || ''
   }
 
   const fetchPlayerBalances = async () => {
@@ -1306,9 +1299,12 @@ export default function GigaverseDashboard() {
             </div>
           </div>
           
-          {/* Right side: Token Manager and Energy Display (swapped and pushed to right) */}
+          {/* Right side: Wallet Connect, Token Manager and Energy Display */}
           <div className="flex items-center space-x-6 ml-auto">
-            {/* JWT Token Manager (moved to first position) */}
+            {/* Wallet Connection */}
+            <WalletConnect />
+            
+            {/* JWT Token Manager */}
             <RefinedButton
               onClick={() => setShowTokenManager(true)}
               variant="secondary"
@@ -1319,7 +1315,7 @@ export default function GigaverseDashboard() {
               TOKEN
             </RefinedButton>
             
-            {/* Enhanced Energy Display (moved to second position) */}
+            {/* Enhanced Energy Display */}
             <div className="max-w-2xl"> {/* Reduced from max-w-3xl to max-w-2xl since it's now on the right */}
               <div 
                 className="bg-black/60 border border-cyan-400/30 rounded-lg p-5 backdrop-blur-sm cursor-pointer hover:border-cyan-400/50 transition-all duration-300 hover:bg-black/70"

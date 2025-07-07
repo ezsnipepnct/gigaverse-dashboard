@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Battery, BatteryLow } from 'lucide-react'
+import { agwAuthService } from '@/lib/agw-auth'
 
 interface EnergyData {
   ENERGY_CID: number
@@ -21,10 +22,7 @@ interface EnergyDisplayProps {
 
 // JWT Token management
 const getJWTToken = () => {
-  if (typeof window !== 'undefined') {
-    return localStorage.getItem('jwt_token') || ''
-  }
-  return ''
+  return agwAuthService.getJWT() || ''
 }
 
 const EnergyDisplay: React.FC<EnergyDisplayProps> = ({ 

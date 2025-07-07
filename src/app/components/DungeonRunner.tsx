@@ -24,6 +24,7 @@ import {
   Crosshair,
   BarChart3
 } from 'lucide-react'
+import { agwAuthService } from '@/lib/agw-auth'
 
 interface DungeonRunnerProps {
   isOpen: boolean
@@ -58,10 +59,7 @@ interface RoundResult {
 const DungeonRunner: React.FC<DungeonRunnerProps> = ({ isOpen, onClose }) => {
   // JWT Token management
   const getJWTToken = () => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('jwt_token') || ''
-    }
-    return ''
+    return agwAuthService.getJWT() || ''
   }
 
   const [gameState, setGameState] = useState<GameState | null>(null)
