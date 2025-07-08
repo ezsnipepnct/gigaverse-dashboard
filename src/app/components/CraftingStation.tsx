@@ -319,7 +319,7 @@ const CraftingStation: React.FC<CraftingStationProps> = ({ isOpen, onClose }) =>
         }
       }
       
-      setSuccessMessage(`Successfully crafted ${craftingQuantity}x ${selectedRecipe.NAME_CID}!`)
+      setSuccessMessage(`Successfully crafted ${craftingQuantity}x ${getCleanRecipeName(selectedRecipe.NAME_CID)}!`)
       fetchPlayerBalances()
       
       setTimeout(() => {
@@ -357,6 +357,19 @@ const CraftingStation: React.FC<CraftingStationProps> = ({ isOpen, onClose }) =>
       case 5: return 'RELIC'
       default: return 'COMMON'
     }
+  }
+
+  // Helper function to clean recipe names (remove "Craft " prefix)
+  const getCleanRecipeName = (recipeName: string): string => {
+    return recipeName.replace(/^Craft\s+/i, '')
+  }
+
+  // Helper function to get the crafted item ID from rewards
+  const getCraftedItemId = (recipe: Recipe): number | null => {
+    if (recipe.REWARDS_CID && recipe.REWARDS_CID.length > 0) {
+      return recipe.REWARDS_CID[0].itemId
+    }
+    return null
   }
 
   const getPlayerBalance = (itemId: string | number): number => {
@@ -607,11 +620,19 @@ const CraftingStation: React.FC<CraftingStationProps> = ({ isOpen, onClose }) =>
                           <div className="flex items-center justify-between pr-8">
                             <div className="flex items-center space-x-4">
                               <div className={`p-2 rounded ${recipe.unlocked ? 'bg-cyan-400/20' : 'bg-gray-600/20'}`}>
-                                <Package className={`w-5 h-5 ${recipe.unlocked ? 'text-cyan-400' : 'text-gray-500'}`} />
+                                {getCraftedItemId(recipe) ? (
+                                  <ItemIcon 
+                                    itemId={getCraftedItemId(recipe)!} 
+                                    size="small" 
+                                    showRarity={false}
+                                  />
+                                ) : (
+                                  <Package className={`w-5 h-5 ${recipe.unlocked ? 'text-cyan-400' : 'text-gray-500'}`} />
+                                )}
                               </div>
                               <div>
                                 <h3 className={`font-mono font-bold text-lg ${recipe.unlocked ? 'text-cyan-400' : 'text-gray-500'}`}>
-                                  {recipe.NAME_CID}
+                                  {getCleanRecipeName(recipe.NAME_CID)}
                                 </h3>
                                 <p className={`font-mono text-xs ${recipe.unlocked ? 'text-gray-400' : 'text-gray-600'}`}>
                                   {recipe.DESCRIPTION_CID}
@@ -687,14 +708,22 @@ const CraftingStation: React.FC<CraftingStationProps> = ({ isOpen, onClose }) =>
                             {/* Recipe Icon */}
                             <div className="flex justify-center mb-3">
                               <div className={`p-3 rounded-lg ${recipe.unlocked ? 'bg-cyan-400/20' : 'bg-gray-600/20'}`}>
-                                <Package className={`w-8 h-8 ${recipe.unlocked ? 'text-cyan-400' : 'text-gray-500'}`} />
+                                {getCraftedItemId(recipe) ? (
+                                  <ItemIcon 
+                                    itemId={getCraftedItemId(recipe)!} 
+                                    size="medium" 
+                                    showRarity={false}
+                                  />
+                                ) : (
+                                  <Package className={`w-8 h-8 ${recipe.unlocked ? 'text-cyan-400' : 'text-gray-500'}`} />
+                                )}
                               </div>
                             </div>
 
                             {/* Recipe Info */}
                             <div className="flex-1 text-center">
                               <h3 className={`font-mono font-bold text-sm mb-2 truncate ${recipe.unlocked ? 'text-cyan-400' : 'text-gray-500'}`}>
-                                {recipe.NAME_CID}
+                                {getCleanRecipeName(recipe.NAME_CID)}
                               </h3>
                               <p className={`font-mono text-xs mb-3 line-clamp-2 ${recipe.unlocked ? 'text-gray-400' : 'text-gray-600'}`}>
                                 {recipe.DESCRIPTION_CID}
@@ -744,10 +773,18 @@ const CraftingStation: React.FC<CraftingStationProps> = ({ isOpen, onClose }) =>
                           selectedRecipe.unlocked ? 'bg-cyan-400/20' : 'bg-gray-600/20'
                         }`}
                       >
-                        <Sparkles className={`w-8 h-8 ${selectedRecipe.unlocked ? 'text-cyan-400' : 'text-gray-500'}`} />
+                        {getCraftedItemId(selectedRecipe) ? (
+                          <ItemIcon 
+                            itemId={getCraftedItemId(selectedRecipe)!} 
+                            size="large" 
+                            showRarity={false}
+                          />
+                        ) : (
+                          <Sparkles className={`w-8 h-8 ${selectedRecipe.unlocked ? 'text-cyan-400' : 'text-gray-500'}`} />
+                        )}
                       </motion.div>
                       <h3 className={`text-xl font-bold font-mono mb-2 ${selectedRecipe.unlocked ? 'text-cyan-400' : 'text-gray-500'}`}>
-                        {selectedRecipe.NAME_CID}
+                        {getCleanRecipeName(selectedRecipe.NAME_CID)}
                       </h3>
                       <p className={`font-mono text-sm ${selectedRecipe.unlocked ? 'text-gray-400' : 'text-gray-600'}`}>
                         {selectedRecipe.DESCRIPTION_CID}
