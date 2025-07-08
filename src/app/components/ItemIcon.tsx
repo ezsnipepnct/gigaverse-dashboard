@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ParsedItemMetadata } from '../types/item';
 import { itemMetadataService } from '../services/itemMetadata';
+import { Lock } from 'lucide-react';
 
 interface ItemIconProps {
   itemId: number;
@@ -264,7 +265,9 @@ const ItemIcon: React.FC<ItemIconProps> = ({
 
       {/* Soulbound indicator */}
       {item?.soulbound && (
-        <div className="absolute bottom-0 left-0 w-2 h-2 bg-red-500 rounded-tr" />
+        <div className="absolute top-0 left-0 w-5 h-5 bg-red-500 rounded-full border border-gray-800 flex items-center justify-center">
+          <Lock className="w-3 h-3 text-white" />
+        </div>
       )}
     </div>
   );

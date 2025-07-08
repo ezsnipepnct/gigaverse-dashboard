@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { ParsedItemMetadata } from '../types/item';
 import { itemMetadataService } from '../services/itemMetadata';
-import { Package, Shield, Star } from 'lucide-react';
+import { Package, Shield, Star, Lock } from 'lucide-react';
 
 interface ItemCardProps {
   itemId: number;
@@ -163,7 +163,9 @@ const ItemCard: React.FC<ItemCardProps> = ({
           
           {/* Soulbound indicator */}
           {item.soulbound && (
-            <div className="absolute -bottom-1 -left-1 w-3 h-3 bg-red-500 rounded-full border border-gray-800" />
+            <div className="absolute -top-1 -left-1 w-6 h-6 bg-red-500 rounded-full border border-gray-800 flex items-center justify-center">
+              <Lock className="w-4 h-4 text-white" />
+            </div>
           )}
         </div>
 
