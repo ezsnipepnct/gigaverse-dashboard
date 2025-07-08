@@ -631,25 +631,16 @@ const CraftingStation: React.FC<CraftingStationProps> = ({ isOpen, onClose }) =>
                                 )}
                               </div>
                               <div>
-                                <h3 className={`font-mono font-bold text-lg ${recipe.unlocked ? 'text-cyan-400' : 'text-gray-500'}`}>
+                                <h3 className={`font-bold ${recipe.unlocked ? 'text-white' : 'text-gray-400'}`}>
                                   {getCleanRecipeName(recipe.NAME_CID)}
                                 </h3>
-                                <p className={`font-mono text-xs ${recipe.unlocked ? 'text-gray-400' : 'text-gray-600'}`}>
-                                  {recipe.DESCRIPTION_CID}
-                                </p>
-                                <div className="flex items-center space-x-4 mt-1">
-                                  <div className="flex items-center space-x-1">
-                                    <Zap className={`w-3 h-3 ${recipe.unlocked ? 'text-yellow-400' : 'text-gray-500'}`} />
-                                    <span className={`font-mono text-xs ${recipe.unlocked ? 'text-yellow-400' : 'text-gray-500'}`}>
-                                      {recipe.ENERGY_CID || 0}
-                                    </span>
-                                  </div>
-                                  <div className="flex items-center space-x-1">
-                                    <Star className={`w-3 h-3 ${recipe.unlocked ? 'text-green-400' : 'text-gray-500'}`} />
-                                    <span className={`font-mono text-xs ${recipe.unlocked ? 'text-green-400' : 'text-gray-500'}`}>
-                                      {recipe.SUCCESS_RATE_CID || 100}%
-                                    </span>
-                                  </div>
+                                <div className="flex items-center space-x-4 mt-2">
+                                  <span className={`text-sm ${recipe.unlocked ? 'text-cyan-400' : 'text-gray-500'}`}>
+                                    Energy: {recipe.ENERGY_CID}
+                                  </span>
+                                  <span className={`text-sm ${recipe.unlocked ? 'text-green-400' : 'text-gray-500'}`}>
+                                    {recipe.SUCCESS_RATE_CID || 100}%
+                                  </span>
                                 </div>
                               </div>
                             </div>
@@ -722,24 +713,20 @@ const CraftingStation: React.FC<CraftingStationProps> = ({ isOpen, onClose }) =>
 
                             {/* Recipe Info */}
                             <div className="flex-1 text-center">
-                              <h3 className={`font-mono font-bold text-sm mb-2 truncate ${recipe.unlocked ? 'text-cyan-400' : 'text-gray-500'}`}>
+                              <h3 className={`font-bold text-sm mb-2 truncate ${recipe.unlocked ? 'text-cyan-400' : 'text-gray-500'}`}>
                                 {getCleanRecipeName(recipe.NAME_CID)}
                               </h3>
-                              <p className={`font-mono text-xs mb-3 line-clamp-2 ${recipe.unlocked ? 'text-gray-400' : 'text-gray-600'}`}>
-                                {recipe.DESCRIPTION_CID}
-                              </p>
                               
-                              {/* Stats */}
-                              <div className="flex justify-center space-x-4 mb-3">
+                              <div className="flex justify-center items-center space-x-3 text-xs">
                                 <div className="flex items-center space-x-1">
                                   <Zap className={`w-3 h-3 ${recipe.unlocked ? 'text-yellow-400' : 'text-gray-500'}`} />
-                                  <span className={`font-mono text-xs ${recipe.unlocked ? 'text-yellow-400' : 'text-gray-500'}`}>
+                                  <span className={`${recipe.unlocked ? 'text-yellow-400' : 'text-gray-500'}`}>
                                     {recipe.ENERGY_CID || 0}
                                   </span>
                                 </div>
                                 <div className="flex items-center space-x-1">
                                   <Star className={`w-3 h-3 ${recipe.unlocked ? 'text-green-400' : 'text-gray-500'}`} />
-                                  <span className={`font-mono text-xs ${recipe.unlocked ? 'text-green-400' : 'text-gray-500'}`}>
+                                  <span className={`${recipe.unlocked ? 'text-green-400' : 'text-gray-500'}`}>
                                     {recipe.SUCCESS_RATE_CID || 100}%
                                   </span>
                                 </div>
@@ -786,9 +773,6 @@ const CraftingStation: React.FC<CraftingStationProps> = ({ isOpen, onClose }) =>
                       <h3 className={`text-xl font-bold font-mono mb-2 ${selectedRecipe.unlocked ? 'text-cyan-400' : 'text-gray-500'}`}>
                         {getCleanRecipeName(selectedRecipe.NAME_CID)}
                       </h3>
-                      <p className={`font-mono text-sm ${selectedRecipe.unlocked ? 'text-gray-400' : 'text-gray-600'}`}>
-                        {selectedRecipe.DESCRIPTION_CID}
-                      </p>
                       
                       {/* Lock Status */}
                       {!selectedRecipe.unlocked && (
