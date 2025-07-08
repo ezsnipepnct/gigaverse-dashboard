@@ -16,6 +16,7 @@ import {
   RefreshCw,
   Zap
 } from 'lucide-react'
+import { agwAuthService } from '@/lib/agw-auth'
 
 interface DealsModalProps {
   onClose: () => void
@@ -64,12 +65,9 @@ const DealsModal: React.FC<DealsModalProps> = ({ onClose }) => {
     timeUntilNextWeek: ''
   })
 
-  // JWT Token management
+  // JWT Token management using AGW auth service
   const getJWTToken = () => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('jwt_token') || ''
-    }
-    return ''
+    return agwAuthService.getJWT() || ''
   }
 
   useEffect(() => {

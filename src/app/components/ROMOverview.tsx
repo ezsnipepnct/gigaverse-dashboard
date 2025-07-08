@@ -19,6 +19,7 @@ import {
   Hammer,
   AlertCircle
 } from 'lucide-react'
+import { agwAuthService } from '@/lib/agw-auth'
 
 interface ROMOverviewProps {
   isOpen: boolean
@@ -65,12 +66,9 @@ interface ROMSummary {
 
 const WALLET_ADDRESS = "0xb0d90D52C7389824D4B22c06bcdcCD734E3162b7"
 
-// JWT Token management
+// JWT Token management using AGW auth service
 const getJWTToken = () => {
-  if (typeof window !== 'undefined') {
-    return localStorage.getItem('jwt_token') || ''
-  }
-  return ''
+  return agwAuthService.getJWT() || ''
 }
 
 const ROMOverview: React.FC<ROMOverviewProps> = ({ isOpen, onClose }) => {

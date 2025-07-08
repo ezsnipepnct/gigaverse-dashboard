@@ -50,6 +50,7 @@ import {
   Eye,
   EyeOff
 } from 'lucide-react'
+import { agwAuthService } from '@/lib/agw-auth'
 
 interface FishingProps {
   isOpen: boolean
@@ -111,12 +112,9 @@ const Fishing: React.FC<FishingProps> = ({ isOpen, onClose }) => {
   const wsRef = useRef<WebSocket | null>(null)
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
-  // JWT Token management
+  // JWT Token management using AGW auth service
   const getJWTToken = () => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('jwt_token') || ''
-    }
-    return ''
+    return agwAuthService.getJWT() || ''
   }
 
   // Check for existing active fishing game
