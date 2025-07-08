@@ -16,7 +16,9 @@ import {
   AlertCircle,
   RefreshCw,
   Wrench,
-  Battery
+  Battery,
+  List,
+  Grid3X3
 } from 'lucide-react'
 import ItemIcon from './ItemIcon'
 import ItemTooltip from './ItemTooltip'
@@ -88,6 +90,7 @@ const CraftingStation: React.FC<CraftingStationProps> = ({ isOpen, onClose }) =>
   const [playerBalances, setPlayerBalances] = useState<Record<string, number>>({})
   const [mounted, setMounted] = useState(false)
   const [showLockedRecipes, setShowLockedRecipes] = useState(false)
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list')
 
   useEffect(() => {
     setMounted(true)
@@ -491,6 +494,36 @@ const CraftingStation: React.FC<CraftingStationProps> = ({ isOpen, onClose }) =>
                   ))}
                 </select>
                 
+                {/* View Mode Toggle */}
+                <div className="flex items-center space-x-1 bg-gray-900/50 border border-cyan-400/20 rounded-lg p-1">
+                  <button
+                    onClick={() => setViewMode('list')}
+                    className={`
+                      p-2 rounded transition-all duration-200
+                      ${viewMode === 'list' 
+                        ? 'bg-cyan-400/20 text-cyan-400' 
+                        : 'text-gray-400 hover:text-cyan-400 hover:bg-cyan-400/10'
+                      }
+                    `}
+                    title="List View"
+                  >
+                    <List className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => setViewMode('grid')}
+                    className={`
+                      p-2 rounded transition-all duration-200
+                      ${viewMode === 'grid' 
+                        ? 'bg-cyan-400/20 text-cyan-400' 
+                        : 'text-gray-400 hover:text-cyan-400 hover:bg-cyan-400/10'
+                      }
+                    `}
+                    title="Grid View"
+                  >
+                    <Grid3X3 className="w-4 h-4" />
+                  </button>
+                </div>
+                
                 {/* Show Locked Recipes Toggle */}
                 <div className="flex items-center space-x-3 px-3 py-2 bg-gray-900/50 border border-cyan-400/20 rounded-lg">
                   <span className="text-cyan-400 font-mono text-sm">Show Locked</span>
@@ -533,55 +566,142 @@ const CraftingStation: React.FC<CraftingStationProps> = ({ isOpen, onClose }) =>
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {filteredRecipes.map((recipe) => (
-                      <motion.div
-                        key={recipe._id}
-                        whileHover={{ scale: recipe.unlocked ? 1.01 : 1 }}
-                        onClick={() => recipe.unlocked && setSelectedRecipe(recipe)}
-                        className={`
-                          p-4 rounded-lg transition-all duration-200 border relative
-                          ${!recipe.unlocked 
-                            ? 'bg-gray-800/30 border-gray-700/50 opacity-60 cursor-not-allowed' 
-                            : selectedRecipe?._id === recipe._id
-                              ? 'bg-cyan-400/10 border-cyan-400/50 shadow-lg cursor-pointer'
-                              : 'bg-gray-900/30 border-gray-600/30 hover:bg-gray-900/50 hover:border-cyan-400/30 cursor-pointer'
-                          }
-                        `}
-                      >
-                        {/* Lock/Unlock Indicator */}
-                        <div className="absolute top-2 right-2">
-                          {recipe.unlocked ? (
-                            <motion.div
-                              initial={{ scale: 0 }}
-                              animate={{ scale: 1 }}
-                              className="w-6 h-6 bg-green-400/20 rounded-full flex items-center justify-center"
-                            >
-                              <CheckCircle className="w-4 h-4 text-green-400" />
-                            </motion.div>
-                          ) : (
-                            <motion.div
-                              initial={{ scale: 0 }}
-                              animate={{ scale: 1 }}
-                              className="w-6 h-6 bg-red-400/20 rounded-full flex items-center justify-center"
-                            >
-                              <X className="w-4 h-4 text-red-400" />
-                            </motion.div>
-                          )}
-                        </div>
+                    {viewMode === 'list' ? (
+                      // List View
+                      filteredRecipes.map((recipe) => (
+                        <motion.div
+                          key={recipe._id}
+                          whileHover={{ scale: recipe.unlocked ? 1.01 : 1 }}
+                          onClick={() => recipe.unlocked && setSelectedRecipe(recipe)}
+                          className={`
+                            p-4 rounded-lg transition-all duration-200 border relative
+                            ${!recipe.unlocked 
+                              ? 'bg-gray-800/30 border-gray-700/50 opacity-60 cursor-not-allowed' 
+                              : selectedRecipe?._id === recipe._id
+                                ? 'bg-cyan-400/10 border-cyan-400/50 shadow-lg cursor-pointer'
+                                : 'bg-gray-900/30 border-gray-600/30 hover:bg-gray-900/50 hover:border-cyan-400/30 cursor-pointer'
+                            }
+                          `}
+                        >
+                          {/* Lock/Unlock Indicator */}
+                          <div className="absolute top-2 right-2">
+                            {recipe.unlocked ? (
+                              <motion.div
+                                initial={{ scale: 0 }}
+                                animate={{ scale: 1 }}
+                                className="w-6 h-6 bg-green-400/20 rounded-full flex items-center justify-center"
+                              >
+                                <CheckCircle className="w-4 h-4 text-green-400" />
+                              </motion.div>
+                            ) : (
+                              <motion.div
+                                initial={{ scale: 0 }}
+                                animate={{ scale: 1 }}
+                                className="w-6 h-6 bg-red-400/20 rounded-full flex items-center justify-center"
+                              >
+                                <X className="w-4 h-4 text-red-400" />
+                              </motion.div>
+                            )}
+                          </div>
 
-                        <div className="flex items-center justify-between pr-8">
-                          <div className="flex items-center space-x-4">
-                            <div className={`p-2 rounded ${recipe.unlocked ? 'bg-cyan-400/20' : 'bg-gray-600/20'}`}>
-                              <Package className={`w-5 h-5 ${recipe.unlocked ? 'text-cyan-400' : 'text-gray-500'}`} />
+                          <div className="flex items-center justify-between pr-8">
+                            <div className="flex items-center space-x-4">
+                              <div className={`p-2 rounded ${recipe.unlocked ? 'bg-cyan-400/20' : 'bg-gray-600/20'}`}>
+                                <Package className={`w-5 h-5 ${recipe.unlocked ? 'text-cyan-400' : 'text-gray-500'}`} />
+                              </div>
+                              <div>
+                                <h3 className={`font-mono font-bold text-lg ${recipe.unlocked ? 'text-cyan-400' : 'text-gray-500'}`}>
+                                  {recipe.NAME_CID}
+                                </h3>
+                                <p className={`font-mono text-xs ${recipe.unlocked ? 'text-gray-400' : 'text-gray-600'}`}>
+                                  {recipe.DESCRIPTION_CID}
+                                </p>
+                                <div className="flex items-center space-x-4 mt-1">
+                                  <div className="flex items-center space-x-1">
+                                    <Zap className={`w-3 h-3 ${recipe.unlocked ? 'text-yellow-400' : 'text-gray-500'}`} />
+                                    <span className={`font-mono text-xs ${recipe.unlocked ? 'text-yellow-400' : 'text-gray-500'}`}>
+                                      {recipe.ENERGY_CID || 0}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center space-x-1">
+                                    <Star className={`w-3 h-3 ${recipe.unlocked ? 'text-green-400' : 'text-gray-500'}`} />
+                                    <span className={`font-mono text-xs ${recipe.unlocked ? 'text-green-400' : 'text-gray-500'}`}>
+                                      {recipe.SUCCESS_RATE_CID || 100}%
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
                             </div>
-                            <div>
-                              <h3 className={`font-mono font-bold text-lg ${recipe.unlocked ? 'text-cyan-400' : 'text-gray-500'}`}>
+                            <div className="text-center">
+                              <div className={`font-mono text-xs uppercase ${recipe.unlocked ? 'text-green-400' : 'text-red-400'}`}>
+                                {recipe.unlocked ? 'UNLOCKED' : 'LOCKED'}
+                              </div>
+                              {recipe.unlocked ? (
+                                <CheckCircle className="w-4 h-4 text-green-400 mx-auto mt-1" />
+                              ) : (
+                                <X className="w-4 h-4 text-red-400 mx-auto mt-1" />
+                              )}
+                            </div>
+                          </div>
+                        </motion.div>
+                      ))
+                    ) : (
+                      // Grid View
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {filteredRecipes.map((recipe) => (
+                          <motion.div
+                            key={recipe._id}
+                            whileHover={{ scale: recipe.unlocked ? 1.02 : 1 }}
+                            onClick={() => recipe.unlocked && setSelectedRecipe(recipe)}
+                            className={`
+                              p-4 rounded-lg transition-all duration-200 border relative h-48 flex flex-col
+                              ${!recipe.unlocked 
+                                ? 'bg-gray-800/30 border-gray-700/50 opacity-60 cursor-not-allowed' 
+                                : selectedRecipe?._id === recipe._id
+                                  ? 'bg-cyan-400/10 border-cyan-400/50 shadow-lg cursor-pointer'
+                                  : 'bg-gray-900/30 border-gray-600/30 hover:bg-gray-900/50 hover:border-cyan-400/30 cursor-pointer'
+                              }
+                            `}
+                          >
+                            {/* Lock/Unlock Indicator */}
+                            <div className="absolute top-2 right-2">
+                              {recipe.unlocked ? (
+                                <motion.div
+                                  initial={{ scale: 0 }}
+                                  animate={{ scale: 1 }}
+                                  className="w-5 h-5 bg-green-400/20 rounded-full flex items-center justify-center"
+                                >
+                                  <CheckCircle className="w-3 h-3 text-green-400" />
+                                </motion.div>
+                              ) : (
+                                <motion.div
+                                  initial={{ scale: 0 }}
+                                  animate={{ scale: 1 }}
+                                  className="w-5 h-5 bg-red-400/20 rounded-full flex items-center justify-center"
+                                >
+                                  <X className="w-3 h-3 text-red-400" />
+                                </motion.div>
+                              )}
+                            </div>
+
+                            {/* Recipe Icon */}
+                            <div className="flex justify-center mb-3">
+                              <div className={`p-3 rounded-lg ${recipe.unlocked ? 'bg-cyan-400/20' : 'bg-gray-600/20'}`}>
+                                <Package className={`w-8 h-8 ${recipe.unlocked ? 'text-cyan-400' : 'text-gray-500'}`} />
+                              </div>
+                            </div>
+
+                            {/* Recipe Info */}
+                            <div className="flex-1 text-center">
+                              <h3 className={`font-mono font-bold text-sm mb-2 truncate ${recipe.unlocked ? 'text-cyan-400' : 'text-gray-500'}`}>
                                 {recipe.NAME_CID}
                               </h3>
-                              <p className={`font-mono text-xs ${recipe.unlocked ? 'text-gray-400' : 'text-gray-600'}`}>
+                              <p className={`font-mono text-xs mb-3 line-clamp-2 ${recipe.unlocked ? 'text-gray-400' : 'text-gray-600'}`}>
                                 {recipe.DESCRIPTION_CID}
                               </p>
-                              <div className="flex items-center space-x-4 mt-1">
+                              
+                              {/* Stats */}
+                              <div className="flex justify-center space-x-4 mb-3">
                                 <div className="flex items-center space-x-1">
                                   <Zap className={`w-3 h-3 ${recipe.unlocked ? 'text-yellow-400' : 'text-gray-500'}`} />
                                   <span className={`font-mono text-xs ${recipe.unlocked ? 'text-yellow-400' : 'text-gray-500'}`}>
@@ -596,20 +716,17 @@ const CraftingStation: React.FC<CraftingStationProps> = ({ isOpen, onClose }) =>
                                 </div>
                               </div>
                             </div>
-                          </div>
-                          <div className="text-center">
-                            <div className={`font-mono text-xs uppercase ${recipe.unlocked ? 'text-green-400' : 'text-red-400'}`}>
-                              {recipe.unlocked ? 'UNLOCKED' : 'LOCKED'}
+
+                            {/* Status */}
+                            <div className="text-center">
+                              <div className={`font-mono text-xs uppercase ${recipe.unlocked ? 'text-green-400' : 'text-red-400'}`}>
+                                {recipe.unlocked ? 'UNLOCKED' : 'LOCKED'}
+                              </div>
                             </div>
-                            {recipe.unlocked ? (
-                              <CheckCircle className="w-4 h-4 text-green-400 mx-auto mt-1" />
-                            ) : (
-                              <X className="w-4 h-4 text-red-400 mx-auto mt-1" />
-                            )}
-                          </div>
-                        </div>
-                      </motion.div>
-                    ))}
+                          </motion.div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
