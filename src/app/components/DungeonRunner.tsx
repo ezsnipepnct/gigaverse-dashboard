@@ -22,7 +22,10 @@ import {
   Activity,
   Brain,
   Crosshair,
-  BarChart3
+  BarChart3,
+  Crown,
+  Settings,
+  ChevronRight
 } from 'lucide-react'
 import { agwAuthService } from '@/lib/agw-auth'
 
@@ -30,6 +33,54 @@ interface DungeonRunnerProps {
   isOpen: boolean
   onClose: () => void
 }
+
+// Dungeon Mode Configurations
+const DUNGEON_MODES = {
+  normal: {
+    id: 1,
+    name: 'Dungetron 5000',
+    displayName: 'Normal Mode',
+    energyCost: 40,
+    maxRuns: 12,
+    description: 'Standard dungeon with balanced difficulty',
+    icon: Sword,
+    color: 'cyan',
+    bgColor: 'bg-cyan-400/10',
+    borderColor: 'border-cyan-400/50',
+    textColor: 'text-cyan-400',
+    checkpointFloor: -1
+  },
+  gigus: {
+    id: 2,
+    name: 'Gigus Dungeon',
+    displayName: 'Gigus Mode',
+    energyCost: 200,
+    maxRuns: 30,
+    description: 'Elite dungeon with enhanced rewards',
+    icon: Crown,
+    color: 'yellow',
+    bgColor: 'bg-yellow-400/10',
+    borderColor: 'border-yellow-400/50',
+    textColor: 'text-yellow-400',
+    checkpointFloor: -1
+  },
+  underhaul: {
+    id: 3,
+    name: 'Dungetron Underhaul',
+    displayName: 'Underhaul Mode',
+    energyCost: 40,
+    maxRuns: 9,
+    description: 'Challenging underworld dungeon',
+    icon: Flame,
+    color: 'red',
+    bgColor: 'bg-red-400/10',
+    borderColor: 'border-red-400/50',
+    textColor: 'text-red-400',
+    checkpointFloor: 2
+  }
+} as const
+
+type DungeonMode = keyof typeof DUNGEON_MODES
 
 interface GameState {
   player_health: number
@@ -66,7 +117,7 @@ const DungeonRunner: React.FC<DungeonRunnerProps> = ({ isOpen, onClose }) => {
   const [actionToken, setActionToken] = useState<string>('')
   const [isRunning, setIsRunning] = useState(false)
   const [isPaused, setIsPaused] = useState(false)
-  const [currentMode, setCurrentMode] = useState<'normal' | 'gigus'>('normal')
+  const [currentMode, setCurrentMode] = useState<DungeonMode>('normal')
   const [multiRunMode, setMultiRunMode] = useState(false)
   const [runCount, setRunCount] = useState(5)
   const [currentRunNumber, setCurrentRunNumber] = useState(0)
@@ -85,7 +136,100 @@ const DungeonRunner: React.FC<DungeonRunnerProps> = ({ isOpen, onClose }) => {
     totalRounds: 0,
     averageRounds: 0
   })
+  const [playerEnergy, setPlayerEnergy] = useState<number>(0)
+  const [showModeSelector, setShowModeSelector] = useState(false)
+  const [selectedPotions, setSelectedPotions] = useState<number[]>([0, 0, 0])
+  const [availablePotions, setAvailablePotions] = useState<any[]>([])
+  const [showPotionSelector, setShowPotionSelector] = useState(false)
+  const [potionAnalysis, setPotionAnalysis] = useState<any>(null)
 
+  // Load player energy and potions on component mount
+  useEffect(() => {
+    const loadPlayerData = async () => {
+      try {
+        const token = getJWTToken()
+        if (!token) return
+
+        // Load energy
+        const energyResponse = await fetch('/api/player/energy', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        })
+
+        if (energyResponse.ok) {
+          const energyData = await energyResponse.json()
+          setPlayerEnergy(energyData.energy || 0)
+        }
+
+        // Load available potions
+        const potionsResponse = await fetch('/api/potions', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        })
+
+        if (potionsResponse.ok) {
+          const potionsData = await potionsResponse.json()
+          setAvailablePotions(potionsData.potions || [])
+        }
+      } catch (error) {
+        console.error('Failed to load player data:', error)
+      }
+    }
+
+    if (isOpen) {
+      loadPlayerData()
+    }
+  }, [isOpen])
+
+  // Helper function to get current mode config
+  const getCurrentModeConfig = () => DUNGEON_MODES[currentMode]
+
+  // Check if player has enough energy for selected mode
+  const hasEnoughEnergy = () => {
+    const modeConfig = getCurrentModeConfig()
+    return playerEnergy >= modeConfig.energyCost
+  }
+
+  // Potion management functions
+  const getPotionIcon = (potionType: string) => {
+    switch (potionType) {
+      case 'health': return Heart
+      case 'charge': return Zap
+      case 'damage': return Sword
+      case 'defense': return Shield
+      case 'special': return Target
+      default: return Target
+    }
+  }
+
+  const getPotionColor = (potionType: string) => {
+    switch (potionType) {
+      case 'health': return 'text-red-400 border-red-400 bg-red-400/10'
+      case 'charge': return 'text-yellow-400 border-yellow-400 bg-yellow-400/10'
+      case 'damage': return 'text-orange-400 border-orange-400 bg-orange-400/10'
+      case 'defense': return 'text-blue-400 border-blue-400 bg-blue-400/10'
+      case 'special': return 'text-purple-400 border-purple-400 bg-purple-400/10'
+      default: return 'text-gray-400 border-gray-400 bg-gray-400/10'
+    }
+  }
+
+  const selectPotionForSlot = (slotIndex: number, potionId: number) => {
+    const newSelection = [...selectedPotions]
+    newSelection[slotIndex] = potionId
+    setSelectedPotions(newSelection)
+  }
+
+  const getPotionById = (potionId: number) => {
+    return availablePotions.find(p => p.itemId === potionId)
+  }
+
+  const canAffordPotion = (potionId: number) => {
+    const selectedCount = selectedPotions.filter(p => p === potionId).length
+    const potion = getPotionById(potionId)
+    return potion && selectedCount < potion.balance
+  }
 
   // Auto-run logic (disabled - now using runSingleGame for all automated runs)
   useEffect(() => {
@@ -661,6 +805,13 @@ const DungeonRunner: React.FC<DungeonRunnerProps> = ({ isOpen, onClose }) => {
   }
 
   const startNewRun = async () => {
+    // Check if player has enough energy for selected mode
+    const modeConfig = getCurrentModeConfig()
+    if (!hasEnoughEnergy()) {
+      setError(`Not enough energy! Need ${modeConfig.energyCost}⚡ but only have ${playerEnergy}⚡`)
+      return
+    }
+    
     if (multiRunMode) {
       // Start multiple runs
       console.log(`🚀 Starting multi-run mode: ${runCount} runs in ${currentMode.toUpperCase()} mode`)
@@ -693,7 +844,8 @@ const DungeonRunner: React.FC<DungeonRunnerProps> = ({ isOpen, onClose }) => {
           },
           body: JSON.stringify({
             action: 'start_run',
-            mode: currentMode
+            mode: currentMode,
+            selectedPotions
           })
         })
         
@@ -864,15 +1016,120 @@ const DungeonRunner: React.FC<DungeonRunnerProps> = ({ isOpen, onClose }) => {
                   {/* Mode Selection */}
                   <div className="flex items-center space-x-2">
                     <span className="text-gray-400 font-mono text-sm">Mode:</span>
-                    <select
-                      value={currentMode}
-                      onChange={(e) => setCurrentMode(e.target.value as 'normal' | 'gigus')}
-                      disabled={isRunning}
-                      className="px-3 py-1 bg-black/60 border border-gray-600 rounded font-mono text-sm text-white focus:border-cyan-400 focus:outline-none disabled:opacity-50"
-                    >
-                      <option value="normal">Normal Mode</option>
-                      <option value="gigus">Gigus Mode</option>
-                    </select>
+                    <div className="relative">
+                      <button
+                        onClick={() => setShowModeSelector(!showModeSelector)}
+                        disabled={isRunning}
+                        className={`px-4 py-2 rounded font-mono text-sm transition-colors flex items-center space-x-2 disabled:opacity-50 ${
+                          getCurrentModeConfig().bgColor
+                        } ${getCurrentModeConfig().borderColor} ${getCurrentModeConfig().textColor} border`}
+                      >
+                        {React.createElement(getCurrentModeConfig().icon, { className: "w-4 h-4" })}
+                        <span>{getCurrentModeConfig().displayName}</span>
+                        <span className="text-xs opacity-70">({getCurrentModeConfig().energyCost}⚡)</span>
+                        <ChevronRight className={`w-3 h-3 transition-transform ${showModeSelector ? 'rotate-90' : ''}`} />
+                      </button>
+                      
+                      {showModeSelector && (
+                        <div className="absolute top-full left-0 mt-2 w-80 bg-black/95 border border-cyan-400/50 rounded-lg z-10 p-3 space-y-2">
+                          {Object.entries(DUNGEON_MODES).map(([key, mode]) => {
+                            const canAfford = playerEnergy >= mode.energyCost
+                            const isSelected = currentMode === key
+                            return (
+                              <button
+                                key={key}
+                                onClick={() => {
+                                  setCurrentMode(key as DungeonMode)
+                                  setShowModeSelector(false)
+                                }}
+                                disabled={isRunning || !canAfford}
+                                className={`w-full p-3 rounded text-left transition-colors disabled:opacity-50 ${
+                                  isSelected ? mode.bgColor : 'bg-gray-800/50 hover:bg-gray-700/50'
+                                } ${
+                                  isSelected ? mode.borderColor : 'border-gray-600'
+                                } border ${
+                                  !canAfford ? 'border-red-400/50' : ''
+                                }`}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center space-x-3">
+                                    {React.createElement(mode.icon, { 
+                                      className: `w-5 h-5 ${isSelected ? mode.textColor : 'text-gray-400'}` 
+                                    })}
+                                    <div>
+                                      <div className={`font-mono font-bold ${isSelected ? mode.textColor : 'text-white'}`}>
+                                        {mode.displayName}
+                                      </div>
+                                      <div className="text-xs text-gray-400 mt-1">
+                                        {mode.description}
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div className="text-right">
+                                    <div className={`font-mono text-sm ${canAfford ? 'text-green-400' : 'text-red-400'}`}>
+                                      {mode.energyCost}⚡
+                                    </div>
+                                    <div className="text-xs text-gray-400">
+                                      {mode.maxRuns} runs/day
+                                    </div>
+                                  </div>
+                                </div>
+                                {!canAfford && (
+                                  <div className="text-xs text-red-400 mt-2">
+                                    Need {mode.energyCost - playerEnergy} more energy
+                                  </div>
+                                )}
+                              </button>
+                            )
+                          })}
+                          <div className="border-t border-gray-600 pt-2 mt-2">
+                            <div className="text-xs text-gray-400 font-mono">
+                              Current Energy: <span className="text-green-400">{playerEnergy}⚡</span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Potion Selection */}
+                  <div className="flex items-center space-x-2">
+                    <span className="text-gray-400 font-mono text-sm">Potions:</span>
+                    <div className="flex items-center space-x-1">
+                      {selectedPotions.map((potionId, index) => (
+                        <button
+                          key={index}
+                          onClick={() => setShowPotionSelector(true)}
+                          disabled={isRunning}
+                          className={`w-8 h-8 rounded border transition-colors disabled:opacity-50 ${
+                            potionId === 0 
+                              ? 'border-gray-600 bg-gray-800/50 text-gray-400' 
+                              : (() => {
+                                  const potion = getPotionById(potionId)
+                                  return potion ? getPotionColor(potion.type) : 'border-gray-600 bg-gray-800/50 text-gray-400'
+                                })()
+                          }`}
+                          title={potionId === 0 ? 'Empty slot' : getPotionById(potionId)?.name || 'Unknown'}
+                        >
+                          {potionId === 0 ? (
+                            <div className="text-xs">⚫</div>
+                          ) : (
+                            (() => {
+                              const potion = getPotionById(potionId)
+                              const Icon = potion ? getPotionIcon(potion.type) : Target
+                              return <Icon className="w-4 h-4" />
+                            })()
+                          )}
+                        </button>
+                      ))}
+                      <button
+                        onClick={() => setShowPotionSelector(true)}
+                        disabled={isRunning}
+                        className="px-2 py-1 border border-gray-600 rounded text-gray-400 hover:border-cyan-400 hover:text-cyan-400 transition-colors text-xs font-mono disabled:opacity-50"
+                      >
+                        EDIT
+                      </button>
+                    </div>
                   </div>
 
                   {/* Multi-Run Toggle */}
@@ -979,42 +1236,67 @@ const DungeonRunner: React.FC<DungeonRunnerProps> = ({ isOpen, onClose }) => {
                 {gameState ? (
                   <>
                     {/* Combat Display */}
-                                <div className="bg-black/60 border border-cyan-400/30 p-6 rounded">
-              <h3 className="text-xl font-bold text-cyan-400 font-mono mb-6 flex items-center space-x-2">
+                    <div className="bg-black/60 border border-cyan-400/30 p-6 rounded relative overflow-hidden">
+                      {/* Background Effects */}
+                      <div className="absolute inset-0 bg-gradient-to-r from-cyan-400/5 via-transparent to-red-400/5 pointer-events-none"></div>
+                      
+                      <h3 className="text-xl font-bold text-cyan-400 font-mono mb-6 flex items-center space-x-2">
                         <Crosshair className="w-5 h-5" />
-                        <span>COMBAT STATUS</span>
+                        <span>COMBAT ARENA</span>
+                        <div className="flex-1 border-t border-cyan-400/30 mx-4"></div>
+                        <span className="text-sm text-cyan-300/70">Floor {gameState.current_floor} - Room {gameState.current_room}</span>
                       </h3>
                       
-                      <div className="grid grid-cols-2 gap-8">
-                                                {/* Player */}
-                        <div className="space-y-4">
-                          <h4 className="text-green-400 font-mono font-bold text-center">PLAYER</h4>
+                      <div className="grid grid-cols-2 gap-8 relative">
+                        {/* VS Divider */}
+                        <div className="absolute left-1/2 top-8 transform -translate-x-1/2 z-10">
+                          <div className="bg-black/90 border border-yellow-400/50 rounded-full p-3">
+                            <div className="text-yellow-400 font-mono font-bold text-sm">VS</div>
+                          </div>
+                        </div>
+                        
+                        {/* Player */}
+                        <div className="space-y-4 relative z-0">
+                          <div className="text-center">
+                            <h4 className="text-green-400 font-mono font-bold text-lg">PLAYER</h4>
+                            <div className="text-xs text-gray-400 mt-1">💪 HERO</div>
+                          </div>
                           
                           {/* Health Bar */}
                           <div className="space-y-2">
                             <div className="flex justify-between text-sm font-mono">
-                              <span className="text-gray-400">Health</span>
+                              <span className="text-gray-400 flex items-center space-x-1">
+                                <Heart className="w-3 h-3" />
+                                <span>Health</span>
+                              </span>
                               <span className="text-green-400">{gameState.player_health}/{gameState.player_max_health}</span>
                             </div>
-                            <div className="h-3 bg-gray-800 rounded-full overflow-hidden">
+                            <div className="h-4 bg-gray-800 rounded-full overflow-hidden border border-green-400/30">
                               <div 
-                                className="h-full bg-gradient-to-r from-green-600 to-green-400 transition-all duration-500"
+                                className="h-full bg-gradient-to-r from-green-600 to-green-400 transition-all duration-500 relative"
                                 style={{ width: `${getHealthPercentage(gameState.player_health, gameState.player_max_health)}%` }}
-                              />
+                              >
+                                <div className="absolute inset-0 bg-white/20 animate-pulse"></div>
+                              </div>
                             </div>
                           </div>
 
                           {/* Shield Bar */}
                           <div className="space-y-2">
                             <div className="flex justify-between text-sm font-mono">
-                              <span className="text-gray-400">Shield</span>
+                              <span className="text-gray-400 flex items-center space-x-1">
+                                <Shield className="w-3 h-3" />
+                                <span>Shield</span>
+                              </span>
                               <span className="text-cyan-400">{gameState.player_shield}/{gameState.player_max_shield}</span>
                             </div>
-                            <div className="h-3 bg-gray-800 rounded-full overflow-hidden">
+                            <div className="h-4 bg-gray-800 rounded-full overflow-hidden border border-cyan-400/30">
                               <div 
-                                                                  className="h-full bg-gradient-to-r from-cyan-600 to-cyan-400 transition-all duration-500"
+                                className="h-full bg-gradient-to-r from-cyan-600 to-cyan-400 transition-all duration-500 relative"
                                 style={{ width: `${getHealthPercentage(gameState.player_shield, gameState.player_max_shield)}%` }}
-                              />
+                              >
+                                <div className="absolute inset-0 bg-white/20 animate-pulse"></div>
+                              </div>
                             </div>
                           </div>
 
@@ -1053,37 +1335,91 @@ const DungeonRunner: React.FC<DungeonRunnerProps> = ({ isOpen, onClose }) => {
                               )
                             })}
                           </div>
+
+                          {/* Potion Status */}
+                          <div className="space-y-2">
+                            <div className="text-sm font-mono text-gray-400">Potion Belt</div>
+                            <div className="grid grid-cols-3 gap-2">
+                              {selectedPotions.map((potionId, index) => (
+                                <div key={index} className={`p-2 rounded-lg border text-center ${
+                                  potionId === 0 
+                                    ? 'border-gray-600 bg-gray-800/50' 
+                                    : (() => {
+                                        const potion = getPotionById(potionId)
+                                        return potion ? getPotionColor(potion.type) : 'border-gray-600 bg-gray-800/50'
+                                      })()
+                                }`}>
+                                  <div className="text-xs text-gray-400 mb-1">#{index + 1}</div>
+                                  {potionId === 0 ? (
+                                    <div className="text-xs text-gray-500 font-mono">Empty</div>
+                                  ) : (
+                                    (() => {
+                                      const potion = getPotionById(potionId)
+                                      if (!potion) return <div className="text-xs text-red-400">Unknown</div>
+                                      const Icon = getPotionIcon(potion.type)
+                                      return (
+                                        <div className="space-y-1">
+                                          <div className="flex justify-center">
+                                            <Icon className="w-4 h-4" />
+                                          </div>
+                                          <div className="text-xs font-mono text-white truncate" title={potion.name}>
+                                            {potion.name.substring(0, 8)}
+                                          </div>
+                                          {potion.heal > 0 && (
+                                            <div className="text-xs text-green-400">+{potion.heal}</div>
+                                          )}
+                                        </div>
+                                      )
+                                    })()
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
                         </div>
 
                         {/* Enemy */}
-                        <div className="space-y-4">
-                          <h4 className="text-red-400 font-mono font-bold text-center">ENEMY</h4>
+                        <div className="space-y-4 relative z-0">
+                          <div className="text-center">
+                            <h4 className="text-red-400 font-mono font-bold text-lg">ENEMY</h4>
+                            <div className="text-xs text-gray-400 mt-1">👹 MONSTER</div>
+                          </div>
                           
                           {/* Health Bar */}
                           <div className="space-y-2">
                             <div className="flex justify-between text-sm font-mono">
-                              <span className="text-gray-400">Health</span>
+                              <span className="text-gray-400 flex items-center space-x-1">
+                                <Heart className="w-3 h-3" />
+                                <span>Health</span>
+                              </span>
                               <span className="text-red-400">{gameState.enemy_health}/{gameState.enemy_max_health}</span>
                             </div>
-                            <div className="h-3 bg-gray-800 rounded-full overflow-hidden">
+                            <div className="h-4 bg-gray-800 rounded-full overflow-hidden border border-red-400/30">
                               <div 
-                                className="h-full bg-gradient-to-r from-red-600 to-red-400 transition-all duration-500"
+                                className="h-full bg-gradient-to-r from-red-600 to-red-400 transition-all duration-500 relative"
                                 style={{ width: `${getHealthPercentage(gameState.enemy_health, gameState.enemy_max_health)}%` }}
-                              />
+                              >
+                                <div className="absolute inset-0 bg-white/20 animate-pulse"></div>
+                              </div>
                             </div>
                           </div>
 
                           {/* Shield Bar */}
                           <div className="space-y-2">
                             <div className="flex justify-between text-sm font-mono">
-                              <span className="text-gray-400">Shield</span>
+                              <span className="text-gray-400 flex items-center space-x-1">
+                                <Shield className="w-3 h-3" />
+                                <span>Shield</span>
+                              </span>
                               <span className="text-purple-400">{gameState.enemy_shield}/{gameState.enemy_max_shield}</span>
                             </div>
-                            <div className="h-3 bg-gray-800 rounded-full overflow-hidden">
+                            <div className="h-4 bg-gray-800 rounded-full overflow-hidden border border-purple-400/30">
                               <div 
-                                className="h-full bg-gradient-to-r from-purple-600 to-purple-400 transition-all duration-500"
+                                className="h-full bg-gradient-to-r from-purple-600 to-purple-400 transition-all duration-500 relative"
                                 style={{ width: `${getHealthPercentage(gameState.enemy_shield, gameState.enemy_max_shield)}%` }}
-                              />
+                              >
+                                <div className="absolute inset-0 bg-white/20 animate-pulse"></div>
+                              </div>
                             </div>
                           </div>
 
@@ -1121,6 +1457,26 @@ const DungeonRunner: React.FC<DungeonRunnerProps> = ({ isOpen, onClose }) => {
                                 </div>
                               )
                             })}
+                          </div>
+
+                          {/* Enemy Status */}
+                          <div className="space-y-2">
+                            <div className="text-sm font-mono text-gray-400">Combat Status</div>
+                            <div className="text-center p-3 rounded border border-red-400/30 bg-red-400/10">
+                              <div className="text-red-400 font-mono">
+                                {(() => {
+                                  const healthRatio = gameState.enemy_health / gameState.enemy_max_health
+                                  const totalHealth = gameState.enemy_health + gameState.enemy_shield
+                                  if (healthRatio < 0.2) return "💀 CRITICAL"
+                                  if (healthRatio < 0.5) return "⚠️ WOUNDED" 
+                                  if (totalHealth > gameState.enemy_max_health * 0.8) return "💪 STRONG"
+                                  return "🔥 FIGHTING"
+                                })()}
+                              </div>
+                              <div className="text-xs text-gray-400 mt-1">
+                                Threat Level: {Math.round((gameState.enemy_health + gameState.enemy_shield) / (gameState.enemy_max_health + gameState.enemy_max_shield) * 100)}%
+                              </div>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -1314,6 +1670,160 @@ const DungeonRunner: React.FC<DungeonRunnerProps> = ({ isOpen, onClose }) => {
                   <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
                   <span className="text-green-400">LIVE GAME DATA</span>
                 </div>
+              </div>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+      
+      {/* Potion Selection Modal */}
+      {showPotionSelector && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          onClick={() => setShowPotionSelector(false)}
+        >
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.8, opacity: 0 }}
+            className="bg-black/95 border-2 border-purple-400/50 rounded-lg max-w-4xl w-full max-h-[80vh] overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="border-b border-purple-400/30 p-6 bg-gradient-to-r from-purple-400/10 to-transparent">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  <div className="p-3 bg-purple-400/20 border border-purple-400/50 rounded-full">
+                    <Heart className="w-8 h-8 text-purple-400" />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold text-purple-400 font-mono tracking-wider">
+                      POTION SELECTION
+                    </h2>
+                    <p className="text-purple-300/70 font-mono">Select up to 3 potions for your dungeon run</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowPotionSelector(false)}
+                  className="p-2 text-gray-400 hover:text-red-400 transition-colors"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6 overflow-y-auto max-h-[60vh]">
+              {/* Current Selection */}
+              <div className="mb-6">
+                <h3 className="text-lg font-bold text-purple-400 font-mono mb-4">CURRENT LOADOUT</h3>
+                <div className="grid grid-cols-3 gap-4">
+                  {selectedPotions.map((potionId, index) => (
+                    <div
+                      key={index}
+                      className={`p-4 rounded border-2 transition-colors ${
+                        potionId === 0 
+                          ? 'border-gray-600 bg-gray-800/50' 
+                          : 'border-purple-400/50 bg-purple-400/10'
+                      }`}
+                    >
+                      <div className="text-center">
+                        <div className="text-sm text-gray-400 font-mono mb-2">Slot {index + 1}</div>
+                        {potionId === 0 ? (
+                          <div className="text-gray-500 font-mono">Empty</div>
+                        ) : (
+                          (() => {
+                            const potion = getPotionById(potionId)
+                            if (!potion) return <div className="text-red-400">Unknown</div>
+                            const Icon = getPotionIcon(potion.type)
+                            return (
+                              <div className="space-y-2">
+                                <div className={`mx-auto w-12 h-12 rounded-full flex items-center justify-center ${
+                                  getPotionColor(potion.type)
+                                }`}>
+                                  <Icon className="w-6 h-6" />
+                                </div>
+                                <div className="text-sm font-mono text-white">{potion.name}</div>
+                                {potion.heal > 0 && (
+                                  <div className="text-xs text-green-400">+{potion.heal} HP</div>
+                                )}
+                              </div>
+                            )
+                          })()
+                        )}
+                        <button
+                          onClick={() => selectPotionForSlot(index, 0)}
+                          className="mt-2 px-3 py-1 text-xs font-mono text-red-400 border border-red-400/50 rounded hover:bg-red-400/10 transition-colors"
+                        >
+                          CLEAR
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Available Potions */}
+              <div>
+                <h3 className="text-lg font-bold text-purple-400 font-mono mb-4">AVAILABLE POTIONS</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {availablePotions.map((potion) => (
+                    <div
+                      key={potion.itemId}
+                      className={`p-4 rounded border-2 transition-colors ${
+                        getPotionColor(potion.type)
+                      }`}
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                          getPotionColor(potion.type)
+                        }`}>
+                          {React.createElement(getPotionIcon(potion.type), { className: "w-5 h-5" })}
+                        </div>
+                        <div className="flex-1">
+                          <div className="font-mono font-bold text-white">{potion.name}</div>
+                          <div className="text-xs text-gray-400">
+                            {potion.heal > 0 ? `+${potion.heal} HP` : potion.type}
+                          </div>
+                          <div className="text-xs text-gray-400">
+                            Available: {potion.balance - selectedPotions.filter(p => p === potion.itemId).length}
+                          </div>
+                        </div>
+                        <div className="flex flex-col space-y-1">
+                          {[0, 1, 2].map(slotIndex => (
+                            <button
+                              key={slotIndex}
+                              onClick={() => selectPotionForSlot(slotIndex, potion.itemId)}
+                              disabled={!canAffordPotion(potion.itemId)}
+                              className={`px-2 py-1 text-xs font-mono rounded transition-colors disabled:opacity-50 ${
+                                selectedPotions[slotIndex] === potion.itemId
+                                  ? 'bg-green-400/20 text-green-400 border border-green-400/50'
+                                  : 'bg-gray-800/50 text-gray-400 border border-gray-600 hover:border-cyan-400 hover:text-cyan-400'
+                              }`}
+                            >
+                              Slot {slotIndex + 1}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="border-t border-purple-400/20 p-4 bg-black/40">
+              <div className="flex items-center justify-between">
+                <div className="text-sm font-mono text-gray-400">
+                  {selectedPotions.filter(p => p !== 0).length}/3 slots filled
+                </div>
+                <button
+                  onClick={() => setShowPotionSelector(false)}
+                  className="px-6 py-2 bg-green-400/20 border border-green-400/50 rounded text-green-400 hover:bg-green-400/30 transition-colors font-mono"
+                >
+                  CONFIRM SELECTION
+                </button>
               </div>
             </div>
           </motion.div>

@@ -30,8 +30,8 @@ interface GameState {
   round_number: number
   current_floor: number
   current_room: number
-  player_charges: { rock: number, paper: number, scissor: number }
-  enemy_charges: { rock: number, paper: number, scissor: number }
+  player_charges: { [key: string]: number }
+  enemy_charges: { [key: string]: number }
   player_move_stats: { [key: string]: { damage: number, shield: number } }
   enemy_move_stats: { [key: string]: { damage: number, shield: number } }
 }
@@ -73,7 +73,9 @@ function determineOutcome(playerMove: string, enemyMove: string): string {
 
 function updateCharges(charges: { [key: string]: number }, chosenMove: string): { [key: string]: number } {
   const newCharges = { ...charges }
-  newCharges[chosenMove] -= 1
+  if (newCharges[chosenMove] !== undefined) {
+    newCharges[chosenMove] -= 1
+  }
   
   for (const move in newCharges) {
     if (move !== chosenMove) {
@@ -504,39 +506,310 @@ async function sendAction(action: string, actionToken: string, dungeonId: number
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const { mode = 'normal', runs = 1 } = body
+    const { action, mode = 'normal', gameState, move, actionToken, lootOptions, selectedLoot } = await request.json()
     
     // Get JWT token from Authorization header
-    const authorization = request.headers.get('Authorization')
-    if (!authorization || !authorization.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'No valid authorization token provided' }, { status: 401 })
+    const authHeader = request.headers.get('authorization')
+    if (!authHeader) {
+      return NextResponse.json({ error: 'No authorization header' }, { status: 401 })
     }
     
-    const jwtToken = authorization.substring(7) // Remove 'Bearer ' prefix
+    const jwtToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : authHeader
     
-    console.log(`Starting ${runs} dungeon runs in ${mode} mode`)
+    // Determine dungeon ID based on mode
+    const dungeonId = mode === 'gigus' ? 2 : mode === 'underhaul' ? 3 : 1
     
-    // Mock dungeon run logic
-    const results = []
-    for (let i = 0; i < runs; i++) {
-      results.push({
-        run: i + 1,
-        mode,
-        success: Math.random() > 0.3, // 70% success rate
-        loot: Math.floor(Math.random() * 100) + 50,
-        experience: Math.floor(Math.random() * 50) + 25
-      })
+    console.log(`🎯 Dungeon API - Action: ${action}, Mode: ${mode}, DungeonID: ${dungeonId}`)
+    
+    if (action === 'start_run') {
+      // Start a new dungeon run
+      const { selectedPotions = [0, 0, 0] } = await request.json()
+      
+      try {
+        let response
+        
+        // Start with potions if any are selected
+        if (selectedPotions.some((p: number) => p !== 0)) {
+          console.log('🧪 Starting run with potions:', selectedPotions)
+          response = await sendAction('start', '', dungeonId, jwtToken, {
+            consumables: selectedPotions,
+            itemId: 0,
+            index: 0
+          })
+        } else {
+          console.log('🏃 Starting run without potions')
+          response = await sendAction('start', '', dungeonId, jwtToken)
+        }
+        
+        console.log('✅ Start run response:', response)
+        
+        if (response.success) {
+          const gameState = extractGameState(response.data.run)
+          
+          // Check if we started in loot phase
+          const lootPhase = response.data.run.lootPhase
+          const lootOptions = response.data.run.lootOptions
+          
+          return NextResponse.json({
+            success: true,
+            actionToken: response.data.actionToken,
+            gameState,
+            lootPhase,
+            lootOptions,
+            entityData: response.data.entity,
+            mode,
+            dungeonId,
+            selectedPotions
+          })
+        } else {
+          return NextResponse.json({ 
+            success: false, 
+            error: response.message || 'Failed to start dungeon run' 
+          })
+        }
+      } catch (error) {
+        console.error('Start run error:', error)
+        return NextResponse.json({ 
+          success: false, 
+          error: error instanceof Error ? error.message : 'Failed to start dungeon run' 
+        })
+      }
     }
     
-    return NextResponse.json({
-      success: true,
-      runs: results,
-      totalRuns: runs,
-      mode
+    if (action === 'calculate_move') {
+      // Calculate best move using MCTS
+      if (!gameState) {
+        return NextResponse.json({ success: false, error: 'No game state provided' })
+      }
+      
+      try {
+        const bestMove = mcts(gameState, MCTS_ITERATIONS)
+        console.log(`🧠 MCTS calculated best move: ${bestMove}`)
+        
+        return NextResponse.json({
+          success: true,
+          bestMove
+        })
+      } catch (error) {
+        console.error('MCTS calculation error:', error)
+        return NextResponse.json({ 
+          success: false, 
+          error: error instanceof Error ? error.message : 'Failed to calculate move' 
+        })
+      }
+    }
+    
+    if (action === 'execute_move') {
+      // Execute a move
+      if (!move || !actionToken) {
+        return NextResponse.json({ success: false, error: 'Missing move or action token' })
+      }
+      
+      try {
+        const response = await sendAction(move, actionToken, dungeonId, jwtToken)
+        console.log(`⚔️ Move execution response:`, response)
+        
+        if (response.success) {
+          const gameState = extractGameState(response.data.run)
+          
+          // Check if we entered loot phase
+          const lootPhase = response.data.run.lootPhase
+          const lootOptions = response.data.run.lootOptions
+          
+          return NextResponse.json({
+            success: true,
+            gameState,
+            actionToken: response.data.actionToken,
+            lootPhase,
+            lootOptions,
+            entityData: response.data.entity, // Include entity data for potion analysis
+            roundResult: {
+              playerMove: move,
+              enemyMove: response.data.run.enemyMove || 'unknown',
+              outcome: response.data.run.outcome || 'unknown',
+              result: response.data.run.result || 'unknown'
+            }
+          })
+        } else {
+          return NextResponse.json({ 
+            success: false, 
+            error: response.message || 'Failed to execute move' 
+          })
+        }
+      } catch (error) {
+        console.error('Move execution error:', error)
+        return NextResponse.json({ 
+          success: false, 
+          error: error instanceof Error ? error.message : 'Failed to execute move' 
+        })
+      }
+    }
+    
+    if (action === 'analyze_potion_usage') {
+      // Analyze whether to use a potion
+      if (!gameState) {
+        return NextResponse.json({ success: false, error: 'No game state provided' })
+      }
+      
+      try {
+        // Call the potion analysis API
+        const potionResponse = await fetch('/api/potions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${jwtToken}`
+          },
+          body: JSON.stringify({
+            action: 'analyze_usage',
+            gameState,
+            entityData: gameState.entityData
+          })
+        })
+        
+        const potionData = await potionResponse.json()
+        
+        if (potionData.success) {
+          console.log('🧪 Potion analysis result:', potionData.analysis)
+          return NextResponse.json({
+            success: true,
+            analysis: potionData.analysis
+          })
+        } else {
+          return NextResponse.json({ 
+            success: false, 
+            error: potionData.error || 'Failed to analyze potion usage' 
+          })
+        }
+      } catch (error) {
+        console.error('Potion analysis error:', error)
+        return NextResponse.json({ 
+          success: false, 
+          error: error instanceof Error ? error.message : 'Failed to analyze potion usage' 
+        })
+      }
+    }
+    
+    if (action === 'use_potion') {
+      // Use a potion
+      if (!actionToken) {
+        return NextResponse.json({ success: false, error: 'No action token provided' })
+      }
+      
+      const { potionSlot, potionItemId } = await request.json()
+      
+      try {
+        const response = await sendAction('useConsumable', actionToken, dungeonId, jwtToken, {
+          consumables: [potionItemId],
+          itemId: potionItemId,
+          index: potionSlot
+        })
+        
+        console.log(`🧪 Potion usage response:`, response)
+        
+        if (response.success) {
+          const gameState = extractGameState(response.data.run)
+          
+          return NextResponse.json({
+            success: true,
+            gameState,
+            actionToken: response.data.actionToken,
+            entityData: response.data.entity,
+            potionUsed: {
+              slot: potionSlot,
+              itemId: potionItemId
+            }
+          })
+        } else {
+          return NextResponse.json({ 
+            success: false, 
+            error: response.message || 'Failed to use potion' 
+          })
+        }
+      } catch (error) {
+        console.error('Potion usage error:', error)
+        return NextResponse.json({ 
+          success: false, 
+          error: error instanceof Error ? error.message : 'Failed to use potion' 
+        })
+      }
+    }
+    
+    if (action === 'auto_select_loot') {
+      // Auto-select best loot option
+      if (!lootOptions || !Array.isArray(lootOptions)) {
+        return NextResponse.json({ success: false, error: 'No loot options provided' })
+      }
+      
+      try {
+        // Find the best loot option using scoring
+        let bestLoot = null
+        let bestScore = -Infinity
+        
+        for (const loot of lootOptions) {
+          const score = getBaseScore(
+            loot.boonTypeString || 'unknown',
+            loot.selectedVal1 || 0,
+            loot.selectedVal2 || 0
+          )
+          
+          if (score > bestScore) {
+            bestScore = score
+            bestLoot = loot
+          }
+        }
+        
+        if (!bestLoot) {
+          // Fallback to first option
+          bestLoot = lootOptions[0]
+        }
+        
+        console.log(`🎁 Auto-selected loot:`, bestLoot)
+        
+        // Execute loot selection
+        const response = await sendAction('selectLoot', actionToken, dungeonId, jwtToken, {
+          lootId: bestLoot.id,
+          lootOptionId: bestLoot.lootOptionId
+        })
+        
+        if (response.success) {
+          const gameState = extractGameState(response.data.run)
+          
+          return NextResponse.json({
+            success: true,
+            gameState,
+            actionToken: response.data.actionToken,
+            selectedLoot: bestLoot,
+            lootDescription: getLootDescription(
+              bestLoot.boonTypeString || 'unknown',
+              bestLoot.selectedVal1 || 0,
+              bestLoot.selectedVal2 || 0
+            )
+          })
+        } else {
+          return NextResponse.json({ 
+            success: false, 
+            error: response.message || 'Failed to select loot' 
+          })
+        }
+      } catch (error) {
+        console.error('Loot selection error:', error)
+        return NextResponse.json({ 
+          success: false, 
+          error: error instanceof Error ? error.message : 'Failed to select loot' 
+        })
+      }
+    }
+    
+    return NextResponse.json({ 
+      success: false, 
+      error: `Unknown action: ${action}` 
     })
+    
   } catch (error) {
     console.error('Dungeon API error:', error)
-    return NextResponse.json({ error: 'Failed to run dungeon' }, { status: 500 })
+    return NextResponse.json({ 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Internal server error' 
+    }, { status: 500 })
   }
 } 
