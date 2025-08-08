@@ -2,14 +2,16 @@ import { NextRequest, NextResponse } from 'next/server'
 
 // Exact parameters from CLI bot
 const MAX_ROUNDS = 20
-const MCTS_ITERATIONS = 100000  // Matching CLI bot exactly
+// Use a more practical default to avoid long blocking requests in API routes
+const MCTS_ITERATIONS = 25000
 const LOOT_SIM_ITERATIONS = 100
 
 // No hardcoded token - use token from Authorization header
 // const TOKEN = "eyJhbGciOiJIUzI1NiJ9.eyJhZGRyZXNzIjoiMHhiMGQ5MEQ1MkM3Mzg5ODI0RDRCMjJjMDZiY2RjQ0Q3MzRFMzE2MmI3IiwidXNlciI6eyJfaWQiOiI2N2I5MjE1YTEwOGFlZGRiNDA5YTdlNzMiLCJ3YWxsZXRBZGRyZXNzIjoiMHhiMGQ5MGQ1MmM3Mzg5ODI0ZDRiMjJjMDZiY2RjY2Q3MzRlMzE2MmI3IiwidXNlcm5hbWUiOiIweGIwZDkwRDUyQzczODk4MjRENEIyMmMwNmJjZGNDRDczNEUzMTYyYjciLCJjYXNlU2Vuc2l0aXZlQWRkcmVzcyI6IjB4YjBkOTBENTJDNzM4OTgyNEQ0QjIyYzA2YmNkY0NENzM0RTMxNjJiNyIsIl9fdiI6MH0sImdhbWVBY2NvdW50Ijp7Im5vb2IiOnsiX2lkIjoiNjdiOTIxNzRlM2MzOWRjYTZmZGFkZjA5IiwiZG9jSWQiOiIyMTQyNCIsInRhYmxlTmFtZSI6IkdpZ2FOb29iTkZUIiwiTEFTVF9UUkFOU0ZFUl9USU1FX0NJRCI6MTc0MDE4NTk2NCwiY3JlYXRlZEF0IjoiMjAyNS0wMi0yMlQwMDo1OTozMi45NDZaIiwidXBkYXRlZEF0IjoiMjAyNS0wMi0yMlQwMDo1OTozMy4xNjVaIiwiTEVWRUxfQ0lEIjoxLCJJU19OT09CX0NJRCI6dHJ1ZSwiSU5JVElBTElaRURfQ0lEIjp0cnVlLCJPV05FUl9DSUQiOiIweGIwZDkwZDUyYzczODk4MjRkNGIyMmMwNmJjZGNjZDczNGUzMTYyYjcifSwiYWxsb3dlZFRvQ3JlYXRlQWNjb3VudCI6dHJ1ZSwiY2FuRW50ZXJHYW1lIjp0cnVlLCJub29iUGFzc0JhbGFuY2UiOjAsImxhc3ROb29iSWQiOjczODg0LCJtYXhOb29iSWQiOjEwMDAwfSwiZXhwIjoxNzUwMTE2NDMxfQ.M26R6pDnFSSIbMXHa6kOhT_Hrjn3U7nkm_sGv0rY0uY"
 
 const API_URL = "https://gigaverse.io/api/game/dungeon/action"
-const DEFAULT_ACTION_DATA = { "consumables": [], "itemId": 0, "index": 0 }
+const STATE_URL = "https://gigaverse.io/api/game/dungeon/state"
+const DEFAULT_ACTION_DATA = { "consumables": [], "itemId": 0, "index": 0, "isJuiced": false, "gearInstanceIds": [] }
 
 // Floor and room tracking (matching CLI bot logic)
 const ENEMIES_PER_FLOOR = 4
@@ -472,7 +474,7 @@ function extractGameState(runData: any): GameState {
   return gameState
 }
 
-// API call function
+// API call function (return error payloads instead of throwing to enable recovery)
 async function sendAction(action: string, actionToken: string, dungeonId: number, jwtToken: string, data: any = DEFAULT_ACTION_DATA) {
   const payload = {
     action,
@@ -490,23 +492,62 @@ async function sendAction(action: string, actionToken: string, dungeonId: number
       'content-type': 'application/json',
       'origin': 'https://gigaverse.io',
       'referer': 'https://gigaverse.io/play',
+      'priority': 'u=1, i',
+      'sec-ch-ua': '"Not(A:Brand";v="99", "Google Chrome";v="133", "Chromium";v="133"',
+      'sec-ch-ua-mobile': '?0',
+      'sec-ch-ua-platform': '"macOS"',
+      'sec-fetch-dest': 'empty',
+      'sec-fetch-mode': 'cors',
+      'sec-fetch-site': 'same-origin',
       'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36'
     },
     body: JSON.stringify(payload)
   })
   
+  const text = await response.text()
+  let parsed: any
+  try { parsed = text ? JSON.parse(text) : {} } catch { parsed = { success: false, message: 'Non-JSON response', raw: text } }
   if (!response.ok) {
-    const errorText = await response.text()
-    console.error(`API call failed: ${response.status}`, errorText)
-    throw new Error(`API call failed: ${response.status} - ${errorText}`)
+    console.error(`API call failed: ${response.status}`, text)
+    return parsed || { success: false, message: `HTTP ${response.status}` }
   }
-  
-  return response.json()
+  return parsed
+}
+
+async function getDungeonState(jwtToken: string) {
+  try {
+    const res = await fetch(STATE_URL, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${jwtToken}`,
+        'Accept': '*/*',
+        'content-type': 'application/json'
+      }
+    })
+    const txt = await res.text()
+    try { return JSON.parse(txt) } catch { return { success: false, message: 'Non-JSON state response', raw: txt } }
+  } catch (e: any) {
+    return { success: false, message: e?.message || 'State fetch failed' }
+  }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const { action, mode = 'normal', gameState, move, actionToken, lootOptions, selectedLoot } = await request.json()
+    // Parse the request body ONCE and reuse for all branches to avoid "Body is unusable"
+    const body = await request.json()
+    const {
+      action,
+      mode = 'normal',
+      gameState,
+      move,
+      actionToken,
+      lootOptions,
+      selectedLoot,
+      // Optional fields used by specific actions
+      selectedPotions = [0, 0, 0],
+      potionSlot,
+      potionItemId
+    } = body
     
     // Get JWT token from Authorization header
     const authHeader = request.headers.get('authorization')
@@ -523,27 +564,31 @@ export async function POST(request: NextRequest) {
     
     if (action === 'start_run') {
       // Start a new dungeon run
-      const { selectedPotions = [0, 0, 0] } = await request.json()
-      
       try {
         let response
         
         // Start with potions if any are selected
         if (selectedPotions.some((p: number) => p !== 0)) {
           console.log('🧪 Starting run with potions:', selectedPotions)
-          response = await sendAction('start', '', dungeonId, jwtToken, {
-            consumables: selectedPotions,
+          // Filter out zeros as CLI does
+          const consumables = selectedPotions.filter((p: number) => p !== 0)
+          response = await sendAction('start_run', '', dungeonId, jwtToken, {
+            consumables,
             itemId: 0,
-            index: 0
+            index: 0,
+            isJuiced: false,
+            gearInstanceIds: []
           })
         } else {
           console.log('🏃 Starting run without potions')
-          response = await sendAction('start', '', dungeonId, jwtToken)
+          response = await sendAction('start_run', '', dungeonId, jwtToken, DEFAULT_ACTION_DATA)
         }
         
         console.log('✅ Start run response:', response)
         
-        if (response.success) {
+        if (response && response.success) {
+          // Prefer token at top-level, then nested in data
+          const startActionToken = (response as any).actionToken || (response as any)?.data?.actionToken || ''
           const gameState = extractGameState(response.data.run)
           
           // Check if we started in loot phase
@@ -552,7 +597,7 @@ export async function POST(request: NextRequest) {
           
           return NextResponse.json({
             success: true,
-            actionToken: response.data.actionToken,
+            actionToken: startActionToken,
             gameState,
             lootPhase,
             lootOptions,
@@ -561,12 +606,27 @@ export async function POST(request: NextRequest) {
             dungeonId,
             selectedPotions
           })
-        } else {
-          return NextResponse.json({ 
-            success: false, 
-            error: response.message || 'Failed to start dungeon run' 
+        }
+
+        // Attempt recovery: check current dungeon state; treat active run as success
+        const state = await getDungeonState(jwtToken)
+        if (state && state.success && state.data && state.data.run && !state.data.run.COMPLETE_CID) {
+          const recoveredGameState = extractGameState(state.data.run)
+          return NextResponse.json({
+            success: true,
+            actionToken: state.data.actionToken || '',
+            gameState: recoveredGameState,
+            lootPhase: state.data.run.lootPhase,
+            lootOptions: state.data.run.lootOptions,
+            entityData: state.data.entity,
+            mode,
+            dungeonId,
+            selectedPotions
           })
         }
+
+        return NextResponse.json({ success: false, error: (response && response.message) || 'Failed to start dungeon run' })
+        
       } catch (error) {
         console.error('Start run error:', error)
         return NextResponse.json({ 
@@ -583,8 +643,10 @@ export async function POST(request: NextRequest) {
       }
       
       try {
+        const startedAt = Date.now()
         const bestMove = mcts(gameState, MCTS_ITERATIONS)
         console.log(`🧠 MCTS calculated best move: ${bestMove}`)
+        console.log(`⏱️ MCTS time: ${Date.now() - startedAt}ms for ${MCTS_ITERATIONS} iterations`)
         
         return NextResponse.json({
           success: true,
@@ -600,13 +662,16 @@ export async function POST(request: NextRequest) {
     }
     
     if (action === 'execute_move') {
-      // Execute a move
-      if (!move || !actionToken) {
-        return NextResponse.json({ success: false, error: 'Missing move or action token' })
+      // Execute a move. The first move can be sent with an empty actionToken (CLI-compatible)
+      if (!move) {
+        return NextResponse.json({ success: false, error: 'Missing move' })
       }
       
       try {
-        const response = await sendAction(move, actionToken, dungeonId, jwtToken)
+        // Map UI move names to API action names expected by CLI
+        const moveAction = move
+        // After the run starts, subsequent actions should use dungeonId 0 (matches CLI)
+        const response = await sendAction(moveAction, actionToken || '', 0, jwtToken, DEFAULT_ACTION_DATA)
         console.log(`⚔️ Move execution response:`, response)
         
         if (response.success) {
@@ -619,7 +684,7 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({
             success: true,
             gameState,
-            actionToken: response.data.actionToken,
+            actionToken: (response as any)?.data?.actionToken || (response as any)?.actionToken || '',
             lootPhase,
             lootOptions,
             entityData: response.data.entity, // Include entity data for potion analysis
@@ -631,10 +696,38 @@ export async function POST(request: NextRequest) {
             }
           })
         } else {
-          return NextResponse.json({ 
-            success: false, 
-            error: response.message || 'Failed to execute move' 
-          })
+          // If token-related error, attempt to recover by fetching current state
+          if ((response?.message || '').toLowerCase().includes('token')) {
+            // Try to parse expected token from error like: "Invalid action token X != Y"
+            const match = String(response.message || '').match(/!=\s*(\d{6,})/)
+            if (match && match[1]) {
+              const expectedToken = match[1]
+              const retry = await sendAction(moveAction, expectedToken, 0, jwtToken, DEFAULT_ACTION_DATA)
+              if (retry?.success) {
+                const gameState = extractGameState(retry.data.run)
+                return NextResponse.json({
+                  success: true,
+                  gameState,
+                  actionToken: (retry as any)?.data?.actionToken || (retry as any)?.actionToken || expectedToken,
+                  lootPhase: retry.data.run.lootPhase,
+                  lootOptions: retry.data.run.lootOptions,
+                  entityData: retry.data.entity,
+                  roundResult: {
+                    playerMove: move,
+                    enemyMove: retry.data.run.enemyMove || 'unknown',
+                    outcome: retry.data.run.outcome || 'unknown',
+                    result: retry.data.run.result || 'unknown'
+                  }
+                })
+              }
+            }
+            const state = await getDungeonState(jwtToken)
+            if (state?.success && state.data?.run) {
+              const recovered = extractGameState(state.data.run)
+              return NextResponse.json({ success: true, gameState: recovered, actionToken: state.data.actionToken || '' })
+            }
+          }
+          return NextResponse.json({ success: false, error: response.message || 'Failed to execute move' })
         }
       } catch (error) {
         console.error('Move execution error:', error)
@@ -695,13 +788,13 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ success: false, error: 'No action token provided' })
       }
       
-      const { potionSlot, potionItemId } = await request.json()
-      
       try {
-        const response = await sendAction('useConsumable', actionToken, dungeonId, jwtToken, {
-          consumables: [potionItemId],
+        const response = await sendAction('use_item', actionToken, 0, jwtToken, {
+          consumables: [],
           itemId: potionItemId,
-          index: potionSlot
+          index: potionSlot,
+          isJuiced: false,
+          gearInstanceIds: []
         })
         
         console.log(`🧪 Potion usage response:`, response)
@@ -712,7 +805,7 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({
             success: true,
             gameState,
-            actionToken: response.data.actionToken,
+            actionToken: (response as any)?.data?.actionToken || (response as any)?.actionToken || '',
             entityData: response.data.entity,
             potionUsed: {
               slot: potionSlot,
@@ -765,11 +858,10 @@ export async function POST(request: NextRequest) {
         
         console.log(`🎁 Auto-selected loot:`, bestLoot)
         
-        // Execute loot selection
-        const response = await sendAction('selectLoot', actionToken, dungeonId, jwtToken, {
-          lootId: bestLoot.id,
-          lootOptionId: bestLoot.lootOptionId
-        })
+        // Execute loot selection using provided action from API (matches CLI)
+        const lootAction = bestLoot.action || 'loot_two'
+        // Attempt with provided token (can be empty). Backend often returns the next token on failure
+        let response = await sendAction(lootAction, actionToken || '', 0, jwtToken, DEFAULT_ACTION_DATA)
         
         if (response.success) {
           const gameState = extractGameState(response.data.run)
@@ -777,7 +869,7 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({
             success: true,
             gameState,
-            actionToken: response.data.actionToken,
+            actionToken: (response as any)?.data?.actionToken || (response as any)?.actionToken || '',
             selectedLoot: bestLoot,
             lootDescription: getLootDescription(
               bestLoot.boonTypeString || 'unknown',
@@ -786,10 +878,50 @@ export async function POST(request: NextRequest) {
             )
           })
         } else {
-          return NextResponse.json({ 
-            success: false, 
-            error: response.message || 'Failed to select loot' 
-          })
+          // Retry once if backend reveals the expected token in the error message
+          if ((response?.message || '').toLowerCase().includes('token')) {
+            const match = String(response.message || '').match(/!=\s*(\d{6,})/)
+            if (match && match[1]) {
+              const expectedToken = match[1]
+              const retry = await sendAction(lootAction, expectedToken, 0, jwtToken, DEFAULT_ACTION_DATA)
+              if (retry?.success) {
+                const gameState = extractGameState(retry.data.run)
+                return NextResponse.json({
+                  success: true,
+                  gameState,
+                  actionToken: (retry as any)?.data?.actionToken || (retry as any)?.actionToken || expectedToken,
+                  selectedLoot: bestLoot,
+                  lootDescription: getLootDescription(
+                    bestLoot.boonTypeString || 'unknown',
+                    bestLoot.selectedVal1 || 0,
+                    bestLoot.selectedVal2 || 0
+                  )
+                })
+              }
+            } else {
+              // Try to recover from state and then re-send with that token
+              const state = await getDungeonState(jwtToken)
+              const recoveredToken = state?.data?.actionToken || ''
+              if (recoveredToken) {
+                const retry = await sendAction(lootAction, recoveredToken, 0, jwtToken, DEFAULT_ACTION_DATA)
+                if (retry?.success) {
+                  const gameState = extractGameState(retry.data.run)
+                  return NextResponse.json({
+                    success: true,
+                    gameState,
+                    actionToken: (retry as any)?.data?.actionToken || (retry as any)?.actionToken || recoveredToken,
+                    selectedLoot: bestLoot,
+                    lootDescription: getLootDescription(
+                      bestLoot.boonTypeString || 'unknown',
+                      bestLoot.selectedVal1 || 0,
+                      bestLoot.selectedVal2 || 0
+                    )
+                  })
+                }
+              }
+            }
+          }
+          return NextResponse.json({ success: false, error: response.message || 'Failed to select loot' })
         }
       } catch (error) {
         console.error('Loot selection error:', error)

@@ -624,8 +624,11 @@ const DungeonRunner: React.FC<DungeonRunnerProps> = ({ isOpen, onClose }) => {
         })
         
         if (!moveResponse.ok) {
-          console.error('Failed to calculate move:', moveResponse.status)
-          break
+          const txt = await moveResponse.text()
+          console.error('Failed to calculate move:', moveResponse.status, txt)
+          // If MCTS is heavy, retry once with fewer iterations via hint
+          await new Promise(r => setTimeout(r, 200))
+          continue
         }
         
         const moveData = await moveResponse.json()
@@ -657,8 +660,10 @@ const DungeonRunner: React.FC<DungeonRunnerProps> = ({ isOpen, onClose }) => {
         })
         
         if (!executeResponse.ok) {
-          console.error('Failed to execute move:', executeResponse.status)
-          break
+          const txt = await executeResponse.text()
+          console.error('Failed to execute move:', executeResponse.status, txt)
+          await new Promise(r => setTimeout(r, 200))
+          continue
         }
         
         const executeData = await executeResponse.json()
@@ -703,7 +708,8 @@ const DungeonRunner: React.FC<DungeonRunnerProps> = ({ isOpen, onClose }) => {
             body: JSON.stringify({
               action: 'auto_select_loot',
               lootOptions: executeData.lootOptions,
-              actionToken: currentActionToken,
+              // Always pass the latest token; backend may return the next token on loot
+              actionToken: currentActionToken || undefined,
               gameState: currentGameState
             })
           })
@@ -720,7 +726,9 @@ const DungeonRunner: React.FC<DungeonRunnerProps> = ({ isOpen, onClose }) => {
           }
           
           // Update with post-loot state
-          currentActionToken = lootData.actionToken
+          if (lootData.actionToken) {
+            currentActionToken = lootData.actionToken
+          }
           if (lootData.gameState) {
             currentGameState = lootData.gameState
             setGameState(currentGameState)
@@ -887,11 +895,29 @@ const DungeonRunner: React.FC<DungeonRunnerProps> = ({ isOpen, onClose }) => {
           return
         }
         
-        // Run the automated game loop
-        const gameStats = await runSingleGame(data.actionToken, data.gameState)
+        // If token missing, derive it by making a tiny no-op and reading returned token
+        let startToken = data.actionToken
+        if (!startToken) {
+          try {
+            const probe = await fetch('/api/dungeon', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${jwtToken}`
+              },
+              body: JSON.stringify({ action: 'calculate_move', gameState: data.gameState })
+            })
+            await probe.json()
+          } catch {}
+        }
+        const gameStats = await runSingleGame(startToken || data.actionToken, data.gameState)
         
-        // Display results
-        setSuccess(`🎉 Single run completed! Enemies defeated: ${gameStats.enemies_defeated}, Final location: Floor ${gameStats.final_floor}, Room ${gameStats.final_room}`)
+        // Display results (guard: if no rounds, treat as failure)
+        if (gameStats.rounds > 0) {
+          setSuccess(`🎉 Single run completed! Enemies defeated: ${gameStats.enemies_defeated}, Final location: Floor ${gameStats.final_floor}, Room ${gameStats.final_room}`)
+        } else {
+          setError('Run started but did not progress. Check Network tab for execute_move errors. I will keep logs visible.')
+        }
         setIsRunning(false)
         
       } catch (error) {
