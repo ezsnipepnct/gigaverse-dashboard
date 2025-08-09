@@ -1,13 +1,15 @@
 "use client"
 
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import DungeonBattle, { GameState } from './DungeonBattle'
+import ItemIcon from './ItemIcon'
+import { itemMetadataService } from '@/app/services/itemMetadata'
 
 export interface StreamSnapshot {
   index: number
   gameState?: GameState | null
   lastMove?: string
-  type?: 'round' | 'loot'
+  type?: 'round' | 'upgrade' | 'item'
   loot?: {
     id?: number
     amount?: number
@@ -40,6 +42,37 @@ const MoveStream: React.FC<{ snapshots: StreamSnapshot[] }> = ({ snapshots }) =>
     }
   }
 
+  const ItemRow: React.FC<{ itemId?: number; amount?: number }> = ({ itemId, amount }) => {
+    const [name, setName] = useState<string>(itemId ? `Item ${itemId}` : 'Unknown')
+    const [rarityColor, setRarityColor] = useState<string>('gray')
+
+    useEffect(() => {
+      let mounted = true
+      if (!itemId) return
+      itemMetadataService.getItem(itemId).then(meta => {
+        if (!mounted || !meta) return
+        setName(meta.name || `Item ${itemId}`)
+        setRarityColor(meta.rarityColor || 'gray')
+      }).catch(() => {})
+      return () => { mounted = false }
+    }, [itemId])
+
+    return (
+      <div className="flex items-center gap-3">
+        {itemId ? <ItemIcon itemId={itemId} size="small" showRarity /> : <div className="w-8 h-8 bg-gray-700 rounded" />}
+        <div className="font-mono text-sm">
+          <span className="text-white/90">{name}</span>
+          {typeof amount === 'number' && (
+            <span className="text-cyan-300 ml-2">x{amount}</span>
+          )}
+        </div>
+        <div className={`ml-auto text-xs rounded px-2 py-0.5 border border-white/10 text-white/70`}>
+          {rarityColor}
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="bg-black/30 border border-cyan-400/30 p-4 rounded h-full">
       <h4 className="text-cyan-300 font-mono font-semibold mb-3">MOVE STREAM</h4>
@@ -49,14 +82,22 @@ const MoveStream: React.FC<{ snapshots: StreamSnapshot[] }> = ({ snapshots }) =>
         ) : (
           snapshots.slice(-50).reverse().map((s) => (
             <div key={s.index} className="">
-              {s.type === 'loot' || s.loot ? (
+              {s.type === 'upgrade' ? (
                 <div className="flex items-start gap-3 px-3 py-2 rounded border border-emerald-400/30 bg-emerald-500/10">
                   <div className="w-2 h-2 rounded-full bg-emerald-400 mt-1" />
                   <div className="flex-1">
-                    <div className="text-emerald-300 font-mono text-xs mb-1">LOOT ACQUIRED</div>
+                    <div className="text-emerald-300 font-mono text-xs mb-1">UPGRADE APPLIED</div>
                     <div className="text-white/90 font-mono text-sm">
                       {s.lootDescription || getLootDescription(s.loot)}
                     </div>
+                  </div>
+                </div>
+              ) : s.type === 'item' ? (
+                <div className="flex items-start gap-3 px-3 py-2 rounded border border-cyan-400/30 bg-cyan-500/10">
+                  <div className="w-2 h-2 rounded-full bg-cyan-400 mt-1" />
+                  <div className="flex-1">
+                    <div className="text-cyan-300 font-mono text-xs mb-1">ITEM ACQUIRED</div>
+                    <ItemRow itemId={s.loot?.id} amount={s.loot?.amount} />
                   </div>
                 </div>
               ) : (

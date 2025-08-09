@@ -774,17 +774,25 @@ const DungeonRunner: React.FC<DungeonRunnerProps> = ({ isOpen, onClose }) => {
           const itemChanges = (executeData.itemChanges || []) as Array<{ id: number; amount: number; rarity?: number; gearInstanceId?: string }>
           if (itemChanges.length > 0) {
             setLootLog(prev => [...prev, ...itemChanges])
-            // Append compact loot summary into move stream too
-            setMoveSnapshots(prev => ([
-              ...prev,
-              ...itemChanges.map((c, i) => ({
-                index: (prev.at(-1)?.index || 0) + i + 1,
-                type: 'loot',
-                loot: { id: c.id, amount: c.amount, rarity: c.rarity },
-                lootDescription: `Item ${c.id} x${c.amount}`
-              }))
-            ]))
-        }
+            // Classify: if change includes boonTypeString/selectedVal, treat as upgrade; else item
+            setMoveSnapshots(prev => {
+              const baseIndex = (prev.at(-1)?.index || 0)
+              const entries = itemChanges.map((c: any, i: number) => {
+                const isUpgrade = !!(c.boonTypeString)
+                return {
+                  index: baseIndex + i + 1,
+                  type: isUpgrade ? 'upgrade' : 'item',
+                  loot: isUpgrade ? undefined : { id: c.id, amount: c.amount, rarity: c.rarity },
+                  lootDescription: isUpgrade ? getLootDescription({
+                    boonTypeString: c.boonTypeString,
+                    selectedVal1: c.selectedVal1,
+                    selectedVal2: c.selectedVal2
+                  }) : `Item ${c.id} x${c.amount}`
+                } as any
+              })
+              return [...prev, ...entries]
+            })
+          }
         
         roundCount++
         setCurrentRound(roundCount)
@@ -853,15 +861,20 @@ const DungeonRunner: React.FC<DungeonRunnerProps> = ({ isOpen, onClose }) => {
           const lootItemChanges = (lootData.itemChanges || []) as Array<{ id: number; amount: number; rarity?: number; gearInstanceId?: string }>
           if (lootItemChanges.length > 0) {
             setLootLog(prev => [...prev, ...lootItemChanges])
-            setMoveSnapshots(prev => ([
-              ...prev,
-              ...lootItemChanges.map((c, i) => ({
-                index: (prev.at(-1)?.index || 0) + i + 1,
-                type: 'loot',
-                loot: { id: c.id, amount: c.amount, rarity: c.rarity },
-                lootDescription: `Item ${c.id} x${c.amount}`
+            setMoveSnapshots(prev => {
+              const baseIndex = (prev.at(-1)?.index || 0)
+              const entries = lootItemChanges.map((c: any, i: number) => ({
+                index: baseIndex + i + 1,
+                type: c.boonTypeString ? 'upgrade' : 'item',
+                loot: c.boonTypeString ? undefined : { id: c.id, amount: c.amount, rarity: c.rarity },
+                lootDescription: c.boonTypeString ? getLootDescription({
+                  boonTypeString: c.boonTypeString,
+                  selectedVal1: c.selectedVal1,
+                  selectedVal2: c.selectedVal2
+                }) : `Item ${c.id} x${c.amount}`
               }))
-            ]))
+              return [...prev, ...entries]
+            })
           }
           
           // Small delay after loot selection
