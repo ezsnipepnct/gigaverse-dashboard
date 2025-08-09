@@ -764,6 +764,8 @@ const DungeonRunner: React.FC<DungeonRunnerProps> = ({ isOpen, onClose }) => {
             ...prev,
             {
               index: (prev.at(-1)?.index || 0) + 1,
+              type: 'round',
+              roundNumber: roundCount + 1,
               gameState: preState || currentGameState,
               lastMove: executeData.roundResult.playerMove
             }
@@ -802,6 +804,15 @@ const DungeonRunner: React.FC<DungeonRunnerProps> = ({ isOpen, onClose }) => {
           console.log('🎁 Entered loot phase, auto-selecting best loot...')
           enemiesDefeated++
           setLastMove('Selecting loot...')
+          // Insert a visual separator for enemy defeat
+          setMoveSnapshots(prev => ([
+            ...prev,
+            {
+              index: (prev.at(-1)?.index || 0) + 1,
+              type: 'separator',
+              lootDescription: `Enemy defeated — Floor ${finalFloor} Room ${finalRoom}`
+            }
+          ]))
           
           // Auto-select best loot option
           const lootResponse = await fetch('/api/dungeon', {

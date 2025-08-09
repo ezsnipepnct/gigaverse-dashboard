@@ -9,7 +9,8 @@ export interface StreamSnapshot {
   index: number
   gameState?: GameState | null
   lastMove?: string
-  type?: 'round' | 'upgrade' | 'item'
+  type?: 'round' | 'upgrade' | 'item' | 'separator'
+  roundNumber?: number
   loot?: {
     id?: number
     amount?: number
@@ -100,9 +101,26 @@ const MoveStream: React.FC<{ snapshots: StreamSnapshot[] }> = ({ snapshots }) =>
                     <ItemRow itemId={s.loot?.id} amount={s.loot?.amount} />
                   </div>
                 </div>
+              ) : s.type === 'separator' ? (
+                <div className="relative px-2 py-1 my-2">
+                  <div className="h-px w-full bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+                  <div className="absolute inset-x-0 -top-2 flex justify-center">
+                    <span className="px-2 text-xs font-mono text-white/60 bg-black/80">{s.lootDescription || '—'}</span>
+                  </div>
+                </div>
               ) : (
                 s.gameState ? (
-                  <DungeonBattle gameState={s.gameState} lastMove={s.lastMove || ''} isCalculating={false} />
+                  <div>
+                    {s.type === 'round' && (
+                      <div className="mb-2 flex items-center gap-2">
+                        <span className="px-2 py-0.5 rounded-full border border-white/10 text-white/70 text-xs font-mono">ROUND {s.roundNumber ?? ''}</span>
+                        {s.lastMove && (
+                          <span className="text-cyan-300 text-xs font-mono">Move: {s.lastMove}</span>
+                        )}
+                      </div>
+                    )}
+                    <DungeonBattle gameState={s.gameState} lastMove={s.lastMove || ''} isCalculating={false} />
+                  </div>
                 ) : null
               )}
             </div>
