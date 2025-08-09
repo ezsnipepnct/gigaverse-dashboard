@@ -965,19 +965,33 @@ export default function GigaverseDashboard() {
       const data = await response.json()
       console.log('Energy API response:', data)
 
-      // Use the parsed data from the API response
-      const entity = data.entities?.[0]
-      if (entity && entity.parsedData) {
+      // Robust parsing: accept either proxied API structure or local mock fallback
+      const entity = data?.entities?.[0]
+      if (entity?.parsedData) {
         const parsed = entity.parsedData
         setEnergyData({
-          currentEnergy: parsed.energyValue || 0,
-          maxEnergy: parsed.maxEnergy || 420,
-          regenerationRate: parsed.regenPerHour || 18,
-          isPlayerJuiced: parsed.isPlayerJuiced || false
+          currentEnergy: Math.max(0, parsed.energyValue ?? parsed.energy ?? 0),
+          maxEnergy: parsed.maxEnergy ?? 420,
+          regenerationRate: parsed.regenPerHour ?? 18,
+          isPlayerJuiced: parsed.isPlayerJuiced ?? false
         })
-      } else {
-        console.error('Invalid energy data format:', data)
+        return
       }
+
+      // Fallback: mock shape { energy, maxEnergy, lastRegenTime }
+      if (typeof data?.energy === 'number' && typeof data?.maxEnergy === 'number') {
+        setEnergyData({
+          currentEnergy: data.energy,
+          maxEnergy: data.maxEnergy,
+          regenerationRate: 0,
+          isPlayerJuiced: false
+        })
+        return
+      }
+
+      // Unknown shape: avoid noisy console error and set a safe default
+      console.warn('Energy API returned unexpected shape. Using safe defaults.')
+      setEnergyData({ currentEnergy: 0, maxEnergy: 420, regenerationRate: 0, isPlayerJuiced: false })
 
     } catch (error) {
       console.error('Failed to fetch energy:', error)
@@ -1654,7 +1668,7 @@ export default function GigaverseDashboard() {
          onClose={() => setShowFishing(false)}
        />
        <TokenManager
-         show={showTokenManager}
+         isOpen={showTokenManager}
          onClose={() => setShowTokenManager(false)}
        />
        <ROMOverview

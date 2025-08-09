@@ -80,13 +80,31 @@ const EnergyDisplay: React.FC<EnergyDisplayProps> = ({
         setEnergyData({
           ENERGY_CID: entity.ENERGY_CID,
           TIMESTAMP_CID: entity.TIMESTAMP_CID,
-          maxEnergy: parsed.maxEnergy || 420,
-          currentEnergy: parsed.energyValue || 0,
-          regenerationRate: parsed.regenPerHour || 18,
-          isPlayerJuiced: parsed.isPlayerJuiced || false
+          maxEnergy: parsed.maxEnergy ?? 420,
+          currentEnergy: Math.max(0, parsed.energyValue ?? parsed.energy ?? 0),
+          regenerationRate: parsed.regenPerHour ?? 18,
+          isPlayerJuiced: parsed.isPlayerJuiced ?? false
+        })
+      } else if (typeof data?.energy === 'number' && typeof data?.maxEnergy === 'number') {
+        // Fallback mock shape
+        setEnergyData({
+          ENERGY_CID: 0,
+          TIMESTAMP_CID: Date.now(),
+          maxEnergy: data.maxEnergy,
+          currentEnergy: data.energy,
+          regenerationRate: 0,
+          isPlayerJuiced: false
         })
       } else {
-        console.error('Invalid energy data format:', data)
+        console.warn('Invalid energy data shape; using safe defaults')
+        setEnergyData({
+          ENERGY_CID: 0,
+          TIMESTAMP_CID: Date.now(),
+          maxEnergy: 420,
+          currentEnergy: 0,
+          regenerationRate: 0,
+          isPlayerJuiced: false
+        })
       }
 
     } catch (error) {

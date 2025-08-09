@@ -423,7 +423,38 @@ function getBaseScore(boonType: string, val1: number, val2: number): number {
   }
 }
 
-function extractGameState(runData: any): GameState {
+function deriveFloorRoom(runData: any, entityData?: any): { floor: number; room: number } {
+  // Prefer entity ROOM_NUM_CID if present
+  let absoluteRoom: number | null = null
+  if (entityData && typeof entityData.ROOM_NUM_CID !== 'undefined') {
+    const n = Number(entityData.ROOM_NUM_CID)
+    if (!Number.isNaN(n) && n > 0) absoluteRoom = n
+  }
+  // Fallback: parse from enemy id like "Enemy Room 15"
+  if (absoluteRoom === null) {
+    const enemyId: string | undefined = runData?.players?.[1]?.id
+    const m = typeof enemyId === 'string' ? enemyId.match(/(\d{1,2})$/) : null
+    if (m && m[1]) {
+      absoluteRoom = Number(m[1])
+    }
+  }
+  // Last fallback: use ENEMY_CID if it looks like a room counter
+  if (absoluteRoom === null && entityData && typeof entityData.ENEMY_CID !== 'undefined') {
+    const n = Number(entityData.ENEMY_CID)
+    if (!Number.isNaN(n) && n > 0) absoluteRoom = n
+  }
+  // If still unknown, keep previous globals
+  if (absoluteRoom === null) {
+    return { floor: currentFloor, room: currentRoom }
+  }
+  const floor = Math.floor((absoluteRoom - 1) / ENEMIES_PER_FLOOR) + 1
+  const room = ((absoluteRoom - 1) % ENEMIES_PER_FLOOR) + 1
+  currentFloor = floor
+  currentRoom = room
+  return { floor, room }
+}
+
+function extractGameState(runData: any, entityData?: any): GameState {
   console.log('Extracting game state from run data:', runData)
   
   const player = runData.players[0]
@@ -436,6 +467,8 @@ function extractGameState(runData: any): GameState {
   const playerMaxShield = player.shield?.currentMax || player.shield?.startingMax || 0
   const playerMaxHealth = player.health?.currentMax || player.health?.startingMax || 0
   
+  const { floor, room } = deriveFloorRoom(runData, entityData)
+
   const gameState = {
     player_health: player.health?.current || 0,
     player_shield: player.shield?.current || 0,
@@ -446,8 +479,8 @@ function extractGameState(runData: any): GameState {
     enemy_max_health: enemy.health?.starting || 0,
     enemy_max_shield: enemy.shield?.starting || 0,
     round_number: 1,
-    current_floor: currentFloor,
-    current_room: currentRoom,
+    current_floor: floor,
+    current_room: room,
     player_charges: {
       rock: player.rock?.currentCharges || 3,
       paper: player.paper?.currentCharges || 3,
@@ -589,7 +622,7 @@ export async function POST(request: NextRequest) {
         if (response && response.success) {
           // Prefer token at top-level, then nested in data
           const startActionToken = (response as any).actionToken || (response as any)?.data?.actionToken || ''
-          const gameState = extractGameState(response.data.run)
+          const gameState = extractGameState(response.data.run, response.data.entity)
           
           // Check if we started in loot phase
           const lootPhase = response.data.run.lootPhase
@@ -675,7 +708,7 @@ export async function POST(request: NextRequest) {
         console.log(`⚔️ Move execution response:`, response)
         
         if (response.success) {
-          const gameState = extractGameState(response.data.run)
+           const gameState = extractGameState(response.data.run, response.data.entity)
           
           // Check if we entered loot phase
           const lootPhase = response.data.run.lootPhase
@@ -704,7 +737,7 @@ export async function POST(request: NextRequest) {
               const expectedToken = match[1]
               const retry = await sendAction(moveAction, expectedToken, 0, jwtToken, DEFAULT_ACTION_DATA)
               if (retry?.success) {
-                const gameState = extractGameState(retry.data.run)
+                const gameState = extractGameState(retry.data.run, retry.data.entity)
                 return NextResponse.json({
                   success: true,
                   gameState,
@@ -723,7 +756,7 @@ export async function POST(request: NextRequest) {
             }
             const state = await getDungeonState(jwtToken)
             if (state?.success && state.data?.run) {
-              const recovered = extractGameState(state.data.run)
+              const recovered = extractGameState(state.data.run, state.data.entity)
               return NextResponse.json({ success: true, gameState: recovered, actionToken: state.data.actionToken || '' })
             }
           }
@@ -800,7 +833,7 @@ export async function POST(request: NextRequest) {
         console.log(`🧪 Potion usage response:`, response)
         
         if (response.success) {
-          const gameState = extractGameState(response.data.run)
+          const gameState = extractGameState(response.data.run, response.data.entity)
           
           return NextResponse.json({
             success: true,
@@ -885,7 +918,7 @@ export async function POST(request: NextRequest) {
               const expectedToken = match[1]
               const retry = await sendAction(lootAction, expectedToken, 0, jwtToken, DEFAULT_ACTION_DATA)
               if (retry?.success) {
-                const gameState = extractGameState(retry.data.run)
+                const gameState = extractGameState(retry.data.run, retry.data.entity)
                 return NextResponse.json({
                   success: true,
                   gameState,

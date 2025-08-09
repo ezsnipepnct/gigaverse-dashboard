@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import DungeonBattle from './DungeonBattle'
+import MoveStream from './MoveStream'
+// Removed MoveStream section to replace with inline timeline
 import { 
   Sword, 
   Shield, 
@@ -125,6 +127,7 @@ const DungeonRunner: React.FC<DungeonRunnerProps> = ({ isOpen, onClose }) => {
   const [sessionStats, setSessionStats] = useState<any[]>([])
   const [isClaimingEnergy, setIsClaimingEnergy] = useState(false)
   const [roundHistory, setRoundHistory] = useState<RoundResult[]>([])
+  const [moveSnapshots, setMoveSnapshots] = useState<any[]>([])
   const [currentRound, setCurrentRound] = useState(0)
   const [isCalculating, setIsCalculating] = useState(false)
   const [lastMove, setLastMove] = useState<string>('')
@@ -324,9 +327,42 @@ const DungeonRunner: React.FC<DungeonRunnerProps> = ({ isOpen, onClose }) => {
           setActionToken(executeData.actionToken)
           setCurrentRound(prev => prev + 1)
           
-          // Add to round history
+          // Add to round history and snapshot stream
           if (executeData.roundResult) {
             setRoundHistory(prev => [...prev, executeData.roundResult])
+            setMoveSnapshots(prev => [
+              ...prev,
+              {
+                index: (prev.at(-1)?.index || 0) + 1,
+                playerMove: executeData.roundResult.playerMove,
+                enemyMove: executeData.roundResult.enemyMove,
+                result: executeData.roundResult.result,
+                pre: {
+                  player_health: (gameState as any)?.player_health ?? 0,
+                  player_shield: (gameState as any)?.player_shield ?? 0,
+                  enemy_health: (gameState as any)?.enemy_health ?? 0,
+                  enemy_shield: (gameState as any)?.enemy_shield ?? 0,
+                  player_max_health: (gameState as any)?.player_max_health ?? 0,
+                  player_max_shield: (gameState as any)?.player_max_shield ?? 0,
+                  enemy_max_health: (gameState as any)?.enemy_max_health ?? 0,
+                  enemy_max_shield: (gameState as any)?.enemy_max_shield ?? 0,
+                  current_floor: (gameState as any)?.current_floor ?? 1,
+                  current_room: (gameState as any)?.current_room ?? 1,
+                },
+                post: {
+                  player_health: newGameState.player_health,
+                  player_shield: newGameState.player_shield,
+                  enemy_health: newGameState.enemy_health,
+                  enemy_shield: newGameState.enemy_shield,
+                  player_max_health: newGameState.player_max_health,
+                  player_max_shield: newGameState.player_max_shield,
+                  enemy_max_health: newGameState.enemy_max_health,
+                  enemy_max_shield: newGameState.enemy_max_shield,
+                  current_floor: newGameState.current_floor,
+                  current_room: newGameState.current_room,
+                }
+              }
+            ])
           }
           
           // Check if game is over AFTER executing the move
@@ -578,6 +614,7 @@ const DungeonRunner: React.FC<DungeonRunnerProps> = ({ isOpen, onClose }) => {
     // Reset game state for this run
     setGameState(null)
     setRoundHistory([])
+    setMoveSnapshots([])
     setCurrentRound(0)
     
     // Set initial game state from the start run response
@@ -647,6 +684,8 @@ const DungeonRunner: React.FC<DungeonRunnerProps> = ({ isOpen, onClose }) => {
         
         // Step 2: Execute the move
         console.log('⚔️ Executing move...')
+        // Capture pre-state snapshot before executing the move
+        const preState = currentGameState ? { ...currentGameState } : null
         const executeResponse = await fetch('/api/dungeon', {
           method: 'POST',
           headers: { 
@@ -675,7 +714,8 @@ const DungeonRunner: React.FC<DungeonRunnerProps> = ({ isOpen, onClose }) => {
         
         // Update action token and game state
         currentActionToken = executeData.actionToken
-        currentGameState = executeData.gameState
+        const newGameState = executeData.gameState
+        currentGameState = newGameState
         
         // Update UI state
         if (currentGameState) {
@@ -684,10 +724,18 @@ const DungeonRunner: React.FC<DungeonRunnerProps> = ({ isOpen, onClose }) => {
           finalRoom = currentGameState.current_room || finalRoom
         }
         
-        // Add to round history
+        // Add to round history and move snapshots
         if (executeData.roundResult) {
           setRoundHistory(prev => [...prev, executeData.roundResult])
           console.log(`Round result: ${executeData.roundResult.playerMove} vs ${executeData.roundResult.enemyMove} = ${executeData.roundResult.result}`)
+          setMoveSnapshots(prev => ([
+            ...prev,
+            {
+              index: (prev.at(-1)?.index || 0) + 1,
+              gameState: preState || currentGameState,
+              lastMove: executeData.roundResult.playerMove
+            }
+          ]))
         }
         
         roundCount++
@@ -993,61 +1041,64 @@ const DungeonRunner: React.FC<DungeonRunnerProps> = ({ isOpen, onClose }) => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-black/85 backdrop-blur-sm z-50"
           onClick={onClose}
         >
           <motion.div
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.8, opacity: 0 }}
-            className="bg-black/90 border-2 border-cyan-400/50 rounded-lg max-w-7xl w-full max-h-[90vh] overflow-hidden"
+            className="bg-black/90 border-2 border-cyan-400/50 rounded-none w-full h-full overflow-hidden"
             style={{
-              clipPath: 'polygon(20px 0%, 100% 0%, calc(100% - 20px) 100%, 0% 100%)'
+              clipPath: 'polygon(0 0, 100% 0, 100% 100%, 0 100%)'
             }}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="border-b border-cyan-400/30 p-6 bg-gradient-to-r from-cyan-400/10 to-transparent">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <div className="p-3 bg-cyan-400/20 border border-cyan-400/50 rounded-full">
-                    <Sword className="w-8 h-8 text-cyan-400" />
+            <div className="relative border-b border-white/10 px-6 py-4 bg-black/60">
+              {/* soft neon sweep */}
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-cyan-500/10 via-transparent to-rose-500/10" />
+              <div className="relative flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-full bg-cyan-500/15 border border-cyan-400/30 shadow-[0_0_20px_rgba(34,211,238,0.12)]">
+                    <Sword className="w-5 h-5 text-cyan-300" />
                   </div>
-                  <div>
-                    <h2 className="text-3xl font-bold text-cyan-400 font-mono tracking-wider neon-pulse">
-                      GIGAVERSE DUNGEON BOT
-                    </h2>
-                    <p className="text-cyan-300/70 font-mono">MCTS-POWERED AUTOMATED DUNGEON RUNNER</p>
+                  <div className="leading-tight">
+                    <div className="text-cyan-300 font-semibold">Gigaverse Dungeon Bot</div>
+                    <div className="text-[12px] text-white/50">MCTS‑powered automated runner</div>
                   </div>
                 </div>
-                <div className="flex items-center space-x-4">
-                  <div className="text-right text-sm font-mono">
-                    <div className="text-green-400">Wins: {runStats.wins}</div>
-                    <div className="text-red-400">Losses: {runStats.losses}</div>
-                    <div className="text-gray-400">Avg Rounds: {runStats.averageRounds.toFixed(1)}</div>
+                <div className="flex items-center gap-3">
+                  <div className="hidden md:flex items-center gap-3 text-xs font-mono text-white/60">
+                    <span className="px-2.5 py-0.5 rounded-full border border-emerald-400/30 text-emerald-300">Wins {runStats.wins}</span>
+                    <span className="px-2.5 py-0.5 rounded-full border border-rose-400/30 text-rose-300">Losses {runStats.losses}</span>
+                    <span className="px-2.5 py-0.5 rounded-full border border-white/15">Avg {runStats.averageRounds.toFixed(1)}</span>
                   </div>
                   <button
                     onClick={onClose}
-                    className="p-2 text-gray-400 hover:text-red-400 transition-colors"
+                    className="p-2 text-white/50 hover:text-white/80 transition-colors"
+                    aria-label="Close"
                   >
-                    <X className="w-6 h-6" />
+                    <X className="w-5 h-5" />
                   </button>
                 </div>
               </div>
             </div>
+            {/* accent line */}
+            <div className="h-px w-full bg-gradient-to-r from-transparent via-cyan-400/40 to-transparent" />
 
             {/* Controls */}
-            <div className="p-6 border-b border-cyan-400/20 bg-black/40">
+            <div className="px-6 py-3 border-b border-white/10 bg-black/50">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
                   {/* Mode Selection */}
                   <div className="flex items-center space-x-2">
                     <span className="text-gray-400 font-mono text-sm">Mode:</span>
-                    <div className="relative">
+                  <div className="relative">
                       <button
                         onClick={() => setShowModeSelector(!showModeSelector)}
                         disabled={isRunning}
-                        className={`px-4 py-2 rounded font-mono text-sm transition-colors flex items-center space-x-2 disabled:opacity-50 ${
+                    className={`px-4 py-1.5 rounded-full font-mono text-sm transition-colors flex items-center space-x-2 disabled:opacity-50 ${
                           getCurrentModeConfig().bgColor
                         } ${getCurrentModeConfig().borderColor} ${getCurrentModeConfig().textColor} border`}
                       >
@@ -1122,13 +1173,13 @@ const DungeonRunner: React.FC<DungeonRunnerProps> = ({ isOpen, onClose }) => {
                   {/* Potion Selection */}
                   <div className="flex items-center space-x-2">
                     <span className="text-gray-400 font-mono text-sm">Potions:</span>
-                    <div className="flex items-center space-x-1">
+                  <div className="flex items-center space-x-1">
                       {selectedPotions.map((potionId, index) => (
                         <button
                           key={index}
                           onClick={() => setShowPotionSelector(true)}
                           disabled={isRunning}
-                          className={`w-8 h-8 rounded border transition-colors disabled:opacity-50 ${
+                        className={`w-8 h-8 rounded-full border transition-colors disabled:opacity-50 ${
                             potionId === 0 
                               ? 'border-gray-600 bg-gray-800/50 text-gray-400' 
                               : (() => {
@@ -1152,7 +1203,7 @@ const DungeonRunner: React.FC<DungeonRunnerProps> = ({ isOpen, onClose }) => {
                       <button
                         onClick={() => setShowPotionSelector(true)}
                         disabled={isRunning}
-                        className="px-2 py-1 border border-gray-600 rounded text-gray-400 hover:border-cyan-400 hover:text-cyan-400 transition-colors text-xs font-mono disabled:opacity-50"
+                      className="px-3 py-1 border border-gray-600 rounded-full text-gray-400 hover:border-cyan-400 hover:text-cyan-400 transition-colors text-xs font-mono disabled:opacity-50"
                       >
                         EDIT
                       </button>
@@ -1165,7 +1216,7 @@ const DungeonRunner: React.FC<DungeonRunnerProps> = ({ isOpen, onClose }) => {
                     <button
                       onClick={() => setMultiRunMode(!multiRunMode)}
                       disabled={isRunning}
-                      className={`px-3 py-1 border rounded font-mono text-sm transition-colors disabled:opacity-50 ${
+                      className={`px-3 py-1 border rounded-full font-mono text-sm transition-colors disabled:opacity-50 ${
                         multiRunMode 
                           ? 'border-green-400 text-green-400 bg-green-400/10' 
                           : 'border-gray-600 text-gray-400 hover:border-cyan-400 hover:text-cyan-400'
@@ -1199,7 +1250,7 @@ const DungeonRunner: React.FC<DungeonRunnerProps> = ({ isOpen, onClose }) => {
                     {!isRunning ? (
                       <button
                         onClick={startNewRun}
-                        className="px-4 py-2 bg-green-400/20 border border-green-400/50 rounded text-green-400 hover:bg-green-400/30 transition-colors font-mono text-sm flex items-center space-x-2"
+                        className="px-5 py-1.5 bg-emerald-500/15 border border-emerald-400/40 rounded-full text-emerald-300 hover:bg-emerald-500/25 transition-colors font-mono text-sm flex items-center space-x-2 shadow-[0_0_20px_rgba(16,185,129,0.12)]"
                       >
                         <Play className="w-4 h-4" />
                         <span>{multiRunMode ? `START ${runCount} RUNS` : 'START RUN'}</span>
@@ -1208,10 +1259,10 @@ const DungeonRunner: React.FC<DungeonRunnerProps> = ({ isOpen, onClose }) => {
                       <>
                         <button
                           onClick={togglePause}
-                          className={`px-4 py-2 border rounded font-mono text-sm flex items-center space-x-2 transition-colors ${
+                          className={`px-5 py-1.5 border rounded-full font-mono text-sm flex items-center space-x-2 transition-colors shadow-[0_0_20px_rgba(245,158,11,0.08)] ${
                             isPaused 
-                              ? 'bg-green-400/20 border-green-400/50 text-green-400 hover:bg-green-400/30'
-                              : 'bg-yellow-400/20 border-yellow-400/50 text-yellow-400 hover:bg-yellow-400/30'
+                              ? 'bg-emerald-500/15 border-emerald-400/40 text-emerald-300 hover:bg-emerald-500/25'
+                              : 'bg-amber-500/15 border-amber-400/40 text-amber-300 hover:bg-amber-500/25'
                           }`}
                         >
                           {isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
@@ -1219,7 +1270,7 @@ const DungeonRunner: React.FC<DungeonRunnerProps> = ({ isOpen, onClose }) => {
                         </button>
                         <button
                           onClick={stopRun}
-                          className="px-4 py-2 bg-red-400/20 border border-red-400/50 rounded text-red-400 hover:bg-red-400/30 transition-colors font-mono text-sm flex items-center space-x-2"
+                          className="px-5 py-1.5 bg-rose-500/15 border border-rose-400/40 rounded-full text-rose-300 hover:bg-rose-500/25 transition-colors font-mono text-sm flex items-center space-x-2 shadow-[0_0_20px_rgba(244,63,94,0.10)]"
                         >
                           <RotateCcw className="w-4 h-4" />
                           <span>STOP</span>
@@ -1230,7 +1281,7 @@ const DungeonRunner: React.FC<DungeonRunnerProps> = ({ isOpen, onClose }) => {
                 </div>
 
                 {/* Status */}
-                <div className="flex items-center space-x-4 text-sm font-mono">
+                <div className="flex items-center space-x-6 text-sm font-mono">
                   <div className="flex items-center space-x-2">
                     <div className={`w-2 h-2 rounded-full ${
                       isRunning && !isPaused ? 'bg-green-400 animate-pulse' : 
@@ -1240,13 +1291,15 @@ const DungeonRunner: React.FC<DungeonRunnerProps> = ({ isOpen, onClose }) => {
                       {isRunning && !isPaused ? 'RUNNING' : isPaused ? 'PAUSED' : 'IDLE'}
                     </span>
                   </div>
+                  {gameState && (
+                    <div className="px-3 py-1 rounded-full border border-cyan-400/40 text-cyan-300/90 shadow-[0_0_16px_rgba(34,211,238,0.10)]">
+                      Floor {gameState.current_floor} • Room {gameState.current_room}
+                    </div>
+                  )}
                   {multiRunMode && currentRunNumber > 0 && (
                     <span className="text-orange-400">
                       Run {currentRunNumber}/{runCount}
                     </span>
-                  )}
-                  {gameState && (
-                    <span className="text-cyan-400">Floor {gameState?.current_floor || 1} - Room {gameState?.current_room || 1}</span>
                   )}
                   {isClaimingEnergy && (
                     <span className="text-yellow-400 animate-pulse">
@@ -1257,17 +1310,14 @@ const DungeonRunner: React.FC<DungeonRunnerProps> = ({ isOpen, onClose }) => {
               </div>
             </div>
 
-            <div className="p-6 grid grid-cols-1 lg:grid-cols-3 gap-6 max-h-[calc(90vh-200px)] overflow-y-auto">
-              {/* Game State */}
-              <div className="lg:col-span-2 space-y-6">
+            <div className="p-6 grid grid-cols-1 gap-6 h-[calc(100vh-180px)] overflow-y-auto">
+              {/* Left: Game State + Vertical Stream */}
+              <div className="xl:col-span-2 space-y-6">
                 {gameState ? (
                   <DungeonBattle
                     gameState={gameState as any}
                     lastMove={lastMove}
                     isCalculating={isCalculating}
-                    roundHistory={roundHistory}
-                    selectedPotions={selectedPotions}
-                    availablePotions={availablePotions as any}
                   />
                 ) : (
                   <div className="bg-black/60 border border-gray-600 p-8 rounded text-center">
@@ -1278,139 +1328,60 @@ const DungeonRunner: React.FC<DungeonRunnerProps> = ({ isOpen, onClose }) => {
                     </p>
                   </div>
                 )}
+
+                {/* Vertical Move Stream */}
+                <MoveStream snapshots={moveSnapshots as any} />
               </div>
 
-              {/* Round History & Stats */}
-              <div className="space-y-6">
-                {/* Round History */}
-                            <div className="bg-black/60 border border-cyan-400/30 p-4 rounded">
-              <h4 className="text-cyan-400 font-mono font-bold mb-4 flex items-center space-x-2">
-                    <Activity className="w-4 h-4" />
-                                          <span>COMBAT HISTORY</span>
+              {/* Full-width Session Summary (optional) */}
+              {sessionStats.length > 0 && (
+                <div className="bg-black/60 border border-green-400/30 p-4 rounded">
+                  <h4 className="text-green-400 font-mono font-bold mb-4 flex items-center space-x-2">
+                    <BarChart3 className="w-4 h-4" />
+                    <span>SESSION SUMMARY</span>
                   </h4>
-                  
-                  <div className="space-y-2 max-h-64 overflow-y-auto">
-                    {roundHistory.length === 0 ? (
-                      <p className="text-gray-500 font-mono text-sm text-center py-4">
-                        No combats yet
-                      </p>
-                    ) : (
-                      roundHistory.slice(-10).reverse().map((round, index) => (
-                        <div key={index} className="p-2 bg-black/40 border border-gray-600 rounded">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-2">
-                              <span className="text-xs font-mono text-gray-400">
-                                R{roundHistory.length - index}
-                              </span>
-                              <div className="flex items-center space-x-1">
-                                {React.createElement(getMoveIcon(round.playerMove), { 
-                                  className: `w-3 h-3 ${getMoveColor(round.playerMove).split(' ')[0]}` 
-                                })}
-                                <span className="text-xs">vs</span>
-                                {React.createElement(getMoveIcon(round.enemyMove), { 
-                                  className: "w-3 h-3 text-gray-400" 
-                                })}
-                              </div>
-                            </div>
-                            <span className={`text-xs font-mono ${
-                              round.result === 'VICTORY' ? 'text-green-400' :
-                              round.result === 'DEFEAT' ? 'text-red-400' : 'text-yellow-400'
-                            }`}>
-                              {round.result}
-                            </span>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-
-                {/* Session Summary (only show when we have session stats) */}
-                {sessionStats.length > 0 && (
-                  <div className="bg-black/60 border border-green-400/30 p-4 rounded">
-                    <h4 className="text-green-400 font-mono font-bold mb-4 flex items-center space-x-2">
-                      <BarChart3 className="w-4 h-4" />
-                      <span>SESSION SUMMARY</span>
-                    </h4>
-                    
-                    <div className="space-y-3 text-sm font-mono">
-                      <div className="flex justify-between">
-                        <span className="text-gray-400">Completed Runs:</span>
-                        <span className="text-green-400">{sessionStats.length}</span>
-                      </div>
-                      
-                      <div className="flex justify-between">
-                        <span className="text-gray-400">Total Enemies:</span>
-                        <span className="text-red-400">
-                          {sessionStats.reduce((sum, run) => sum + run.enemies_defeated, 0)}
-                        </span>
-                      </div>
-                      
-                      <div className="flex justify-between">
-                        <span className="text-gray-400">Avg Enemies/Run:</span>
-                        <span className="text-yellow-400">
-                          {(sessionStats.reduce((sum, run) => sum + run.enemies_defeated, 0) / sessionStats.length).toFixed(1)}
-                        </span>
-                      </div>
-                      
-                      {(() => {
-                        const bestRun = sessionStats.reduce((best, current) => 
-                          (current.final_floor > best.final_floor || 
-                           (current.final_floor === best.final_floor && current.final_room > best.final_room) ||
-                           (current.final_floor === best.final_floor && current.final_room === best.final_room && current.enemies_defeated > best.enemies_defeated))
-                            ? current : best
-                        )
-                        return (
-                          <>
-                            <div className="border-t border-gray-600 pt-3 mt-3">
-                              <div className="text-cyan-400 font-bold mb-2">BEST RUN:</div>
-                              <div className="flex justify-between">
-                                <span className="text-gray-400">Location:</span>
-                                                                  <span className="text-cyan-400">Floor {bestRun.final_floor}, Room {bestRun.final_room}</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span className="text-gray-400">Enemies:</span>
-                                <span className="text-red-400">{bestRun.enemies_defeated}</span>
-                              </div>
-                            </div>
-                          </>
-                        )
-                      })()}
+                  <div className="space-y-3 text-sm font-mono">
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Completed Runs:</span>
+                      <span className="text-green-400">{sessionStats.length}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Total Enemies:</span>
+                      <span className="text-red-400">{sessionStats.reduce((sum, run) => sum + run.enemies_defeated, 0)}</span>
                     </div>
                   </div>
-                )}
+                </div>
+              )}
 
-                {/* Messages */}
-                {(error || success) && (
-                  <div className="space-y-3">
-                    {error && (
-                      <div className="bg-red-900/30 border border-red-400/50 p-4 rounded">
-                        <div className="flex items-center space-x-2">
-                          <AlertTriangle className="w-4 h-4 text-red-400" />
-                          <span className="text-red-400 font-mono font-bold text-sm">ERROR</span>
-                        </div>
-                        <p className="text-red-300 font-mono text-sm mt-2">{error}</p>
-                        <button
-                          onClick={() => setError('')}
-                          className="mt-3 px-3 py-1 bg-red-400/20 border border-red-400/50 rounded text-red-400 hover:bg-red-400/30 transition-colors font-mono text-xs"
-                        >
-                          DISMISS
-                        </button>
+              {/* Full-width Messages */}
+              {(error || success) && (
+                <div className="space-y-3">
+                  {error && (
+                    <div className="bg-red-900/30 border border-red-400/50 p-4 rounded">
+                      <div className="flex items-center space-x-2">
+                        <AlertTriangle className="w-4 h-4 text-red-400" />
+                        <span className="text-red-400 font-mono font-bold text-sm">ERROR</span>
                       </div>
-                    )}
-                    
-                    {success && (
-                      <div className="bg-green-900/30 border border-green-400/50 p-4 rounded">
-                        <div className="flex items-center space-x-2">
-                          <CheckCircle className="w-4 h-4 text-green-400" />
-                          <span className="text-green-400 font-mono font-bold text-sm">SUCCESS</span>
-                        </div>
-                        <p className="text-green-300 font-mono text-sm mt-2">{success}</p>
+                      <p className="text-red-300 font-mono text-sm mt-2">{error}</p>
+                      <button
+                        onClick={() => setError('')}
+                        className="mt-3 px-3 py-1 bg-red-400/20 border border-red-400/50 rounded text-red-400 hover:bg-red-400/30 transition-colors font-mono text-xs"
+                      >
+                        DISMISS
+                      </button>
+                    </div>
+                  )}
+                  {success && (
+                    <div className="bg-green-900/30 border border-green-400/50 p-4 rounded">
+                      <div className="flex items-center space-x-2">
+                        <CheckCircle className="w-4 h-4 text-green-400" />
+                        <span className="text-green-400 font-mono font-bold text-sm">SUCCESS</span>
                       </div>
-                    )}
-                  </div>
-                )}
-              </div>
+                      <p className="text-green-300 font-mono text-sm mt-2">{success}</p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Footer */}
