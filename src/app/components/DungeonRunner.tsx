@@ -148,6 +148,8 @@ const DungeonRunner: React.FC<DungeonRunnerProps> = ({ isOpen, onClose }) => {
   const [availablePotions, setAvailablePotions] = useState<any[]>([])
   const [showPotionSelector, setShowPotionSelector] = useState(false)
   const [potionAnalysis, setPotionAnalysis] = useState<any>(null)
+  const [pyServiceUp, setPyServiceUp] = useState<boolean | null>(null)
+  const [lastEngine, setLastEngine] = useState<'python' | 'node' | null>(null)
 
   // Load player energy and potions on component mount
   useEffect(() => {
@@ -195,6 +197,23 @@ const DungeonRunner: React.FC<DungeonRunnerProps> = ({ isOpen, onClose }) => {
       loadPlayerData()
     }
   }, [isOpen])
+
+  // Ping local Python service health endpoint periodically
+  useEffect(() => {
+    let timer: any
+    const ping = async () => {
+      try {
+        const res = await fetch('http://127.0.0.1:8765/health', { method: 'GET' })
+        setPyServiceUp(res.ok)
+      } catch {
+        setPyServiceUp(false)
+      } finally {
+        timer = setTimeout(ping, 4000)
+      }
+    }
+    ping()
+    return () => clearTimeout(timer)
+  }, [])
 
   // Helper function to get current mode config
   const getCurrentModeConfig = () => DUNGEON_MODES[currentMode]
@@ -686,6 +705,9 @@ const DungeonRunner: React.FC<DungeonRunnerProps> = ({ isOpen, onClose }) => {
         }
         
         const bestMove = moveData.bestMove
+        if (moveData.engine === 'python' || moveData.engine === 'node') {
+          setLastEngine(moveData.engine)
+        }
         console.log(`🎯 MCTS selected move: ${bestMove}`)
         setLastMove(bestMove)
         
@@ -1342,6 +1364,16 @@ const DungeonRunner: React.FC<DungeonRunnerProps> = ({ isOpen, onClose }) => {
 
                 {/* Status */}
                 <div className="flex items-center space-x-6 text-sm font-mono">
+                  {/* Engine/Service status */}
+                  <div className="flex items-center gap-2">
+                    <div className={`w-2 h-2 rounded-full ${pyServiceUp ? 'bg-emerald-400' : pyServiceUp === false ? 'bg-rose-400' : 'bg-gray-500'} animate-pulse`} />
+                    <span className={pyServiceUp ? 'text-emerald-300' : pyServiceUp === false ? 'text-rose-300' : 'text-gray-400'}>
+                      {pyServiceUp ? 'PY-SVC ON' : pyServiceUp === false ? 'PY-SVC OFF' : 'PY-SVC ...'}
+                    </span>
+                    {lastEngine && (
+                      <span className="px-2 py-0.5 rounded-full border border-white/15 text-white/70">{lastEngine.toUpperCase()}</span>
+                    )}
+                  </div>
                   <div className="flex items-center space-x-2">
                     <div className={`w-2 h-2 rounded-full ${
                       isRunning && !isPaused ? 'bg-green-400 animate-pulse' : 

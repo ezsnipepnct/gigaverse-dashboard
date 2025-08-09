@@ -765,7 +765,25 @@ export async function POST(request: NextRequest) {
       
       try {
         const startedAt = Date.now()
-        // Adaptive iteration count similar to CLI bot
+        // Try local Python service first
+        try {
+          const resp = await fetch('http://127.0.0.1:8765/mcts/move', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ gameState, iterations: DEFAULT_MCTS_ITERATIONS })
+          })
+          if (resp.ok) {
+            const json = await resp.json()
+            if (json?.success && json?.move) {
+              console.log(`🧠 PyMCTS best move: ${json.move} in ${Date.now() - startedAt}ms`)
+              return NextResponse.json({ success: true, bestMove: json.move, engine: 'python' })
+            }
+          }
+        } catch (e) {
+          console.warn('⚠️ Python MCTS service unavailable, falling back to Node MCTS')
+        }
+
+        // Fallback to Node MCTS
         const enemyRatio = gameState.enemy_health / Math.max(1, gameState.enemy_max_health)
         const playerRatio = gameState.player_health / Math.max(1, gameState.player_max_health)
         const lowChargeMoves = Object.values(gameState.player_charges as Record<string, number>).filter((c: number) => c <= 1).length
@@ -776,13 +794,9 @@ export async function POST(request: NextRequest) {
         else iterations = Math.floor((DEFAULT_MCTS_ITERATIONS * 3) / 4)
 
         const bestMove = mcts(gameState, iterations)
-        console.log(`🧠 MCTS calculated best move: ${bestMove}`)
-        console.log(`⏱️ MCTS time: ${Date.now() - startedAt}ms for ${iterations} iterations`)
-        
-        return NextResponse.json({
-          success: true,
-          bestMove
-        })
+        console.log(`🧠 Node MCTS best move: ${bestMove} in ${Date.now() - startedAt}ms for ${iterations} iterations`)
+
+        return NextResponse.json({ success: true, bestMove, engine: 'node' })
       } catch (error) {
         console.error('MCTS calculation error:', error)
         return NextResponse.json({ 
@@ -967,6 +981,36 @@ export async function POST(request: NextRequest) {
       }
       
       try {
+        // Prefer local Python loot chooser if available
+        try {
+          const resp = await fetch('http://127.0.0.1:8765/loot/choose', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ gameState, lootOptions, simIterations: LOOT_SIM_ITERATIONS })
+          })
+          if (resp.ok) {
+            const json = await resp.json()
+            if (json?.success && typeof json?.index === 'number') {
+              // Assign actions by index
+              lootOptions.forEach((opt: any, i: number) => { opt.action = i === 0 ? 'loot_one' : i === 1 ? 'loot_two' : 'loot_three' })
+              const bestLoot = lootOptions[json.index] || lootOptions[0]
+              const lootAction = bestLoot.action
+              let response = await sendAction(lootAction, actionToken || '', 0, jwtToken, DEFAULT_ACTION_DATA)
+              if (response.success) {
+                const gameState = extractGameState(response.data.run, response.data.entity)
+                return NextResponse.json({
+                  success: true,
+                  gameState,
+                  actionToken: (response as any)?.data?.actionToken || (response as any)?.actionToken || '',
+                  selectedLoot: bestLoot,
+                })
+              }
+            }
+          }
+        } catch (e) {
+          console.warn('⚠️ Python loot service unavailable, using Node sim')
+        }
+
         // Assign actions by index to mirror CLI expectation
         lootOptions.forEach((opt: any, i: number) => {
           opt.action = i === 0 ? 'loot_one' : i === 1 ? 'loot_two' : 'loot_three'
