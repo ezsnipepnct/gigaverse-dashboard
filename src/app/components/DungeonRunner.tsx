@@ -774,6 +774,16 @@ const DungeonRunner: React.FC<DungeonRunnerProps> = ({ isOpen, onClose }) => {
           const itemChanges = (executeData.itemChanges || []) as Array<{ id: number; amount: number; rarity?: number; gearInstanceId?: string }>
           if (itemChanges.length > 0) {
             setLootLog(prev => [...prev, ...itemChanges])
+            // Append compact loot summary into move stream too
+            setMoveSnapshots(prev => ([
+              ...prev,
+              ...itemChanges.map((c, i) => ({
+                index: (prev.at(-1)?.index || 0) + i + 1,
+                type: 'loot',
+                loot: { id: c.id, amount: c.amount, rarity: c.rarity },
+                lootDescription: `Item ${c.id} x${c.amount}`
+              }))
+            ]))
         }
         
         roundCount++
@@ -827,12 +837,31 @@ const DungeonRunner: React.FC<DungeonRunnerProps> = ({ isOpen, onClose }) => {
             lootHistory.push(lootDesc)
             console.log(`🎁 Selected loot: ${lootDesc}`)
             setSuccess(`🎁 Selected loot: ${lootDesc}`)
+            // Stream loot event
+            setMoveSnapshots(prev => ([
+              ...prev,
+              {
+                index: (prev.at(-1)?.index || 0) + 1,
+                type: 'loot',
+                loot: lootData.selectedLoot,
+                lootDescription: lootDesc
+              }
+            ]))
           }
 
           // Also capture any item balance changes from loot selection response
           const lootItemChanges = (lootData.itemChanges || []) as Array<{ id: number; amount: number; rarity?: number; gearInstanceId?: string }>
           if (lootItemChanges.length > 0) {
             setLootLog(prev => [...prev, ...lootItemChanges])
+            setMoveSnapshots(prev => ([
+              ...prev,
+              ...lootItemChanges.map((c, i) => ({
+                index: (prev.at(-1)?.index || 0) + i + 1,
+                type: 'loot',
+                loot: { id: c.id, amount: c.amount, rarity: c.rarity },
+                lootDescription: `Item ${c.id} x${c.amount}`
+              }))
+            ]))
           }
           
           // Small delay after loot selection
