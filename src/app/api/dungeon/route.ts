@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-// Exact parameters from CLI bot
-const MAX_ROUNDS = 20
-// Use a more practical default to avoid long blocking requests in API routes
-const MCTS_ITERATIONS = 25000
+// Exact parameters adapted to align with CLI bot
+const MAX_ROUNDS = 50
+// Default iteration budget; we apply adaptive iterations per state later
+const DEFAULT_MCTS_ITERATIONS = 25000
 const LOOT_SIM_ITERATIONS = 100
 
 // No hardcoded token - use token from Authorization header
@@ -106,6 +106,25 @@ function getEnemyStrongestAttack(enemyMoveStats: { [key: string]: { damage: numb
   return [strongestMove, strongestDamage]
 }
 
+function getEnemyStrongestAvailableAttack(
+  enemyMoveStats: { [key: string]: { damage: number, shield: number } },
+  enemyCharges: { [key: string]: number }
+): [string, number] {
+  let strongestMove: string | null = null
+  let strongestDamage = -Infinity
+  for (const [move, stats] of Object.entries(enemyMoveStats)) {
+    const charge = enemyCharges?.[move] ?? 3
+    if (charge > 0 && stats.damage > strongestDamage) {
+      strongestDamage = stats.damage
+      strongestMove = move
+    }
+  }
+  if (strongestMove === null) {
+    return getEnemyStrongestAttack(enemyMoveStats)
+  }
+  return [strongestMove, strongestDamage]
+}
+
 function getCounterMove(move: string): string {
   if (move === "rock") return "paper"
   if (move === "paper") return "scissor"
@@ -184,7 +203,10 @@ function selectBestChild(node: MCTSNode, explorationWeight: number = 1.4): MCTSN
   let bestScore = -Infinity
   let bestChild: MCTSNode | null = null
   
-  const [strongestEnemyMove, strongestDamage] = getEnemyStrongestAttack(node.state.enemy_move_stats)
+  const [strongestEnemyMove, strongestDamage] = getEnemyStrongestAvailableAttack(
+    node.state.enemy_move_stats,
+    node.state.enemy_charges
+  )
   const counterToStrongest = getCounterMove(strongestEnemyMove)
   
   for (const child of node.children) {
@@ -195,13 +217,15 @@ function selectBestChild(node: MCTSNode, explorationWeight: number = 1.4): MCTSN
     const winRate = child.wins / child.visits
     const exploration = Math.sqrt(Math.log(node.visits) / child.visits)
     
-    // Exact bonuses from CLI bot
+    // Heuristics aligned with CLI bot (charge-aware and threat scaled)
     let bonus = 0
     
-    // Counter bonus (exact values)
+    // Counter bonus scaled by threat level
     if (child.move === counterToStrongest) {
       const playerHealthRatio = node.state.player_health / node.state.player_max_health
-      const threatLevel = strongestDamage / (node.state.player_health + node.state.player_shield)
+      const effectiveHp = node.state.player_health + node.state.player_shield
+      let threatLevel = effectiveHp > 0 ? (strongestDamage / effectiveHp) : 1.0
+      if (strongestDamage < 5) threatLevel *= 0.5
       
       if (playerHealthRatio < 0.3) {
         bonus += 0.08 * Math.min(threatLevel, 1.0)
@@ -210,12 +234,12 @@ function selectBestChild(node: MCTSNode, explorationWeight: number = 1.4): MCTSN
       }
     }
     
-    // Charge bonus/penalty (exact values)
+    // Charge pressure penalty (stronger)
     const charge = node.state.player_charges[child.move!]
     if (charge === 1) {
-      bonus -= 0.3 // High penalty for last charge
+      bonus -= 0.8 // Very high penalty for last charge (avoid depleting to -1)
     } else if (charge === 2) {
-      bonus -= 0.1 // Moderate penalty
+      bonus -= 0.3 // Significant penalty when dropping to 0
     }
     
     const score = winRate + explorationWeight * exploration + bonus
@@ -230,52 +254,111 @@ function selectBestChild(node: MCTSNode, explorationWeight: number = 1.4): MCTSN
 }
 
 function expand(node: MCTSNode): MCTSNode {
-  const possibleMoves = getAvailableMoves(node.state.player_charges)
-  const existingMoves = new Set(node.children.map(child => child.move))
-  
-  for (const move of possibleMoves) {
-    if (!existingMoves.has(move)) {
-      // Create a new state by simulating one round with a random enemy move
-      const enemyMoves = getAvailableMoves(node.state.enemy_charges)
-      const randomEnemyMove = enemyMoves[Math.floor(Math.random() * enemyMoves.length)]
-      
-      const newState = applyRound(node.state, move, randomEnemyMove)
-      const newChild = new MCTSNode(newState, node, move)
-      node.children.push(newChild)
-      return newChild
+  const tried = new Set(node.children.map(c => c.move))
+  const possible = getAvailableMoves(node.state.player_charges)
+  const untried = possible.filter(m => !tried.has(m))
+  const candidateMoves = untried.length > 0 ? untried : possible
+
+  // Identify killing moves that do not deplete to -1
+  const killingMoves: string[] = []
+  for (const m of candidateMoves) {
+    const dmg = node.state.player_move_stats[m].damage
+    if (dmg > node.state.enemy_shield + node.state.enemy_health && node.state.player_charges[m] > 1) {
+      killingMoves.push(m)
     }
   }
-  
-  return node.children[0]
+
+  const [strongestEnemyMove, strongestDamage] = getEnemyStrongestAvailableAttack(
+    node.state.enemy_move_stats,
+    node.state.enemy_charges
+  )
+  const counterToStrongest = getCounterMove(strongestEnemyMove)
+
+  const enemyHealthRatio = node.state.enemy_health / node.state.enemy_max_health
+  const playerHealthRatio = node.state.player_health / node.state.player_max_health
+
+  const highChargeMoves = candidateMoves.filter(m => node.state.player_charges[m] > 1)
+  let move: string
+
+  if (killingMoves.length > 0) {
+    move = killingMoves[Math.floor(Math.random() * killingMoves.length)]
+  } else if (highChargeMoves.length === 0) {
+    const safe = candidateMoves.length > 0 ? candidateMoves : possible
+    move = safe[Math.floor(Math.random() * safe.length)]
+  } else if (enemyHealthRatio < 0.3) {
+    const sorted = [...highChargeMoves].sort((a, b) => node.state.player_move_stats[b].damage - node.state.player_move_stats[a].damage)
+    move = sorted[0] ?? highChargeMoves[0]
+  } else if (playerHealthRatio < 0.3 && highChargeMoves.includes(counterToStrongest)) {
+    move = counterToStrongest
+  } else if (strongestDamage < 5) {
+    const sorted = [...highChargeMoves].sort((a, b) => node.state.player_move_stats[b].damage - node.state.player_move_stats[a].damage)
+    move = sorted[0] ?? highChargeMoves[0]
+  } else if (highChargeMoves.includes(counterToStrongest)) {
+    move = counterToStrongest
+  } else {
+    move = highChargeMoves[Math.floor(Math.random() * highChargeMoves.length)]
+  }
+
+  const enemyMoves = getAvailableMoves(node.state.enemy_charges)
+  const enemyMove = enemyMoves[Math.floor(Math.random() * enemyMoves.length)] || 'rock'
+  const newState = applyRound(node.state, move, enemyMove)
+  const child = new MCTSNode(newState, node, move)
+  node.children.push(child)
+  return child
 }
 
 function simulate(state: GameState): number {
-  const simState = JSON.parse(JSON.stringify(state))
-  
-  while (!isTerminal(simState)) {
-    const playerMoves = getAvailableMoves(simState.player_charges)
-    const enemyMoves = getAvailableMoves(simState.enemy_charges)
-    
+  const sim = JSON.parse(JSON.stringify(state)) as GameState
+  while (!isTerminal(sim)) {
+    const playerMoves = getAvailableMoves(sim.player_charges)
+    const enemyMoves = getAvailableMoves(sim.enemy_charges)
     if (playerMoves.length === 0 || enemyMoves.length === 0) break
-    
-    const playerMove = playerMoves[Math.floor(Math.random() * playerMoves.length)]
+
+    let playerMove: string
+    if (Math.random() < 0.8) {
+      // smart policy
+      const highChargeMoves = playerMoves.filter(m => sim.player_charges[m] > 1)
+      const safeMoves = highChargeMoves.length > 0 ? highChargeMoves : playerMoves
+
+      // killing moves without depleting
+      const killing = safeMoves.filter(m => sim.player_move_stats[m].damage > sim.enemy_shield + sim.enemy_health)
+      if (killing.length > 0) {
+        playerMove = killing[Math.floor(Math.random() * killing.length)]
+      } else {
+        const [strongestEnemy, strongestDamage] = getEnemyStrongestAvailableAttack(sim.enemy_move_stats, sim.enemy_charges)
+        const counter = getCounterMove(strongestEnemy)
+        const enemyHealthRatio = sim.enemy_health / sim.enemy_max_health
+        const playerHealthRatio = sim.player_health / sim.player_max_health
+        if (enemyHealthRatio < 0.3) {
+          const sorted = [...safeMoves].sort((a, b) => sim.player_move_stats[b].damage - sim.player_move_stats[a].damage)
+          playerMove = sorted[0] ?? safeMoves[0]
+        } else if (playerHealthRatio < 0.3) {
+          if (safeMoves.includes(counter) && strongestDamage > 3) {
+            playerMove = counter
+          } else {
+            playerMove = safeMoves.sort((a, b) => sim.player_move_stats[b].shield - sim.player_move_stats[a].shield)[0] ?? safeMoves[0]
+          }
+        } else if (strongestDamage < 5) {
+          const sorted = [...safeMoves].sort((a, b) => sim.player_move_stats[b].damage - sim.player_move_stats[a].damage)
+          playerMove = sorted[0] ?? safeMoves[0]
+        } else {
+          playerMove = safeMoves.includes(counter) ? counter : safeMoves[Math.floor(Math.random() * safeMoves.length)]
+        }
+      }
+    } else {
+      const highChargeMoves = playerMoves.filter(m => sim.player_charges[m] > 1)
+      playerMove = (highChargeMoves.length > 0 ? highChargeMoves : playerMoves)[Math.floor(Math.random() * (highChargeMoves.length > 0 ? highChargeMoves.length : playerMoves.length))]
+    }
+
     const enemyMove = enemyMoves[Math.floor(Math.random() * enemyMoves.length)]
-    
-    const newState = applyRound(simState, playerMove, enemyMove)
-    Object.assign(simState, newState)
+    const ns = applyRound(sim, playerMove, enemyMove)
+    Object.assign(sim, ns)
   }
-  
-  // Return 1 if player wins, 0 if enemy wins
-  if (simState.enemy_health <= 0 && simState.player_health > 0) {
-    return 1
-  } else if (simState.player_health <= 0) {
-    return 0
-  } else {
-    // Timeout - judge by health ratio
-    const playerRatio = simState.player_health / simState.player_max_health
-    const enemyRatio = simState.enemy_health / simState.enemy_max_health
-    return playerRatio > enemyRatio ? 1 : 0
-  }
+  if (sim.enemy_health <= 0 && sim.player_health > 0) return 1
+  if (sim.player_health <= 0) return 0
+  const pr = sim.player_health / sim.player_max_health
+  const er = sim.enemy_health / sim.enemy_max_health
+  return pr > er ? 1 : 0
 }
 
 function backpropagate(node: MCTSNode, result: number): void {
@@ -309,8 +392,11 @@ function mcts(rootState: GameState, iterations: number): string {
     backpropagate(node, result)
   }
   
-  // Select best move (exact logic from CLI bot)
-  const [strongestEnemyMove, strongestDamage] = getEnemyStrongestAttack(rootState.enemy_move_stats)
+  // Final selection with charge-aware and threat-scaled heuristics
+  const [strongestEnemyMove, strongestDamage] = getEnemyStrongestAvailableAttack(
+    rootState.enemy_move_stats,
+    rootState.enemy_charges
+  )
   const counterToStrongest = getCounterMove(strongestEnemyMove)
   
   // Check for killing moves
@@ -338,7 +424,9 @@ function mcts(rootState: GameState, iterations: number): string {
   
   const enemyHealthRatio = rootState.enemy_health / rootState.enemy_max_health
   const playerHealthRatio = rootState.player_health / rootState.player_max_health
-  const threatLevel = strongestDamage / (rootState.player_health + rootState.player_shield)
+  const effectiveHp = rootState.player_health + rootState.player_shield
+  let threatLevel = effectiveHp > 0 ? strongestDamage / effectiveHp : 1.0
+  if (strongestDamage < 5) threatLevel *= 0.5
   
   for (const child of rootNode.children) {
     if (child.visits === 0) continue
@@ -677,9 +765,19 @@ export async function POST(request: NextRequest) {
       
       try {
         const startedAt = Date.now()
-        const bestMove = mcts(gameState, MCTS_ITERATIONS)
+        // Adaptive iteration count similar to CLI bot
+        const enemyRatio = gameState.enemy_health / Math.max(1, gameState.enemy_max_health)
+        const playerRatio = gameState.player_health / Math.max(1, gameState.player_max_health)
+        const lowChargeMoves = Object.values(gameState.player_charges as Record<string, number>).filter((c: number) => c <= 1).length
+        let iterations = DEFAULT_MCTS_ITERATIONS
+        if (enemyRatio < 0.2) iterations = Math.floor(DEFAULT_MCTS_ITERATIONS / 2)
+        else if (playerRatio > 0.8 && enemyRatio > 0.8) iterations = Math.floor(DEFAULT_MCTS_ITERATIONS / 2)
+        else if (playerRatio < 0.3 || lowChargeMoves >= 2) iterations = DEFAULT_MCTS_ITERATIONS
+        else iterations = Math.floor((DEFAULT_MCTS_ITERATIONS * 3) / 4)
+
+        const bestMove = mcts(gameState, iterations)
         console.log(`🧠 MCTS calculated best move: ${bestMove}`)
-        console.log(`⏱️ MCTS time: ${Date.now() - startedAt}ms for ${MCTS_ITERATIONS} iterations`)
+        console.log(`⏱️ MCTS time: ${Date.now() - startedAt}ms for ${iterations} iterations`)
         
         return NextResponse.json({
           success: true,
@@ -721,6 +819,7 @@ export async function POST(request: NextRequest) {
             lootPhase,
             lootOptions,
             entityData: response.data.entity, // Include entity data for potion analysis
+            itemChanges: (response as any)?.gameItemBalanceChanges || (response as any)?.data?.gameItemBalanceChanges || [],
             roundResult: {
               playerMove: move,
               enemyMove: response.data.run.enemyMove || 'unknown',
@@ -745,6 +844,7 @@ export async function POST(request: NextRequest) {
                   lootPhase: retry.data.run.lootPhase,
                   lootOptions: retry.data.run.lootOptions,
                   entityData: retry.data.entity,
+                  itemChanges: (retry as any)?.gameItemBalanceChanges || (retry as any)?.data?.gameItemBalanceChanges || [],
                   roundResult: {
                     playerMove: move,
                     enemyMove: retry.data.run.enemyMove || 'unknown',
@@ -867,37 +967,142 @@ export async function POST(request: NextRequest) {
       }
       
       try {
-        // Find the best loot option using scoring
-        let bestLoot = null
-        let bestScore = -Infinity
-        
-        for (const loot of lootOptions) {
-          const score = getBaseScore(
-            loot.boonTypeString || 'unknown',
-            loot.selectedVal1 || 0,
-            loot.selectedVal2 || 0
-          )
-          
-          if (score > bestScore) {
-            bestScore = score
-            bestLoot = loot
+        // Assign actions by index to mirror CLI expectation
+        lootOptions.forEach((opt: any, i: number) => {
+          opt.action = i === 0 ? 'loot_one' : i === 1 ? 'loot_two' : 'loot_three'
+        })
+
+        // Simulation-driven loot evaluation (similar to CLI LootManager)
+        const fs = await import('fs/promises')
+        const path = await import('path')
+
+        // Determine enemy stats file (default to normal/gigus stats)
+        // If mode is provided in body use underhaul file for 'underhaul'
+        const statsFile = (body?.mode === 'underhaul')
+          ? path.join(process.cwd(), 'gigaverse-backend', 'underhaul_enemy_stats.json')
+          : path.join(process.cwd(), 'gigaverse-backend', 'enemy_stats.json')
+
+        let enemyData: any = {}
+        try {
+          const raw = await fs.readFile(statsFile, 'utf-8')
+          enemyData = JSON.parse(raw)?.enemies || {}
+        } catch (e) {
+          console.warn('⚠️ Could not load enemy stats file:', e)
+        }
+
+        function getFutureEnemies(current_floor: number, current_room: number) {
+          const list: Array<{floor:number;room:number;stats:any}> = []
+          for (let f = 1; f <= 4; f++) {
+            const floorKey = `floor_${f}`
+            if (!enemyData[floorKey]) continue
+            for (let r = 1; r <= 4; r++) {
+              if (f < current_floor) continue
+              if (f === current_floor && r <= current_room) continue
+              const roomKey = `room_${r}`
+              if (enemyData[floorKey][roomKey]) {
+                list.push({ floor: f, room: r, stats: enemyData[floorKey][roomKey] })
+              }
+            }
           }
+          return list
         }
-        
-        if (!bestLoot) {
-          // Fallback to first option
-          bestLoot = lootOptions[0]
+
+        function applyLootToState(loot: any, baseState: any, playerStats: any) {
+          const ns = { ...baseState }
+          const newStats: any = {
+            rock: { ...playerStats.rock },
+            paper: { ...playerStats.paper },
+            scissor: { ...playerStats.scissor }
+          }
+          const boon = loot.boonTypeString
+          const v1 = loot.selectedVal1 || 0
+          const v2 = loot.selectedVal2 || 0
+          if (boon === 'UpgradeRock') {
+            newStats.rock.damage += v1; newStats.rock.shield += v2
+          } else if (boon === 'UpgradePaper') {
+            newStats.paper.damage += v1; newStats.paper.shield += v2
+          } else if (boon === 'UpgradeScissor') {
+            newStats.scissor.damage += v1; newStats.scissor.shield += v2
+          } else if (boon === 'AddMaxHealth') {
+            ns.player_max_health += v1; ns.player_health = Math.min(ns.player_health + v1, ns.player_max_health)
+          } else if (boon === 'AddMaxArmor' || boon === 'AddMaxShield') {
+            ns.player_max_shield += v1; ns.player_shield = Math.min(ns.player_shield + v1, ns.player_max_shield)
+          } else if (boon === 'Heal') {
+            ns.player_health = Math.min(ns.player_health + v1, ns.player_max_health)
+          }
+          return { state: ns, stats: newStats }
         }
-        
-        console.log(`🎁 Auto-selected loot:`, bestLoot)
-        
-        // Execute loot selection using provided action from API (matches CLI)
+
+        function evaluateLootAgainstFuture(loot: any, baseState: any) {
+          const futures = getFutureEnemies(baseState.current_floor, baseState.current_room)
+          if (!futures || futures.length === 0) return 0.5
+          // Penalize wasted heal if near full
+          if (loot.boonTypeString === 'Heal') {
+            const healVal = loot.selectedVal1 || 0
+            const maxUsable = baseState.player_max_health - baseState.player_health
+            if (maxUsable < healVal * 0.5) {
+              // large waste → reduce expected value a bit
+            }
+          }
+          let total = 0
+          let wsum = 0
+          for (const fe of futures) {
+            const dist = ((fe.floor - baseState.current_floor) * 4) + (fe.room - baseState.current_room)
+            const weight = Math.max(0.5, 4.0 - dist * 0.5)
+            const { state: st, stats: pstats } = applyLootToState(loot, baseState, baseState.player_move_stats)
+            // Build enemy stats for this future enemy
+            const enemyStats = {
+              rock: { damage: fe.stats.moves.rock.damage, shield: fe.stats.moves.rock.shield },
+              paper: { damage: fe.stats.moves.paper.damage, shield: fe.stats.moves.paper.shield },
+              scissor: { damage: fe.stats.moves.scissor.damage, shield: fe.stats.moves.scissor.shield }
+            }
+            const evalState: GameState = {
+              player_health: st.player_health,
+              player_shield: st.player_shield,
+              enemy_health: fe.stats.health,
+              enemy_shield: fe.stats.shield,
+              player_max_health: st.player_max_health,
+              player_max_shield: st.player_max_shield,
+              enemy_max_health: fe.stats.health,
+              enemy_max_shield: fe.stats.shield,
+              round_number: st.round_number,
+              current_floor: st.current_floor,
+              current_room: st.current_room,
+              player_charges: { ...baseState.player_charges },
+              enemy_charges: { rock: 3, paper: 3, scissor: 3 },
+              player_move_stats: pstats,
+              enemy_move_stats: enemyStats
+            }
+            // Run short simulations
+            let wins = 0
+            for (let i = 0; i < Math.max(25, Math.floor(LOOT_SIM_ITERATIONS / 4)); i++) {
+              wins += simulate(evalState)
+            }
+            const rate = wins / Math.max(25, Math.floor(LOOT_SIM_ITERATIONS / 4))
+            total += rate * weight
+            wsum += weight
+          }
+          return wsum > 0 ? total / wsum : 0
+        }
+
+        let bestLoot: any = null
+        let bestRate = -Infinity
+        for (const loot of lootOptions) {
+          const rate = evaluateLootAgainstFuture(loot, gameState || {})
+          if (rate > bestRate) { bestRate = rate; bestLoot = loot }
+        }
+
+        if (!bestLoot) bestLoot = lootOptions[0]
+
+        console.log('🎁 Auto-selected loot (simulated):', bestLoot)
+
+        // Execute loot selection
         const lootAction = bestLoot.action || 'loot_two'
         // Attempt with provided token (can be empty). Backend often returns the next token on failure
         let response = await sendAction(lootAction, actionToken || '', 0, jwtToken, DEFAULT_ACTION_DATA)
         
         if (response.success) {
-          const gameState = extractGameState(response.data.run)
+          const gameState = extractGameState(response.data.run, response.data.entity)
           
           return NextResponse.json({
             success: true,

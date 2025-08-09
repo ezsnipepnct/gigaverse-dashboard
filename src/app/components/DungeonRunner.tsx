@@ -31,6 +31,7 @@ import {
   ChevronRight
 } from 'lucide-react'
 import { agwAuthService } from '@/lib/agw-auth'
+import { itemMetadataService } from '@/app/services/itemMetadata'
 
 interface DungeonRunnerProps {
   isOpen: boolean
@@ -140,6 +141,7 @@ const DungeonRunner: React.FC<DungeonRunnerProps> = ({ isOpen, onClose }) => {
     totalRounds: 0,
     averageRounds: 0
   })
+  const [lootLog, setLootLog] = useState<Array<{ id: number; amount: number; rarity?: number; gearInstanceId?: string }>>([])
   const [playerEnergy, setPlayerEnergy] = useState<number>(0)
   const [showModeSelector, setShowModeSelector] = useState(false)
   const [selectedPotions, setSelectedPotions] = useState<number[]>([0, 0, 0])
@@ -163,7 +165,14 @@ const DungeonRunner: React.FC<DungeonRunnerProps> = ({ isOpen, onClose }) => {
 
         if (energyResponse.ok) {
           const energyData = await energyResponse.json()
-          setPlayerEnergy(energyData.energy || 0)
+          const entity = energyData?.entities?.[0]
+          if (entity?.parsedData) {
+            setPlayerEnergy(Math.max(0, entity.parsedData.energyValue ?? entity.parsedData.energy ?? 0))
+          } else if (typeof energyData?.energy === 'number') {
+            setPlayerEnergy(energyData.energy)
+          } else {
+            setPlayerEnergy(0)
+          }
         }
 
         // Load available potions
@@ -616,6 +625,7 @@ const DungeonRunner: React.FC<DungeonRunnerProps> = ({ isOpen, onClose }) => {
     setRoundHistory([])
     setMoveSnapshots([])
     setCurrentRound(0)
+    setLootLog([])
     
     // Set initial game state from the start run response
     if (initialGameState) {
@@ -724,7 +734,7 @@ const DungeonRunner: React.FC<DungeonRunnerProps> = ({ isOpen, onClose }) => {
           finalRoom = currentGameState.current_room || finalRoom
         }
         
-        // Add to round history and move snapshots
+          // Add to round history and move snapshots
         if (executeData.roundResult) {
           setRoundHistory(prev => [...prev, executeData.roundResult])
           console.log(`Round result: ${executeData.roundResult.playerMove} vs ${executeData.roundResult.enemyMove} = ${executeData.roundResult.result}`)
@@ -736,6 +746,12 @@ const DungeonRunner: React.FC<DungeonRunnerProps> = ({ isOpen, onClose }) => {
               lastMove: executeData.roundResult.playerMove
             }
           ]))
+        }
+
+          // Track item balance changes (loot) if present
+          const itemChanges = (executeData.itemChanges || []) as Array<{ id: number; amount: number; rarity?: number; gearInstanceId?: string }>
+          if (itemChanges.length > 0) {
+            setLootLog(prev => [...prev, ...itemChanges])
         }
         
         roundCount++
@@ -776,7 +792,7 @@ const DungeonRunner: React.FC<DungeonRunnerProps> = ({ isOpen, onClose }) => {
           
           // Update with post-loot state
           if (lootData.actionToken) {
-            currentActionToken = lootData.actionToken
+          currentActionToken = lootData.actionToken
           }
           if (lootData.gameState) {
             currentGameState = lootData.gameState
@@ -789,6 +805,12 @@ const DungeonRunner: React.FC<DungeonRunnerProps> = ({ isOpen, onClose }) => {
             lootHistory.push(lootDesc)
             console.log(`🎁 Selected loot: ${lootDesc}`)
             setSuccess(`🎁 Selected loot: ${lootDesc}`)
+          }
+
+          // Also capture any item balance changes from loot selection response
+          const lootItemChanges = (lootData.itemChanges || []) as Array<{ id: number; amount: number; rarity?: number; gearInstanceId?: string }>
+          if (lootItemChanges.length > 0) {
+            setLootLog(prev => [...prev, ...lootItemChanges])
           }
           
           // Small delay after loot selection
@@ -820,6 +842,44 @@ const DungeonRunner: React.FC<DungeonRunnerProps> = ({ isOpen, onClose }) => {
       rounds: roundCount,
       loot_history: lootHistory
     }
+  }
+
+  // Prefetch metadata for newly seen loot item ids
+  useEffect(() => {
+    if (lootLog.length === 0) return
+    const newest = lootLog.slice(-10)
+    const ids = Array.from(new Set(newest.map(e => e.id)))
+    itemMetadataService.preloadItems(ids).catch(() => {})
+  }, [lootLog])
+
+  const LootChip: React.FC<{ itemId: number; amount: number; rarity?: number }> = ({ itemId, amount, rarity }) => {
+    const [name, setName] = useState<string>(`Item #${itemId}`)
+    const [icon, setIcon] = useState<string>('')
+    const [rarityColor, setRarityColor] = useState<string>('gray')
+
+    useEffect(() => {
+      let mounted = true
+      itemMetadataService.getItem(itemId).then(meta => {
+        if (!mounted || !meta) return
+        setName(meta.name || `Item #${itemId}`)
+        setIcon(meta.icon || meta.image || '')
+        setRarityColor(meta.rarityColor || 'gray')
+      }).catch(() => {})
+      return () => { mounted = false }
+    }, [itemId])
+
+    return (
+      <div className={`flex items-center gap-2 px-2 py-1 rounded border text-xs font-mono`} style={{ borderColor: `var(--${rarityColor}-400, rgba(255,255,255,0.2))` }}>
+        {icon ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={icon} alt={name} className="w-4 h-4 rounded" />
+        ) : (
+          <div className="w-4 h-4 rounded bg-white/10" />
+        )}
+        <span className="text-white/80 truncate max-w-[160px]">{name}</span>
+        <span className="text-cyan-300">x{amount}</span>
+      </div>
+    )
   }
 
   const displaySessionSummary = (runStats: any[], successfulRuns: number, attemptedRuns: number) => {
@@ -963,7 +1023,7 @@ const DungeonRunner: React.FC<DungeonRunnerProps> = ({ isOpen, onClose }) => {
         
         // Display results (guard: if no rounds, treat as failure)
         if (gameStats.rounds > 0) {
-          setSuccess(`🎉 Single run completed! Enemies defeated: ${gameStats.enemies_defeated}, Final location: Floor ${gameStats.final_floor}, Room ${gameStats.final_room}`)
+        setSuccess(`🎉 Single run completed! Enemies defeated: ${gameStats.enemies_defeated}, Final location: Floor ${gameStats.final_floor}, Room ${gameStats.final_room}`)
         } else {
           setError('Run started but did not progress. Check Network tab for execute_move errors. I will keep logs visible.')
         }
@@ -1094,7 +1154,7 @@ const DungeonRunner: React.FC<DungeonRunnerProps> = ({ isOpen, onClose }) => {
                   {/* Mode Selection */}
                   <div className="flex items-center space-x-2">
                     <span className="text-gray-400 font-mono text-sm">Mode:</span>
-                  <div className="relative">
+                    <div className="relative">
                       <button
                         onClick={() => setShowModeSelector(!showModeSelector)}
                         disabled={isRunning}
@@ -1173,7 +1233,7 @@ const DungeonRunner: React.FC<DungeonRunnerProps> = ({ isOpen, onClose }) => {
                   {/* Potion Selection */}
                   <div className="flex items-center space-x-2">
                     <span className="text-gray-400 font-mono text-sm">Potions:</span>
-                  <div className="flex items-center space-x-1">
+                    <div className="flex items-center space-x-1">
                       {selectedPotions.map((potionId, index) => (
                         <button
                           key={index}
@@ -1331,57 +1391,69 @@ const DungeonRunner: React.FC<DungeonRunnerProps> = ({ isOpen, onClose }) => {
 
                 {/* Vertical Move Stream */}
                 <MoveStream snapshots={moveSnapshots as any} />
-              </div>
+
+                {/* Recent Loot */}
+                {lootLog.length > 0 && (
+                  <div className="bg-black/30 border border-emerald-400/30 rounded p-3">
+                    <div className="text-emerald-300 font-mono text-xs mb-2">RECENT LOOT</div>
+                    <div className="flex flex-wrap gap-2">
+                      {lootLog.slice(-12).reverse().map((e, idx) => (
+                        <LootChip key={`${e.id}-${idx}-${e.amount}`} itemId={e.id} amount={e.amount} rarity={e.rarity} />
+                      ))}
+                              </div>
+                            </div>
+                )}
+                </div>
 
               {/* Full-width Session Summary (optional) */}
-              {sessionStats.length > 0 && (
-                <div className="bg-black/60 border border-green-400/30 p-4 rounded">
-                  <h4 className="text-green-400 font-mono font-bold mb-4 flex items-center space-x-2">
-                    <BarChart3 className="w-4 h-4" />
-                    <span>SESSION SUMMARY</span>
-                  </h4>
-                  <div className="space-y-3 text-sm font-mono">
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">Completed Runs:</span>
-                      <span className="text-green-400">{sessionStats.length}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">Total Enemies:</span>
+                {sessionStats.length > 0 && (
+                  <div className="bg-black/60 border border-green-400/30 p-4 rounded">
+                    <h4 className="text-green-400 font-mono font-bold mb-4 flex items-center space-x-2">
+                      <BarChart3 className="w-4 h-4" />
+                      <span>SESSION SUMMARY</span>
+                    </h4>
+                    <div className="space-y-3 text-sm font-mono">
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Completed Runs:</span>
+                        <span className="text-green-400">{sessionStats.length}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Total Enemies:</span>
                       <span className="text-red-400">{sessionStats.reduce((sum, run) => sum + run.enemies_defeated, 0)}</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
 
               {/* Full-width Messages */}
-              {(error || success) && (
-                <div className="space-y-3">
-                  {error && (
-                    <div className="bg-red-900/30 border border-red-400/50 p-4 rounded">
-                      <div className="flex items-center space-x-2">
-                        <AlertTriangle className="w-4 h-4 text-red-400" />
-                        <span className="text-red-400 font-mono font-bold text-sm">ERROR</span>
+                {(error || success) && (
+                  <div className="space-y-3">
+                    {error && (
+                      <div className="bg-red-900/30 border border-red-400/50 p-4 rounded">
+                        <div className="flex items-center space-x-2">
+                          <AlertTriangle className="w-4 h-4 text-red-400" />
+                          <span className="text-red-400 font-mono font-bold text-sm">ERROR</span>
+                        </div>
+                        <p className="text-red-300 font-mono text-sm mt-2">{error}</p>
+                        <button
+                          onClick={() => setError('')}
+                          className="mt-3 px-3 py-1 bg-red-400/20 border border-red-400/50 rounded text-red-400 hover:bg-red-400/30 transition-colors font-mono text-xs"
+                        >
+                          DISMISS
+                        </button>
                       </div>
-                      <p className="text-red-300 font-mono text-sm mt-2">{error}</p>
-                      <button
-                        onClick={() => setError('')}
-                        className="mt-3 px-3 py-1 bg-red-400/20 border border-red-400/50 rounded text-red-400 hover:bg-red-400/30 transition-colors font-mono text-xs"
-                      >
-                        DISMISS
-                      </button>
-                    </div>
-                  )}
-                  {success && (
-                    <div className="bg-green-900/30 border border-green-400/50 p-4 rounded">
-                      <div className="flex items-center space-x-2">
-                        <CheckCircle className="w-4 h-4 text-green-400" />
-                        <span className="text-green-400 font-mono font-bold text-sm">SUCCESS</span>
+                    )}
+                    {success && (
+                      <div className="bg-green-900/30 border border-green-400/50 p-4 rounded">
+                        <div className="flex items-center space-x-2">
+                          <CheckCircle className="w-4 h-4 text-green-400" />
+                          <span className="text-green-400 font-mono font-bold text-sm">SUCCESS</span>
+                        </div>
+                        <p className="text-green-300 font-mono text-sm mt-2">{success}</p>
                       </div>
-                      <p className="text-green-300 font-mono text-sm mt-2">{success}</p>
-                    </div>
-                  )}
-                </div>
-              )}
+                    )}
+                  </div>
+                )}
             </div>
 
             {/* Footer */}
