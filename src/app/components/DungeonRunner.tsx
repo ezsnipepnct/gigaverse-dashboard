@@ -845,12 +845,12 @@ const DungeonRunner: React.FC<DungeonRunnerProps> = ({ isOpen, onClose }) => {
             lootHistory.push(lootDesc)
             console.log(`🎁 Selected loot: ${lootDesc}`)
             setSuccess(`🎁 Selected loot: ${lootDesc}`)
-            // Stream loot event
+            // Stream upgrade event
             setMoveSnapshots(prev => ([
               ...prev,
               {
                 index: (prev.at(-1)?.index || 0) + 1,
-                type: 'loot',
+                type: 'upgrade',
                 loot: lootData.selectedLoot,
                 lootDescription: lootDesc
               }
