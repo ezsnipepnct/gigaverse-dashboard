@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import DungeonBattle, { GameState } from './DungeonBattle'
 import ItemIcon from './ItemIcon'
 import { itemMetadataService } from '@/app/services/itemMetadata'
@@ -109,6 +109,36 @@ const MoveStream: React.FC<{ snapshots: StreamSnapshot[]; onSelectSnapshot?: (sn
     )
   }
 
+  // Aggregates for summary bar
+  const aggregates = useMemo(() => {
+    let totalItems = 0
+    const itemTotals: Record<number, number> = {}
+    const upgradeTotals: Record<string, {v1:number; v2:number}> = {}
+    let heals = 0
+    let maxHp = 0
+    let maxShield = 0
+    for (const s of snapshots) {
+      if (s.type === 'item' && s.loot?.id && typeof s.loot.amount === 'number') {
+        totalItems += s.loot.amount
+        itemTotals[s.loot.id] = (itemTotals[s.loot.id] || 0) + s.loot.amount
+      } else if (s.type === 'upgrade') {
+        const boon = s.loot?.boonTypeString
+        const v1 = s.loot?.selectedVal1 || 0
+        const v2 = s.loot?.selectedVal2 || 0
+        if (boon === 'Heal') heals += v1
+        else if (boon === 'AddMaxHealth') maxHp += v1
+        else if (boon === 'AddMaxShield' || boon === 'AddMaxArmor') maxShield += v1
+        else if (boon) {
+          const key = boon
+          upgradeTotals[key] = upgradeTotals[key] || { v1:0, v2:0 }
+          upgradeTotals[key].v1 += v1
+          upgradeTotals[key].v2 += v2
+        }
+      }
+    }
+    return { totalItems, itemTotals, upgradeTotals, heals, maxHp, maxShield }
+  }, [snapshots])
+
   return (
     <div className="bg-black/30 border border-cyan-400/30 p-4 rounded h-full">
       <div className="flex items-center justify-between mb-3">
@@ -126,6 +156,33 @@ const MoveStream: React.FC<{ snapshots: StreamSnapshot[]; onSelectSnapshot?: (sn
               {f.label}
             </button>
           ))}
+        </div>
+      </div>
+
+      {/* Summary bar */}
+      <div className="mb-3 grid grid-cols-1 md:grid-cols-3 gap-2">
+        <div className="px-3 py-2 rounded border border-cyan-400/20 bg-cyan-500/5 font-mono text-xs text-white/80">
+          <div className="text-cyan-300 mb-1">ITEMS</div>
+          <div>Total: <span className="text-white/90">{aggregates.totalItems}</span></div>
+        </div>
+        <div className="px-3 py-2 rounded border border-emerald-400/20 bg-emerald-500/5 font-mono text-xs text-white/80">
+          <div className="text-emerald-300 mb-1">UPGRADES</div>
+          <div className="flex flex-wrap gap-2">
+            {Object.entries(aggregates.upgradeTotals).map(([k, v]) => (
+              <span key={k} className="px-2 py-0.5 rounded border border-emerald-400/30 text-emerald-300">
+                {k.replace('Upgrade','')}: +{(v as any).v1}/+{(v as any).v2}
+              </span>
+            ))}
+            {Object.keys(aggregates.upgradeTotals).length === 0 && <span className="text-white/60">None</span>}
+          </div>
+        </div>
+        <div className="px-3 py-2 rounded border border-violet-400/20 bg-violet-500/5 font-mono text-xs text-white/80">
+          <div className="text-violet-300 mb-1">HEALS & MAX</div>
+          <div className="flex gap-3">
+            <span>Heal <span className="text-white/90">+{aggregates.heals}</span></span>
+            <span>MaxHP <span className="text-white/90">+{aggregates.maxHp}</span></span>
+            <span>MaxSH <span className="text-white/90">+{aggregates.maxShield}</span></span>
+          </div>
         </div>
       </div>
       <div className="space-y-4 max-h-[calc(100vh-320px)] overflow-y-auto pr-1">

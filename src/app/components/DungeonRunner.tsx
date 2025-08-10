@@ -678,6 +678,7 @@ const DungeonRunner: React.FC<DungeonRunnerProps> = ({ isOpen, onClose }) => {
         // Step 1: Calculate best move using MCTS
         console.log('🧠 Calculating best move...')
         const jwtToken = getJWTToken()
+        const t0 = Date.now()
         const moveResponse = await fetch('/api/dungeon', {
           method: 'POST',
           headers: { 
@@ -731,6 +732,7 @@ const DungeonRunner: React.FC<DungeonRunnerProps> = ({ isOpen, onClose }) => {
             }
             const offenseOrder = ['rock','paper','scissor'].sort((a,b)=> (gs.player_move_stats?.[b]?.damage??0)-(gs.player_move_stats?.[a]?.damage??0))
             const defenseOrder = ['rock','paper','scissor'].sort((a,b)=> (gs.player_move_stats?.[b]?.shield??0)-(gs.player_move_stats?.[a]?.shield??0))
+            const elapsed = Date.now() - t0
             setMoveSnapshots(prev => ([
               ...prev,
               {
@@ -739,7 +741,7 @@ const DungeonRunner: React.FC<DungeonRunnerProps> = ({ isOpen, onClose }) => {
                 lastMove: bestMove,
                 engine: moveData.engine,
                 analysis: {
-                  timeMs: undefined,
+                  timeMs: elapsed,
                   strongestEnemyMove: strongest.mv,
                   strongestEnemyDamage: strongest.dmg,
                   counterToStrongest,
@@ -842,7 +844,7 @@ const DungeonRunner: React.FC<DungeonRunnerProps> = ({ isOpen, onClose }) => {
                 return {
                   index: baseIndex + i + 1,
                   type: isUpgrade ? 'upgrade' : 'item',
-                  loot: isUpgrade ? undefined : { id: c.id, amount: c.amount, rarity: c.rarity },
+                  loot: isUpgrade ? { boonTypeString: c.boonTypeString, selectedVal1: c.selectedVal1, selectedVal2: c.selectedVal2 } : { id: c.id, amount: c.amount, rarity: c.rarity },
                   lootDescription: isUpgrade ? getLootDescription({
                     boonTypeString: c.boonTypeString,
                     selectedVal1: c.selectedVal1,
@@ -950,7 +952,7 @@ const DungeonRunner: React.FC<DungeonRunnerProps> = ({ isOpen, onClose }) => {
               const entries = lootItemChanges.map((c: any, i: number) => ({
                 index: baseIndex + i + 1,
                 type: c.boonTypeString ? 'upgrade' : 'item',
-                loot: c.boonTypeString ? undefined : { id: c.id, amount: c.amount, rarity: c.rarity },
+                loot: c.boonTypeString ? { boonTypeString: c.boonTypeString, selectedVal1: c.selectedVal1, selectedVal2: c.selectedVal2 } : { id: c.id, amount: c.amount, rarity: c.rarity },
                 lootDescription: c.boonTypeString ? getLootDescription({
                   boonTypeString: c.boonTypeString,
                   selectedVal1: c.selectedVal1,
