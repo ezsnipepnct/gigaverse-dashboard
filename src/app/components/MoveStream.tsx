@@ -51,6 +51,7 @@ export interface StreamSnapshot {
 
 const MoveStream: React.FC<{ snapshots: StreamSnapshot[]; onSelectSnapshot?: (snap: StreamSnapshot) => void }> = ({ snapshots, onSelectSnapshot }) => {
   const [filter, setFilter] = useState<'all' | 'round' | 'upgrade' | 'item' | 'loot' | 'decision'>('all')
+  const [reviewOpen, setReviewOpen] = useState<'upgrades' | 'heals' | null>(null)
   const filtered = snapshots.filter(s => {
     if (filter === 'all') return true
     if (filter === 'round') return s.type === 'round'
@@ -208,7 +209,7 @@ const MoveStream: React.FC<{ snapshots: StreamSnapshot[]; onSelectSnapshot?: (sn
             {Object.keys(aggregates.itemTotals).length === 0 && <span className="text-white/60">None</span>}
           </div>
         </div>
-        <div className="px-3 py-2 rounded border border-white/15 bg-black/30 font-mono text-xs text-white/80">
+        <div className="px-3 py-2 rounded border border-white/15 bg-black/30 font-mono text-xs text-white/80 cursor-pointer" onClick={() => setReviewOpen('upgrades')} title="Click to review loot choices">
           <div className="text-white/70 mb-1">UPGRADES</div>
           <div className="flex flex-wrap gap-2">
             {Object.entries(aggregates.upgradeTotals).map(([k, v]) => (
@@ -219,7 +220,7 @@ const MoveStream: React.FC<{ snapshots: StreamSnapshot[]; onSelectSnapshot?: (sn
             {Object.keys(aggregates.upgradeTotals).length === 0 && <span className="text-white/60">None</span>}
           </div>
         </div>
-        <div className="px-3 py-2 rounded border border-white/15 bg-black/30 font-mono text-xs text-white/80">
+        <div className="px-3 py-2 rounded border border-white/15 bg-black/30 font-mono text-xs text-white/80 cursor-pointer" onClick={() => setReviewOpen('heals')} title="Click to review loot choices">
           <div className="text-white/70 mb-1">HEALS & MAX</div>
           <div className="flex gap-3">
             <span>Heal <span className="text-white/90">+{aggregates.heals}</span></span>
@@ -228,6 +229,45 @@ const MoveStream: React.FC<{ snapshots: StreamSnapshot[]; onSelectSnapshot?: (sn
           </div>
         </div>
       </div>
+
+      {/* Review Drawer */}
+      {reviewOpen && (
+        <div className="mb-3 p-3 rounded border border-white/15 bg-black/60">
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-white/90 font-mono text-sm tracking-wide">{reviewOpen === 'upgrades' ? 'UPGRADE PICKS' : 'HEAL/MAX PICKS'}</div>
+            <button className="text-white/70 text-xs font-mono border border-white/20 px-2 py-0.5 rounded hover:bg-white/5" onClick={() => setReviewOpen(null)}>CLOSE</button>
+          </div>
+          <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+            {snapshots
+              .filter(s => s.type === 'loot_options' && Array.isArray(s.lootOptions))
+              .sort((a, b) => (a.index || 0) - (b.index || 0))
+              .map((s, idx) => (
+              <div key={`${s.index}-${idx}`} className="p-2 rounded border border-white/10 bg-black/40">
+                <div className="text-[11px] text-white/70 font-mono mb-2">Floor {(s as any).floor ?? ''} • Room {(s as any).room ?? ''}</div>
+                <div className="grid grid-cols-3 gap-2">
+                  {(s.lootOptions || []).map((opt: any, i: number) => {
+                    const boon = opt.boonTypeString
+                    const v1 = opt.selectedVal1 || 0
+                    const v2 = opt.selectedVal2 || 0
+                    const label = boon === 'Heal' ? `Heal +${v1}` : boon === 'AddMaxHealth' ? `MaxHP +${v1}` : (boon === 'AddMaxArmor' || boon === 'AddMaxShield') ? `MaxSH +${v1}` : `${(boon||'').replace('Upgrade','')} +${v1}/+${v2}`
+                    const chosen = s.selectedIndex === i
+                    const include = reviewOpen === 'upgrades' ? (boon && !['Heal','AddMaxHealth','AddMaxArmor','AddMaxShield'].includes(boon)) : (boon && ['Heal','AddMaxHealth','AddMaxArmor','AddMaxShield'].includes(boon))
+                    if (!include) return null
+                    return (
+                      <div key={i} className={`relative px-2 py-1 rounded border text-[11px] font-mono ${chosen ? 'border-emerald-400/70 bg-emerald-500/10 text-emerald-200' : 'border-white/10 text-white/80'}`}>
+                        {label}
+                        {chosen && (
+                          <span className="absolute -top-1 -right-1 px-1 py-0.5 rounded text-[10px] border border-emerald-400/60 bg-emerald-500/20 text-emerald-200">PICKED</span>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       <div className="space-y-4 max-h-[calc(100vh-320px)] overflow-y-auto pr-1">
         {filtered.length === 0 ? (
           <div className="text-center text-sm text-white/40 py-8">No moves yet</div>

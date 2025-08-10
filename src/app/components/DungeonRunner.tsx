@@ -150,6 +150,7 @@ const DungeonRunner: React.FC<DungeonRunnerProps> = ({ isOpen, onClose }) => {
   const [potionAnalysis, setPotionAnalysis] = useState<any>(null)
   const [pyServiceUp, setPyServiceUp] = useState<boolean | null>(null)
   const [lastEngine, setLastEngine] = useState<'python' | 'node' | null>(null)
+  const [autoClaimEnergy, setAutoClaimEnergy] = useState<boolean>(true)
 
   // Load player energy and potions on component mount
   useEffect(() => {
@@ -733,7 +734,7 @@ const DungeonRunner: React.FC<DungeonRunnerProps> = ({ isOpen, onClose }) => {
             const offenseOrder = ['rock','paper','scissor'].sort((a,b)=> (gs.player_move_stats?.[b]?.damage??0)-(gs.player_move_stats?.[a]?.damage??0))
             const defenseOrder = ['rock','paper','scissor'].sort((a,b)=> (gs.player_move_stats?.[b]?.shield??0)-(gs.player_move_stats?.[a]?.shield??0))
             const elapsed = Date.now() - t0
-            setMoveSnapshots(prev => ([
+          setMoveSnapshots(prev => ([
               ...prev,
               {
                 index: (prev.at(-1)?.index || 0) + 1,
@@ -880,7 +881,10 @@ const DungeonRunner: React.FC<DungeonRunnerProps> = ({ isOpen, onClose }) => {
             {
               index: (prev.at(-1)?.index || 0) + 1,
               type: 'loot_options',
-              lootOptions: executeData.lootOptions
+              lootOptions: executeData.lootOptions,
+              roundNumber: roundCount,
+              floor: finalFloor,
+              room: finalRoom
             }
           ]))
 
@@ -1075,8 +1079,18 @@ const DungeonRunner: React.FC<DungeonRunnerProps> = ({ isOpen, onClose }) => {
     // Check if player has enough energy for selected mode
     const modeConfig = getCurrentModeConfig()
     if (!hasEnoughEnergy()) {
-      setError(`Not enough energy! Need ${modeConfig.energyCost}⚡ but only have ${playerEnergy}⚡`)
-      return
+      if (autoClaimEnergy) {
+        setError('')
+        setSuccess('Attempting to auto-claim energy…')
+        const claim = await claimEnergy(modeConfig.energyCost)
+        if (!claim.success) {
+          setError(`Auto-claim failed. Need ${modeConfig.energyCost}⚡`) 
+          return
+        }
+      } else {
+        setError(`Not enough energy! Need ${modeConfig.energyCost}⚡ but only have ${playerEnergy}⚡`)
+        return
+      }
     }
     
     if (multiRunMode) {
@@ -1433,6 +1447,22 @@ const DungeonRunner: React.FC<DungeonRunnerProps> = ({ isOpen, onClose }) => {
                       }`}
                     >
                       {multiRunMode ? 'ON' : 'OFF'}
+                    </button>
+                  </div>
+
+                  {/* Auto-Claim Energy */}
+                  <div className="flex items-center space-x-2">
+                    <span className="text-gray-400 font-mono text-sm">Auto-Claim:</span>
+                    <button
+                      onClick={() => setAutoClaimEnergy(v => !v)}
+                      disabled={isRunning}
+                      className={`px-3 py-1 border rounded-full font-mono text-sm transition-colors disabled:opacity-50 ${
+                        autoClaimEnergy
+                          ? 'border-green-400 text-green-400 bg-green-400/10'
+                          : 'border-gray-600 text-gray-400 hover:border-cyan-400 hover:text-cyan-400'
+                      }`}
+                    >
+                      {autoClaimEnergy ? 'ON' : 'OFF'}
                     </button>
                   </div>
 
