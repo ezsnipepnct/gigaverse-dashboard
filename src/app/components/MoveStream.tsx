@@ -11,6 +11,15 @@ export interface StreamSnapshot {
   lastMove?: string
   type?: 'round' | 'upgrade' | 'item' | 'separator' | 'loot_options' | 'mcts'
   roundNumber?: number
+  // Round metadata
+  enemyMove?: string
+  result?: 'win' | 'lose' | 'tie' | string
+  pre?: {
+    player_health: number; player_shield: number; enemy_health: number; enemy_shield: number
+  }
+  post?: {
+    player_health: number; player_shield: number; enemy_health: number; enemy_shield: number
+  }
   loot?: {
     id?: number
     amount?: number
@@ -40,7 +49,17 @@ export interface StreamSnapshot {
   }
 }
 
-const MoveStream: React.FC<{ snapshots: StreamSnapshot[] }> = ({ snapshots }) => {
+const MoveStream: React.FC<{ snapshots: StreamSnapshot[]; onSelectSnapshot?: (snap: StreamSnapshot) => void }> = ({ snapshots, onSelectSnapshot }) => {
+  const [filter, setFilter] = useState<'all' | 'round' | 'upgrade' | 'item' | 'loot' | 'decision'>('all')
+  const filtered = snapshots.filter(s => {
+    if (filter === 'all') return true
+    if (filter === 'round') return s.type === 'round'
+    if (filter === 'upgrade') return s.type === 'upgrade'
+    if (filter === 'item') return s.type === 'item'
+    if (filter === 'loot') return s.type === 'loot_options'
+    if (filter === 'decision') return s.type === 'mcts'
+    return true
+  })
   const getLootDescription = (loot: any): string => {
     if (!loot) return 'Unknown loot'
     const boonType = loot.boonTypeString || 'Unknown'
@@ -92,13 +111,29 @@ const MoveStream: React.FC<{ snapshots: StreamSnapshot[] }> = ({ snapshots }) =>
 
   return (
     <div className="bg-black/30 border border-cyan-400/30 p-4 rounded h-full">
-      <h4 className="text-cyan-300 font-mono font-semibold mb-3">MOVE STREAM</h4>
+      <div className="flex items-center justify-between mb-3">
+        <h4 className="text-cyan-300 font-mono font-semibold">MOVE STREAM</h4>
+        <div className="flex gap-1">
+          {[
+            {k:'all', label:'All'},
+            {k:'round', label:'Rounds'},
+            {k:'upgrade', label:'Upgrades'},
+            {k:'item', label:'Items'},
+            {k:'loot', label:'Loot'},
+            {k:'decision', label:'Decisions'}
+          ].map((f: any) => (
+            <button key={f.k} onClick={() => setFilter(f.k)} className={`px-2 py-0.5 rounded border text-[11px] font-mono ${filter===f.k ? 'border-cyan-400/60 text-cyan-300' : 'border-white/10 text-white/60 hover:text-white/80'}`}>
+              {f.label}
+            </button>
+          ))}
+        </div>
+      </div>
       <div className="space-y-4 max-h-[calc(100vh-320px)] overflow-y-auto pr-1">
-        {snapshots.length === 0 ? (
+        {filtered.length === 0 ? (
           <div className="text-center text-sm text-white/40 py-8">No moves yet</div>
         ) : (
-          snapshots.slice(-50).reverse().map((s) => (
-            <div key={s.index} className="">
+          filtered.slice(-100).reverse().map((s) => (
+            <div key={s.index} className="" onClick={() => onSelectSnapshot && onSelectSnapshot(s)}>
               {s.type === 'upgrade' ? (
                 <div className="flex items-start gap-3 px-3 py-2 rounded border border-emerald-400/30 bg-emerald-500/10">
                   <div className="w-2 h-2 rounded-full bg-emerald-400 mt-1" />
@@ -189,7 +224,18 @@ const MoveStream: React.FC<{ snapshots: StreamSnapshot[] }> = ({ snapshots }) =>
                       <div className="mb-2 flex items-center gap-2">
                         <span className="px-2 py-0.5 rounded-full border border-white/10 text-white/70 text-xs font-mono">ROUND {s.roundNumber ?? ''}</span>
                         {s.lastMove && (
-                          <span className="text-cyan-300 text-xs font-mono">Move: {s.lastMove}</span>
+                          <span className="text-cyan-300 text-xs font-mono">You: {s.lastMove.toUpperCase()}</span>
+                        )}
+                        {s.enemyMove && (
+                          <span className="text-rose-300 text-xs font-mono">Enemy: {s.enemyMove.toUpperCase()}</span>
+                        )}
+                        {s.result && (
+                          <span className={`text-xs font-mono px-2 py-0.5 rounded border ${s.result==='win' ? 'border-emerald-400/50 text-emerald-300' : s.result==='lose' ? 'border-rose-400/50 text-rose-300' : 'border-yellow-400/50 text-yellow-300'}`}>{String(s.result).toUpperCase()}</span>
+                        )}
+                        {(s.pre && s.post) && (
+                          <span className="text-[11px] text-white/70 font-mono ml-2">
+                            HP Δ {s.post.player_health - s.pre.player_health} / {s.post.enemy_health - s.pre.enemy_health} • SH Δ {s.post.player_shield - s.pre.player_shield} / {s.post.enemy_shield - s.pre.enemy_shield}
+                          </span>
                         )}
                       </div>
                     )}

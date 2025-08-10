@@ -808,10 +808,24 @@ const DungeonRunner: React.FC<DungeonRunnerProps> = ({ isOpen, onClose }) => {
             ...prev,
             {
               index: (prev.at(-1)?.index || 0) + 1,
-              type: 'round',
-              roundNumber: roundCount + 1,
-              gameState: preState || currentGameState,
-              lastMove: executeData.roundResult.playerMove
+                type: 'round',
+                roundNumber: roundCount + 1,
+                gameState: preState || currentGameState,
+                lastMove: executeData.roundResult.playerMove,
+                enemyMove: executeData.roundResult.enemyMove,
+                result: (executeData.roundResult.result as any) || (executeData.roundResult.outcome as any),
+                pre: preState ? {
+                  player_health: preState.player_health,
+                  player_shield: preState.player_shield,
+                  enemy_health: preState.enemy_health,
+                  enemy_shield: preState.enemy_shield,
+                } : undefined,
+                post: currentGameState ? {
+                  player_health: currentGameState.player_health,
+                  player_shield: currentGameState.player_shield,
+                  enemy_health: currentGameState.enemy_health,
+                  enemy_shield: currentGameState.enemy_shield,
+                } : undefined
             }
           ]))
         }
