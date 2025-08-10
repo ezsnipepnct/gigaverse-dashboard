@@ -9,7 +9,7 @@ export interface StreamSnapshot {
   index: number
   gameState?: GameState | null
   lastMove?: string
-  type?: 'round' | 'upgrade' | 'item' | 'separator'
+  type?: 'round' | 'upgrade' | 'item' | 'separator' | 'loot_options' | 'mcts'
   roundNumber?: number
   loot?: {
     id?: number
@@ -22,6 +22,22 @@ export interface StreamSnapshot {
     name?: string
   }
   lootDescription?: string
+  lootOptions?: Array<any>
+  selectedIndex?: number
+  // For MCTS decision snapshots
+  engine?: 'python' | 'node'
+  analysis?: {
+    timeMs?: number
+    strongestEnemyMove?: string
+    strongestEnemyDamage?: number
+    counterToStrongest?: string
+    threatLevel?: number
+    charges?: { rock: number; paper: number; scissor: number }
+    stats?: { [k: string]: { damage: number; shield: number } }
+    killMoves?: { [k: string]: boolean }
+    offenseOrder?: string[]
+    defenseOrder?: string[]
+  }
 }
 
 const MoveStream: React.FC<{ snapshots: StreamSnapshot[] }> = ({ snapshots }) => {
@@ -60,7 +76,7 @@ const MoveStream: React.FC<{ snapshots: StreamSnapshot[] }> = ({ snapshots }) =>
 
     return (
       <div className="flex items-center gap-3">
-        {itemId ? <ItemIcon itemId={itemId} size="small" showRarity /> : <div className="w-8 h-8 bg-gray-700 rounded" />}
+        {itemId ? <ItemIcon itemId={itemId} size="small" showRarity hideSoulboundLock /> : <div className="w-8 h-8 bg-gray-700 rounded" />}
         <div className="font-mono text-sm">
           <span className="text-white/90">{name}</span>
           {typeof amount === 'number' && (
@@ -107,6 +123,64 @@ const MoveStream: React.FC<{ snapshots: StreamSnapshot[] }> = ({ snapshots }) =>
                   <div className="absolute inset-x-0 -top-2 flex justify-center">
                     <span className="px-2 text-xs font-mono text-white/60 bg-black/80">{s.lootDescription || '—'}</span>
                   </div>
+                </div>
+              ) : s.type === 'loot_options' ? (
+                <div className="px-3 py-2 rounded border border-purple-400/30 bg-purple-500/10">
+                  <div className="text-purple-300 font-mono text-xs mb-2">LOOT OPTIONS</div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                    {(s.lootOptions || []).map((opt: any, i: number) => (
+                      <div
+                        key={i}
+                        className={`p-2 rounded border text-xs font-mono transition-colors ${s.selectedIndex === i ? 'border-emerald-400/70 bg-emerald-500/10' : 'border-white/15 bg-black/30'}`}
+                      >
+                        <div className="text-white/80">{getLootDescription(opt)}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : s.type === 'mcts' ? (
+                <div className="px-3 py-2 rounded border border-amber-400/30 bg-amber-500/10">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="text-amber-300 font-mono text-xs">MOVE DECISION</div>
+                    <div className="flex items-center gap-2">
+                      {s.engine && (
+                        <span className="px-2 py-0.5 rounded-full border border-white/10 text-white/70 text-[10px] font-mono">{s.engine.toUpperCase()}</span>
+                      )}
+                      {s.analysis?.timeMs ? (
+                        <span className="px-2 py-0.5 rounded-full border border-white/10 text-white/60 text-[10px] font-mono">{s.analysis.timeMs} ms</span>
+                      ) : null}
+                    </div>
+                  </div>
+                  <div className="font-mono text-sm text-white/90 mb-2">
+                    Selected: <span className="text-amber-300 uppercase">{s.lastMove}</span>
+                  </div>
+                  {s.analysis && (
+                    <div className="space-y-2">
+                      <div className="text-[11px] text-white/70 font-mono">
+                        Enemy threat: <span className="text-white/90 uppercase">{s.analysis.strongestEnemyMove}</span> ({s.analysis.strongestEnemyDamage}) • Counter: <span className="text-white/90 uppercase">{s.analysis.counterToStrongest}</span> • Threat lvl: {(s.analysis.threatLevel || 0).toFixed(2)}
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                        {(['rock','paper','scissor'] as const).map((mv) => (
+                          <div key={mv} className={`p-2 rounded border text-xs font-mono ${s.lastMove === mv ? 'border-amber-400/70 bg-amber-500/10' : 'border-white/15 bg-black/20'}`}>
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-white/80 uppercase">{mv}</span>
+                              <span className="text-white/60">CHG {s.analysis?.charges?.[mv] ?? '-'}</span>
+                            </div>
+                            <div className="flex items-center gap-3 text-white/80">
+                              <span>DMG {s.analysis?.stats?.[mv]?.damage ?? '-'}</span>
+                              <span>DEF {s.analysis?.stats?.[mv]?.shield ?? '-'}</span>
+                              {s.analysis?.killMoves?.[mv] && (
+                                <span className="ml-auto px-1.5 py-0.5 rounded border border-rose-400/40 text-rose-300">KILL</span>
+                              )}
+                              {s.analysis?.counterToStrongest === mv && (
+                                <span className="ml-auto px-1.5 py-0.5 rounded border border-emerald-400/40 text-emerald-300">COUNTER</span>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : (
                 s.gameState ? (

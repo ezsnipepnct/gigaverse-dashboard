@@ -8,6 +8,7 @@ interface ItemIconProps {
   itemId: number;
   size?: 'small' | 'medium' | 'large';
   showRarity?: boolean;
+  hideSoulboundLock?: boolean;
   className?: string;
   onClick?: (item: ParsedItemMetadata | null) => void;
 }
@@ -16,6 +17,7 @@ const ItemIcon: React.FC<ItemIconProps> = ({
   itemId, 
   size = 'medium', 
   showRarity = false, 
+  hideSoulboundLock = false,
   className = '',
   onClick 
 }) => {
@@ -263,10 +265,10 @@ const ItemIcon: React.FC<ItemIconProps> = ({
         <div className="text-2xl">{getFallbackIcon()}</div>
       )}
 
-      {/* Soulbound indicator */}
-      {item?.soulbound && (
-        <div className="absolute top-0 left-0 w-5 h-5 bg-red-500 rounded-full border border-gray-800 flex items-center justify-center">
-          <Lock className="w-3 h-3 text-white" />
+      {/* Soulbound indicator (optional) */}
+      {item?.soulbound && !hideSoulboundLock && (
+        <div className="absolute top-0 left-0 w-4 h-4 bg-red-500 rounded-full border border-gray-800 flex items-center justify-center">
+          <Lock className="w-2.5 h-2.5 text-white" />
         </div>
       )}
     </div>

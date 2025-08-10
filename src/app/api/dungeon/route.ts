@@ -994,15 +994,18 @@ export async function POST(request: NextRequest) {
               // Assign actions by index
               lootOptions.forEach((opt: any, i: number) => { opt.action = i === 0 ? 'loot_one' : i === 1 ? 'loot_two' : 'loot_three' })
               const bestLoot = lootOptions[json.index] || lootOptions[0]
+              // Include selected index for UI stream
               const lootAction = bestLoot.action
               let response = await sendAction(lootAction, actionToken || '', 0, jwtToken, DEFAULT_ACTION_DATA)
               if (response.success) {
                 const gameState = extractGameState(response.data.run, response.data.entity)
-                return NextResponse.json({
+           return NextResponse.json({
                   success: true,
                   gameState,
                   actionToken: (response as any)?.data?.actionToken || (response as any)?.actionToken || '',
-                  selectedLoot: bestLoot,
+             selectedLoot: bestLoot,
+             selectedIndex: json.index,
+             lootOptions,
                 })
               }
             }
@@ -1153,6 +1156,8 @@ export async function POST(request: NextRequest) {
             gameState,
             actionToken: (response as any)?.data?.actionToken || (response as any)?.actionToken || '',
             selectedLoot: bestLoot,
+            selectedIndex: Math.max(0, lootOptions.findIndex((o:any)=>o===bestLoot)),
+            lootOptions,
             lootDescription: getLootDescription(
               bestLoot.boonTypeString || 'unknown',
               bestLoot.selectedVal1 || 0,

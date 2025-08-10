@@ -710,6 +710,50 @@ const DungeonRunner: React.FC<DungeonRunnerProps> = ({ isOpen, onClose }) => {
         }
         console.log(`🎯 MCTS selected move: ${bestMove}`)
         setLastMove(bestMove)
+
+        // Build a lightweight decision analysis snapshot for the stream
+        try {
+          const gs = currentGameState
+          if (gs) {
+            const enemyStats = gs.enemy_move_stats || {}
+            const strongest = Object.entries(enemyStats).reduce((acc: any, [mv, st]: any) => {
+              const dmg = st?.damage ?? -Infinity
+              if (dmg > (acc.dmg ?? -Infinity)) return { mv, dmg }
+              return acc
+            }, { mv: 'rock', dmg: -Infinity }) as any
+            const counterToStrongest = strongest.mv === 'rock' ? 'paper' : strongest.mv === 'paper' ? 'scissor' : 'rock'
+            const effectiveHp = (gs.player_health || 0) + (gs.player_shield || 0)
+            const threatLevel = effectiveHp > 0 ? (strongest.dmg || 0) / effectiveHp : 1
+            const killMoves: Record<string, boolean> = {
+              rock: (gs.player_move_stats?.rock?.damage ?? 0) > (gs.enemy_shield + gs.enemy_health),
+              paper: (gs.player_move_stats?.paper?.damage ?? 0) > (gs.enemy_shield + gs.enemy_health),
+              scissor: (gs.player_move_stats?.scissor?.damage ?? 0) > (gs.enemy_shield + gs.enemy_health)
+            }
+            const offenseOrder = ['rock','paper','scissor'].sort((a,b)=> (gs.player_move_stats?.[b]?.damage??0)-(gs.player_move_stats?.[a]?.damage??0))
+            const defenseOrder = ['rock','paper','scissor'].sort((a,b)=> (gs.player_move_stats?.[b]?.shield??0)-(gs.player_move_stats?.[a]?.shield??0))
+            setMoveSnapshots(prev => ([
+              ...prev,
+              {
+                index: (prev.at(-1)?.index || 0) + 1,
+                type: 'mcts',
+                lastMove: bestMove,
+                engine: moveData.engine,
+                analysis: {
+                  timeMs: undefined,
+                  strongestEnemyMove: strongest.mv,
+                  strongestEnemyDamage: strongest.dmg,
+                  counterToStrongest,
+                  threatLevel,
+                  charges: gs.player_charges,
+                  stats: gs.player_move_stats,
+                  killMoves,
+                  offenseOrder,
+                  defenseOrder,
+                }
+              }
+            ]))
+          }
+        } catch {}
         
         // Small delay to show the calculated move
         await new Promise(resolve => setTimeout(resolve, 500))
@@ -814,6 +858,16 @@ const DungeonRunner: React.FC<DungeonRunnerProps> = ({ isOpen, onClose }) => {
             }
           ]))
           
+          // Stream the available loot options for auditability
+          setMoveSnapshots(prev => ([
+            ...prev,
+            {
+              index: (prev.at(-1)?.index || 0) + 1,
+              type: 'loot_options',
+              lootOptions: executeData.lootOptions
+            }
+          ]))
+
           // Auto-select best loot option
           const lootResponse = await fetch('/api/dungeon', {
             method: 'POST',
@@ -856,16 +910,21 @@ const DungeonRunner: React.FC<DungeonRunnerProps> = ({ isOpen, onClose }) => {
             lootHistory.push(lootDesc)
             console.log(`🎁 Selected loot: ${lootDesc}`)
             setSuccess(`🎁 Selected loot: ${lootDesc}`)
-            // Stream upgrade event
-            setMoveSnapshots(prev => ([
-              ...prev,
-              {
-                index: (prev.at(-1)?.index || 0) + 1,
-                type: 'upgrade',
-                loot: lootData.selectedLoot,
-                lootDescription: lootDesc
+            // Highlight the chosen option within the existing loot options snapshot
+            setMoveSnapshots(prev => {
+              const updated = [...prev]
+              for (let i = updated.length - 1; i >= 0; i--) {
+                const snap: any = updated[i]
+                if (snap?.type === 'loot_options' && snap.selectedIndex === undefined) {
+                  const selIdx = typeof (lootData as any).selectedIndex === 'number'
+                    ? (lootData as any).selectedIndex
+                    : Math.max(0, (snap.lootOptions || []).findIndex((o: any) => JSON.stringify(o) === JSON.stringify(lootData.selectedLoot)))
+                  updated[i] = { ...snap, selectedIndex: selIdx }
+                  break
+                }
               }
-            ]))
+              return updated
+            })
           }
 
           // Also capture any item balance changes from loot selection response
