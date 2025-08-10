@@ -1,9 +1,10 @@
 "use client"
 
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import DungeonBattle, { GameState } from './DungeonBattle'
 import ItemIcon from './ItemIcon'
 import { itemMetadataService } from '@/app/services/itemMetadata'
+import { Heart, Shield, Sword, Scissors } from 'lucide-react'
 
 export interface StreamSnapshot {
   index: number
@@ -11,6 +12,8 @@ export interface StreamSnapshot {
   lastMove?: string
   type?: 'round' | 'upgrade' | 'item' | 'separator' | 'loot_options' | 'mcts'
   roundNumber?: number
+  floor?: number
+  room?: number
   // Round metadata
   enemyMove?: string
   result?: 'win' | 'lose' | 'tie' | string
@@ -52,6 +55,18 @@ export interface StreamSnapshot {
 const MoveStream: React.FC<{ snapshots: StreamSnapshot[]; onSelectSnapshot?: (snap: StreamSnapshot) => void }> = ({ snapshots, onSelectSnapshot }) => {
   const [filter, setFilter] = useState<'all' | 'round' | 'upgrade' | 'item' | 'loot' | 'decision'>('all')
   const [reviewOpen, setReviewOpen] = useState<'upgrades' | 'heals' | null>(null)
+  const scrollRef = useRef<HTMLDivElement | null>(null)
+  const [scrolledUp, setScrolledUp] = useState(false)
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    const onScroll = () => {
+      const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 60
+      setScrolledUp(!nearBottom)
+    }
+    el.addEventListener('scroll', onScroll)
+    return () => el.removeEventListener('scroll', onScroll)
+  }, [])
   const filtered = snapshots.filter(s => {
     if (filter === 'all') return true
     if (filter === 'round') return s.type === 'round'
@@ -193,8 +208,8 @@ const MoveStream: React.FC<{ snapshots: StreamSnapshot[]; onSelectSnapshot?: (sn
       </div>
 
       {/* Summary bar */}
-      <div className="mb-3 grid grid-cols-1 md:grid-cols-3 gap-2">
-        <div className="px-3 py-2 rounded border border-white/15 bg-black/30 font-mono text-xs text-white/80">
+      <div className="mb-3 grid grid-cols-1 md:grid-cols-3 gap-2 sticky top-0 z-10 bg-black/60 backdrop-blur-sm border-b border-white/10 pt-2 pb-3">
+        <div className="px-3 py-2 rounded border border-white/15 bg-black/30 font-mono text-xs text-white/80 cursor-pointer" onClick={() => setFilter('item')} title="Filter: Items">
           <div className="text-white/70 mb-1">ITEMS</div>
           <div className="flex flex-wrap gap-2">
             {Object.entries(aggregates.itemTotals)
@@ -209,7 +224,7 @@ const MoveStream: React.FC<{ snapshots: StreamSnapshot[]; onSelectSnapshot?: (sn
             {Object.keys(aggregates.itemTotals).length === 0 && <span className="text-white/60">None</span>}
           </div>
         </div>
-        <div className="px-3 py-2 rounded border border-white/15 bg-black/30 font-mono text-xs text-white/80 cursor-pointer" onClick={() => setReviewOpen('upgrades')} title="Click to review loot choices">
+        <div className="px-3 py-2 rounded border border-white/15 bg-black/30 font-mono text-xs text-white/80 cursor-pointer" onClick={() => { setFilter('upgrade'); setReviewOpen('upgrades') }} title="Click to review loot choices">
           <div className="text-white/70 mb-1">UPGRADES</div>
           <div className="flex flex-wrap gap-2">
             {Object.entries(aggregates.upgradeTotals).map(([k, v]) => (
@@ -220,7 +235,7 @@ const MoveStream: React.FC<{ snapshots: StreamSnapshot[]; onSelectSnapshot?: (sn
             {Object.keys(aggregates.upgradeTotals).length === 0 && <span className="text-white/60">None</span>}
           </div>
         </div>
-        <div className="px-3 py-2 rounded border border-white/15 bg-black/30 font-mono text-xs text-white/80 cursor-pointer" onClick={() => setReviewOpen('heals')} title="Click to review loot choices">
+        <div className="px-3 py-2 rounded border border-white/15 bg-black/30 font-mono text-xs text-white/80 cursor-pointer" onClick={() => { setFilter('loot'); setReviewOpen('heals') }} title="Click to review loot choices">
           <div className="text-white/70 mb-1">HEALS & MAX</div>
           <div className="flex gap-3">
             <span>Heal <span className="text-white/90">+{aggregates.heals}</span></span>
@@ -232,32 +247,47 @@ const MoveStream: React.FC<{ snapshots: StreamSnapshot[]; onSelectSnapshot?: (sn
 
       {/* Review Drawer */}
       {reviewOpen && (
-        <div className="mb-3 p-3 rounded border border-white/15 bg-black/60">
+        <div className="mb-3 p-3 rounded border border-white/12 bg-black/60">
           <div className="flex items-center justify-between mb-3">
             <div className="text-white/90 font-mono text-sm tracking-wide">{reviewOpen === 'upgrades' ? 'UPGRADE PICKS' : 'HEAL/MAX PICKS'}</div>
             <button className="text-white/70 text-xs font-mono border border-white/20 px-2 py-0.5 rounded hover:bg-white/5" onClick={() => setReviewOpen(null)}>CLOSE</button>
           </div>
-          <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+          <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
             {snapshots
               .filter(s => s.type === 'loot_options' && Array.isArray(s.lootOptions))
               .sort((a, b) => (a.index || 0) - (b.index || 0))
               .map((s, idx) => (
-              <div key={`${s.index}-${idx}`} className="p-2 rounded border border-white/10 bg-black/40">
-                <div className="text-[11px] text-white/70 font-mono mb-2">Floor {(s as any).floor ?? ''} • Room {(s as any).room ?? ''}</div>
-                <div className="grid grid-cols-3 gap-2">
+              <div key={`${s.index}-${idx}`} className="p-2.5 rounded border border-white/10 bg-black/50">
+                <div className="text-sm text-white/85 font-mono font-semibold mb-2">Floor {(s as any).floor ?? ''} • Room {(s as any).room ?? ''}</div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                   {(s.lootOptions || []).map((opt: any, i: number) => {
                     const boon = opt.boonTypeString
                     const v1 = opt.selectedVal1 || 0
                     const v2 = opt.selectedVal2 || 0
                     const label = boon === 'Heal' ? `Heal +${v1}` : boon === 'AddMaxHealth' ? `MaxHP +${v1}` : (boon === 'AddMaxArmor' || boon === 'AddMaxShield') ? `MaxSH +${v1}` : `${(boon||'').replace('Upgrade','')} +${v1}/+${v2}`
                     const chosen = s.selectedIndex === i
-                    const include = reviewOpen === 'upgrades' ? (boon && !['Heal','AddMaxHealth','AddMaxArmor','AddMaxShield'].includes(boon)) : (boon && ['Heal','AddMaxHealth','AddMaxArmor','AddMaxShield'].includes(boon))
-                    if (!include) return null
+                    const isUpgrade = !!boon && boon.startsWith('Upgrade')
+                    const isHealMax = !!boon && ['Heal','AddMaxHealth','AddMaxArmor','AddMaxShield'].includes(boon)
+                    // Show all three options always; dim the ones that don't match the current review
+                    const dim = reviewOpen === 'upgrades' ? !isUpgrade : !isHealMax
+                    const IconEl = (() => {
+                      if (boon === 'Heal') return <Heart className="w-4 h-4 text-rose-300" />
+                      if (boon === 'AddMaxHealth') return <Heart className="w-4 h-4 text-violet-300" />
+                      if (boon === 'AddMaxShield' || boon === 'AddMaxArmor') return <Shield className="w-4 h-4 text-cyan-300" />
+                      if (boon === 'UpgradeRock') return <Sword className="w-4 h-4 text-white/80" />
+                      if (boon === 'UpgradePaper') return <Shield className="w-4 h-4 text-white/80" />
+                      if (boon === 'UpgradeScissor') return <Scissors className="w-4 h-4 text-white/80" />
+                      return <Sword className="w-4 h-4 text-white/60" />
+                    })()
                     return (
-                      <div key={i} className={`relative px-2 py-1 rounded border text-[11px] font-mono ${chosen ? 'border-emerald-400/70 bg-emerald-500/10 text-emerald-200' : 'border-white/10 text-white/80'}`}>
-                        {label}
+                      <div
+                        key={i}
+                        className={`group px-2.5 py-1.5 rounded-md border text-[12px] font-mono flex items-center gap-2 transition-colors ${chosen ? 'border-emerald-400/70 bg-emerald-500/10 shadow-[inset_0_0_0_1px_rgba(16,185,129,0.4),0_0_8px_rgba(16,185,129,0.15)] text-emerald-200' : 'border-white/12 bg-black/40 text-white/85 hover:border-white/20'} ${dim ? 'opacity-50' : ''}`}
+                      >
+                        <span className="shrink-0">{IconEl}</span>
+                        <span className="truncate leading-5">{label}</span>
                         {chosen && (
-                          <span className="absolute -top-1 -right-1 px-1 py-0.5 rounded text-[10px] border border-emerald-400/60 bg-emerald-500/20 text-emerald-200">PICKED</span>
+                          <span className="ml-auto px-1.5 py-0.5 rounded text-[10px] border border-emerald-400/60 bg-emerald-500/10 text-emerald-200">PICKED</span>
                         )}
                       </div>
                     )
@@ -268,12 +298,26 @@ const MoveStream: React.FC<{ snapshots: StreamSnapshot[]; onSelectSnapshot?: (sn
           </div>
         </div>
       )}
-      <div className="space-y-4 max-h-[calc(100vh-320px)] overflow-y-auto pr-1">
+      <div ref={scrollRef} className="relative space-y-4 max-h-[calc(100vh-320px)] overflow-y-auto pr-1">
+        {scrolledUp && (
+          <button
+            onClick={() => { const el = scrollRef.current; if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' }) }}
+            className="absolute bottom-3 right-3 px-3 py-1 rounded-full text-xs font-mono border border-cyan-400/40 text-cyan-300 bg-black/60 backdrop-blur hover:bg-black/70"
+          >Jump to latest</button>
+        )}
         {filtered.length === 0 ? (
           <div className="text-center text-sm text-white/40 py-8">No moves yet</div>
         ) : (
           filtered.slice(-100).reverse().map((s) => (
-            <div key={s.index} className="" onClick={() => onSelectSnapshot && onSelectSnapshot(s)}>
+            <div key={s.index} className="relative pl-3" onClick={() => onSelectSnapshot && onSelectSnapshot(s)}>
+              {/* Left rail */}
+              <div className={`absolute left-0 top-0 bottom-0 w-1 rounded ${
+                s.type === 'round' ? 'bg-white/30' :
+                s.type === 'item' ? 'bg-cyan-400/40' :
+                s.type === 'upgrade' ? 'bg-emerald-400/40' :
+                s.type === 'loot_options' ? 'bg-purple-400/40' :
+                s.type === 'mcts' ? 'bg-amber-400/40' : 'bg-white/10'
+              }`} />
               {s.type === 'upgrade' ? (
                 <div className="flex items-start gap-3 px-3 py-2 rounded border border-emerald-400/30 bg-emerald-500/10">
                   <div className="w-2 h-2 rounded-full bg-emerald-400 mt-1" />
