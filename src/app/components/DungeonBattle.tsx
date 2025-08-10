@@ -33,10 +33,11 @@ const clampPercent = (cur: number, max: number) => Math.max(0, Math.min(100, (cu
 
 const MovePill: React.FC<{ label: 'rock' | 'paper' | 'scissor'; dmg: number; def: number; charge: number; isCounter?: boolean }>
 = ({ label, dmg, def, charge, isCounter = false }) => {
+  // Unified color for all move pills to reduce visual noise
   const colorMap: Record<string, string> = {
-    rock: 'from-rose-500/30 to-rose-400/10 text-rose-300',
-    paper: 'from-cyan-500/30 to-cyan-400/10 text-cyan-300',
-    scissor: 'from-amber-500/30 to-amber-400/10 text-amber-300',
+    rock: 'from-cyan-500/20 to-cyan-400/10 text-cyan-300',
+    paper: 'from-cyan-500/20 to-cyan-400/10 text-cyan-300',
+    scissor: 'from-cyan-500/20 to-cyan-400/10 text-cyan-300',
   }
   const Icon = label === 'rock' ? Sword : label === 'paper' ? Shield : Wand2
   const segments = [1, 2, 3].map((i) => (
@@ -181,8 +182,8 @@ const DungeonBattle: React.FC<Props> = ({ gameState, lastMove, isCalculating }) 
               <span className="text-rose-300 tracking-wide text-xs uppercase">Enemy</span>
               <MiniTag tone="red">Monster</MiniTag>
             </div>
-            <StatBar label="Health" value={gameState.enemy_health} max={gameState.enemy_max_health} color="bg-gradient-to-r from-rose-500 to-rose-300" delta={deltas.eHp} />
-            <StatBar label="Shield" value={gameState.enemy_shield} max={gameState.enemy_max_shield} color="bg-gradient-to-r from-fuchsia-500 to-fuchsia-300" delta={deltas.eSh} />
+            <StatBar label="Health" value={gameState.enemy_health} max={gameState.enemy_max_health} color="bg-gradient-to-r from-emerald-500 to-emerald-300" delta={deltas.eHp} />
+            <StatBar label="Shield" value={gameState.enemy_shield} max={gameState.enemy_max_shield} color="bg-gradient-to-r from-cyan-500 to-cyan-300" delta={deltas.eSh} />
             <div className="grid grid-cols-3 gap-2">
               {(['rock','paper','scissor'] as const).map(key => (
                 <MovePill key={key} label={key} dmg={gameState.enemy_move_stats[key].damage} def={gameState.enemy_move_stats[key].shield} charge={gameState.enemy_charges[key]} />

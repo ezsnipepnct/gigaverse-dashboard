@@ -122,9 +122,25 @@ const MoveStream: React.FC<{ snapshots: StreamSnapshot[]; onSelectSnapshot?: (sn
         totalItems += s.loot.amount
         itemTotals[s.loot.id] = (itemTotals[s.loot.id] || 0) + s.loot.amount
       } else if (s.type === 'upgrade') {
-        const boon = s.loot?.boonTypeString
-        const v1 = s.loot?.selectedVal1 || 0
-        const v2 = s.loot?.selectedVal2 || 0
+        let boon = s.loot?.boonTypeString
+        let v1 = s.loot?.selectedVal1 || 0
+        let v2 = s.loot?.selectedVal2 || 0
+        // Fallback: parse from text if data missing
+        if (!boon && s.lootDescription) {
+          const text = s.lootDescription
+          const healMatch = text.match(/heal\s*\+?(\d+)/i)
+          const hpMatch = text.match(/max\s*health|max\s*hp/i) && text.match(/\+(\d+)/)
+          const shMatch = text.match(/max\s*shield|max\s*armor/i) && text.match(/\+(\d+)/)
+          const rockMatch = text.match(/rock[^\d]*\+(\d+)/i)
+          const paperMatch = text.match(/paper[^\d]*\+(\d+)/i)
+          const scissorMatch = text.match(/scissor[^\d]*\+(\d+)/i)
+          if (healMatch) { boon = 'Heal'; v1 = parseInt(healMatch[1] || '0', 10) }
+          else if (hpMatch) { boon = 'AddMaxHealth'; v1 = parseInt((hpMatch as any)[1] || '0', 10) }
+          else if (shMatch) { boon = 'AddMaxShield'; v1 = parseInt((shMatch as any)[1] || '0', 10) }
+          else if (rockMatch) { boon = 'UpgradeRock'; v1 = parseInt(rockMatch[1] || '0', 10) }
+          else if (paperMatch) { boon = 'UpgradePaper'; v1 = parseInt(paperMatch[1] || '0', 10) }
+          else if (scissorMatch) { boon = 'UpgradeScissor'; v1 = parseInt(scissorMatch[1] || '0', 10) }
+        }
         if (boon === 'Heal') heals += v1
         else if (boon === 'AddMaxHealth') maxHp += v1
         else if (boon === 'AddMaxShield' || boon === 'AddMaxArmor') maxShield += v1
@@ -161,23 +177,34 @@ const MoveStream: React.FC<{ snapshots: StreamSnapshot[]; onSelectSnapshot?: (sn
 
       {/* Summary bar */}
       <div className="mb-3 grid grid-cols-1 md:grid-cols-3 gap-2">
-        <div className="px-3 py-2 rounded border border-cyan-400/20 bg-cyan-500/5 font-mono text-xs text-white/80">
-          <div className="text-cyan-300 mb-1">ITEMS</div>
-          <div>Total: <span className="text-white/90">{aggregates.totalItems}</span></div>
+        <div className="px-3 py-2 rounded border border-white/15 bg-black/30 font-mono text-xs text-white/80">
+          <div className="text-white/70 mb-1">ITEMS</div>
+          <div className="flex flex-wrap gap-2">
+            {Object.entries(aggregates.itemTotals)
+              .sort((a,b)=> (b[1] as number) - (a[1] as number))
+              .slice(0,10)
+              .map(([id, qty]) => (
+                <div key={id} className="flex items-center gap-2 px-2 py-1 rounded border border-white/10 bg-black/20">
+                  <ItemIcon itemId={parseInt(id)} size="small" showRarity hideSoulboundLock />
+                  <span className="text-white/80">x{qty as number}</span>
+                </div>
+              ))}
+            {Object.keys(aggregates.itemTotals).length === 0 && <span className="text-white/60">None</span>}
+          </div>
         </div>
-        <div className="px-3 py-2 rounded border border-emerald-400/20 bg-emerald-500/5 font-mono text-xs text-white/80">
-          <div className="text-emerald-300 mb-1">UPGRADES</div>
+        <div className="px-3 py-2 rounded border border-white/15 bg-black/30 font-mono text-xs text-white/80">
+          <div className="text-white/70 mb-1">UPGRADES</div>
           <div className="flex flex-wrap gap-2">
             {Object.entries(aggregates.upgradeTotals).map(([k, v]) => (
-              <span key={k} className="px-2 py-0.5 rounded border border-emerald-400/30 text-emerald-300">
+              <span key={k} className="px-2 py-0.5 rounded border border-white/10 text-white/80">
                 {k.replace('Upgrade','')}: +{(v as any).v1}/+{(v as any).v2}
               </span>
             ))}
             {Object.keys(aggregates.upgradeTotals).length === 0 && <span className="text-white/60">None</span>}
           </div>
         </div>
-        <div className="px-3 py-2 rounded border border-violet-400/20 bg-violet-500/5 font-mono text-xs text-white/80">
-          <div className="text-violet-300 mb-1">HEALS & MAX</div>
+        <div className="px-3 py-2 rounded border border-white/15 bg-black/30 font-mono text-xs text-white/80">
+          <div className="text-white/70 mb-1">HEALS & MAX</div>
           <div className="flex gap-3">
             <span>Heal <span className="text-white/90">+{aggregates.heals}</span></span>
             <span>MaxHP <span className="text-white/90">+{aggregates.maxHp}</span></span>
