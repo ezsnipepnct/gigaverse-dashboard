@@ -150,6 +150,22 @@ const MoveStream: React.FC<{ snapshots: StreamSnapshot[]; onSelectSnapshot?: (sn
           upgradeTotals[key].v1 += v1
           upgradeTotals[key].v2 += v2
         }
+      } else if (s.type === 'loot_options' && typeof s.selectedIndex === 'number' && Array.isArray(s.lootOptions)) {
+        const opt = s.lootOptions[s.selectedIndex]
+        if (opt) {
+          let boon: string | undefined = opt.boonTypeString
+          const v1 = opt.selectedVal1 || 0
+          const v2 = opt.selectedVal2 || 0
+          if (boon === 'Heal') heals += v1
+          else if (boon === 'AddMaxHealth') maxHp += v1
+          else if (boon === 'AddMaxShield' || boon === 'AddMaxArmor') maxShield += v1
+          else if (boon) {
+            const key = boon
+            upgradeTotals[key] = upgradeTotals[key] || { v1:0, v2:0 }
+            upgradeTotals[key].v1 += v1
+            upgradeTotals[key].v2 += v2
+          }
+        }
       }
     }
     return { totalItems, itemTotals, upgradeTotals, heals, maxHp, maxShield }
