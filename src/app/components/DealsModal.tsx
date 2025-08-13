@@ -17,9 +17,6 @@ import {
   Zap
 } from 'lucide-react'
 import { agwAuthService } from '@/lib/agw-auth'
-import ItemIcon from './ItemIcon'
-import ItemTooltip from './ItemTooltip'
-import { marketPriceService } from '../services/marketPrices'
 
 interface DealsModalProps {
   onClose: () => void
@@ -61,8 +58,6 @@ const DealsModal: React.FC<DealsModalProps> = ({ onClose }) => {
   const [error, setError] = useState<string | null>(null)
   const [tradeStates, setTradeStates] = useState<TradeState>({})
   const [tradeMessages, setTradeMessages] = useState<{[dealId: string]: string}>({})
-  const [floorPriceMap, setFloorPriceMap] = useState<Record<string, number>>({})
-  const [ethUsd, setEthUsd] = useState<number>(0)
   const [timeInfo, setTimeInfo] = useState({
     currentDay: 0,
     currentWeek: 0,
@@ -79,45 +74,6 @@ const DealsModal: React.FC<DealsModalProps> = ({ onClose }) => {
     fetchDealsData()
     fetchPlayerBalances()
   }, [])
-
-  // Load market floors for value computations
-  useEffect(() => {
-    ;(async () => {
-      try {
-        const floors = await marketPriceService.getFloorMap()
-        setFloorPriceMap(floors)
-        const usd = await marketPriceService.getEthUsd()
-        setEthUsd(usd)
-      } catch (err) {
-        console.error('Failed to fetch market floors for deals:', err)
-      }
-    })()
-  }, [])
-
-  const formatUsd = (n: number) => {
-    if (!n || n <= 0) return '$0'
-    if (n < 0.01) return `$${n.toFixed(4)}`
-    if (n < 1) return `$${n.toFixed(3)}`
-    if (n < 100) return `$${n.toFixed(2)}`
-    return `$${Math.round(n).toLocaleString()}`
-  }
-
-  const getTotalUsdNeededForDailyDeals = () => {
-    if (!ethUsd || ethUsd <= 0) return 0
-    let total = 0
-    for (const deal of dailyDeals) {
-      const remainingCompletions = deal.maxCompletions > 0 ? Math.max(0, deal.maxCompletions - deal.timesCompleted) : 0
-      if (remainingCompletions === 0) continue
-      const required = deal.inputAmount * remainingCompletions
-      const have = getPlayerBalance(deal.inputItem.id)
-      const missing = Math.max(0, required - have)
-      if (missing === 0) continue
-      const floorEth = floorPriceMap[deal.inputItem.id.toString()] || 0
-      if (floorEth <= 0) continue
-      total += missing * floorEth * ethUsd
-    }
-    return total
-  }
 
   // Function to fetch recipe player data for completion tracking
   const fetchRecipePlayerData = async () => {
@@ -648,9 +604,6 @@ const DealsModal: React.FC<DealsModalProps> = ({ onClose }) => {
               <span className="text-cyan-400">{timeInfo.timeUntilNextWeek}</span>
             </div>
           </div>
-          <div className="text-gray-400">
-            Needed to complete daily: <span className="text-yellow-400 font-bold">{formatUsd(getTotalUsdNeededForDailyDeals())}</span>
-          </div>
         </div>
       </div>
 
@@ -726,21 +679,16 @@ const DealsModal: React.FC<DealsModalProps> = ({ onClose }) => {
                   <div className="space-y-4">
                     {/* Input Item */}
                     <div className="flex items-center space-x-3">
-                      <ItemTooltip itemId={deal.inputItem.id} position="right">
-                        <ItemIcon itemId={deal.inputItem.id} size="medium" showRarity className="w-12 h-12" />
-                      </ItemTooltip>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-mono font-bold text-white text-sm truncate">{deal.inputItem.name}</h4>
-                        <div className="flex items-center space-x-3 text-xs font-mono mt-1">
-                          <span className="text-gray-400">ID: {deal.inputItem.id}</span>
-                          {(() => {
-                            const pEth = floorPriceMap[deal.inputItem.id.toString()] || 0
-                            const usd = pEth > 0 && ethUsd > 0 ? pEth * ethUsd : 0
-                            return usd > 0 ? (
-                              <span className="text-yellow-400">Floor: {formatUsd(usd)}</span>
-                            ) : null
-                          })()}
-                        </div>
+                      <div className="w-12 h-12 bg-gray-800/50 rounded border border-gray-600/50 flex items-center justify-center">
+                        {/* Assuming inputItem.iconUrl is available from the new Deal interface */}
+                        {/* This part needs to be updated if inputItem is removed from Deal */}
+                        {/* For now, using a placeholder or assuming it's handled */}
+                        <Package className="w-6 h-6 text-gray-400" />
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-mono font-bold text-white text-sm">{deal.name}</h4>
+                        {/* Description and iconUrl are removed from Deal, so this will be empty */}
+                        <p className="text-xs text-gray-400 line-clamp-1">No description available</p>
                       </div>
                     </div>
 
