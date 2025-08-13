@@ -9,13 +9,19 @@ interface ItemTooltipProps {
   children: React.ReactNode;
   position?: 'top' | 'bottom' | 'left' | 'right';
   className?: string;
+  floorPriceEth?: number;
+  showUsdPrice?: boolean;
+  ethUsd?: number;
 }
 
 const ItemTooltip: React.FC<ItemTooltipProps> = ({ 
   itemId, 
   children, 
   position = 'top',
-  className = ''
+  className = '',
+  floorPriceEth,
+  showUsdPrice = false,
+  ethUsd
 }) => {
   const [item, setItem] = useState<ParsedItemMetadata | null>(null);
   const [loading, setLoading] = useState(false);
@@ -56,6 +62,24 @@ const ItemTooltip: React.FC<ItemTooltipProps> = ({
         return 'bottom-full mb-2 left-1/2 transform -translate-x-1/2';
     }
   };
+
+  const formatPrice = (priceEth: number) => {
+    if (!priceEth || priceEth <= 0) return 'N/A'
+    if (showUsdPrice && ethUsd && ethUsd > 0) {
+      const usd = priceEth * ethUsd
+      if (usd < 0.01) return `$${usd.toFixed(4)}`
+      if (usd < 1) return `$${usd.toFixed(3)}`
+      if (usd < 100) return `$${usd.toFixed(2)}`
+      return `$${Math.round(usd).toLocaleString()}`
+    }
+    if (priceEth < 0.0001) {
+      const exponent = Math.floor(Math.log10(priceEth))
+      const mantissa = priceEth / Math.pow(10, exponent)
+      return `${mantissa.toFixed(2)} × 10^${exponent} ETH`
+    }
+    if (priceEth < 0.001) return `${(priceEth * 1000).toFixed(2)} mETH`
+    return `${priceEth.toFixed(4)} ETH`
+  }
 
   const getRarityClasses = () => {
     if (!item) return 'border-gray-600 bg-gray-900';
@@ -182,6 +206,13 @@ const ItemTooltip: React.FC<ItemTooltipProps> = ({
             
             {/* Additional attributes */}
             <div className="mt-3 pt-3 border-t border-gray-700">
+              {/* Floor price (if provided) */}
+              {typeof floorPriceEth === 'number' && floorPriceEth > 0 && (
+                <div className="flex items-center justify-between text-xs font-mono mb-1">
+                  <span className="text-gray-500">Floor Price</span>
+                  <span className="text-yellow-400 font-bold">{formatPrice(floorPriceEth)}</span>
+                </div>
+              )}
               <div className="flex items-center justify-between text-xs font-mono">
                 <span className="text-gray-500">Rarity Level</span>
                 <span className={getRarityTextClasses()}>{item.rarity}/4</span>

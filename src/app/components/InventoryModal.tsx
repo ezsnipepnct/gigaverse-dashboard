@@ -17,13 +17,16 @@ import {
   AlertCircle,
   CheckCircle,
   Filter,
-  RefreshCw
+  RefreshCw,
+  Maximize2,
+  Minimize2
 } from 'lucide-react'
 import ItemCard from './ItemCard'
 import ItemIcon from './ItemIcon'
 import ItemTooltip from './ItemTooltip'
 import { itemMetadataService } from '../services/itemMetadata'
 import { agwAuthService } from '@/lib/agw-auth'
+import { marketPriceService } from '../services/marketPrices'
 
 interface InventoryModalProps {
   isOpen: boolean
@@ -72,6 +75,10 @@ const InventoryModal: React.FC<InventoryModalProps> = ({
   const [loading, setLoading] = useState(false)
   const [mounted, setMounted] = useState(false)
   const [windowWidth, setWindowWidth] = useState(0)
+  const [floorPriceMap, setFloorPriceMap] = useState<Record<string, number>>({})
+  const [ethUsd, setEthUsd] = useState<number>(0)
+  const [showUsdPrices, setShowUsdPrices] = useState(false)
+  const [isFullscreen, setIsFullscreen] = useState(false)
 
   useEffect(() => {
     setMounted(true)
@@ -92,6 +99,19 @@ const InventoryModal: React.FC<InventoryModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       fetchGameData()
+      // Fetch market floor prices and ETH price (cached)
+      ;(async () => {
+        try {
+          const [floors, eth] = await Promise.all([
+            marketPriceService.getFloorMap(),
+            marketPriceService.getEthUsd()
+          ])
+          setFloorPriceMap(floors)
+          setEthUsd(eth)
+        } catch (err) {
+          console.error('Failed to load market data for inventory:', err)
+        }
+      })()
     }
   }, [isOpen])
 
@@ -268,6 +288,34 @@ const InventoryModal: React.FC<InventoryModalProps> = ({
     return inventoryItems.reduce((total, item) => total + item.quantity, 0)
   }
 
+  const getEstimatedValueEth = () => {
+    return inventoryItems.reduce((sum, item) => {
+      const floor = floorPriceMap[item.id] || 0
+      if (floor > 0) {
+        return sum + floor * item.quantity
+      }
+      return sum
+    }, 0)
+  }
+
+  const formatPrice = (priceEth: number) => {
+    if (!priceEth || priceEth <= 0) return 'N/A'
+    if (showUsdPrices && ethUsd > 0) {
+      const usd = priceEth * ethUsd
+      if (usd < 0.01) return `$${usd.toFixed(4)}`
+      if (usd < 1) return `$${usd.toFixed(3)}`
+      if (usd < 100) return `$${usd.toFixed(2)}`
+      return `$${Math.round(usd).toLocaleString()}`
+    }
+    if (priceEth < 0.0001) {
+      const exponent = Math.floor(Math.log10(priceEth))
+      const mantissa = priceEth / Math.pow(10, exponent)
+      return `${mantissa.toFixed(2)} × 10^${exponent} ETH`
+    }
+    if (priceEth < 0.001) return `${(priceEth * 1000).toFixed(2)} mETH`
+    return `${priceEth.toFixed(4)} ETH`
+  }
+
   // Calculate grid columns based on window width (matching Tailwind responsive classes)
   const getGridColumns = () => {
     if (windowWidth >= 1280) return 8      // xl:grid-cols-8
@@ -302,7 +350,9 @@ const InventoryModal: React.FC<InventoryModalProps> = ({
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.8, opacity: 0, y: 50 }}
           transition={{ type: 'spring', damping: 20, stiffness: 300 }}
-          className="bg-gradient-to-br from-gray-900/95 to-black/95 border-2 border-cyan-400/50 rounded-xl max-w-5xl w-full mx-4 backdrop-blur-md max-h-[95vh] overflow-hidden shadow-2xl shadow-cyan-400/10"
+          className={`bg-gradient-to-br from-gray-900/95 to-black/95 border-2 border-cyan-400/50 rounded-xl ${
+            isFullscreen ? 'w-[95vw] max-w-[95vw] h-[95vh] max-h-[95vh]' : 'max-w-5xl w-full max-h-[95vh]'
+          } mx-4 backdrop-blur-md overflow-hidden shadow-2xl shadow-cyan-400/10`}
           style={{
             backgroundImage: `radial-gradient(circle at 50% 50%, rgba(6, 182, 212, 0.03) 0%, transparent 50%)`
           }}
@@ -324,9 +374,38 @@ const InventoryModal: React.FC<InventoryModalProps> = ({
                   <p className="text-gray-400 font-mono text-sm tracking-wide">
                     <span className="text-cyan-400 font-semibold">{inventoryItems.length}</span> items • <span className="text-cyan-400 font-semibold">{getTotalValue().toLocaleString()}</span> total
                   </p>
+                  <div className="text-gray-400 font-mono text-xs mt-1">
+                    Est. Value: <span className="text-yellow-400 font-semibold">{formatPrice(getEstimatedValueEth())}</span>
+                    {ethUsd > 0 && (
+                      <span className="ml-2 text-gray-500">{showUsdPrices ? '(USD)' : '(ETH)'}</span>
+                    )}
+                  </div>
                 </div>
               </div>
               <div className="flex items-center space-x-2">
+                {/* Currency toggle */}
+                <button
+                  onClick={() => setShowUsdPrices(!showUsdPrices)}
+                  className={`px-3 py-2 rounded border transition-colors font-mono text-xs ${
+                    showUsdPrices 
+                      ? 'bg-green-400/20 border-green-400/50 text-green-400' 
+                      : 'bg-black/40 border-cyan-400/30 text-cyan-400 hover:bg-cyan-400/10'
+                  }`}
+                  title="Toggle currency"
+                >
+                  {showUsdPrices ? 'USD' : 'ETH'}
+                </button>
+                {ethUsd > 0 && (
+                  <span className="text-xs text-gray-400 font-mono">ETH: ${ethUsd.toFixed(0)}</span>
+                )}
+                {/* Fullscreen toggle */}
+                <button
+                  onClick={() => setIsFullscreen(!isFullscreen)}
+                  className="p-3 text-gray-400 hover:text-cyan-400 hover:bg-cyan-400/10 rounded-lg transition-all duration-200 border border-transparent hover:border-cyan-400/30"
+                  title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
+                >
+                  {isFullscreen ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
+                </button>
                 <button
                   onClick={onRefreshBalances}
                   disabled={balancesLoading}
@@ -403,7 +482,14 @@ const InventoryModal: React.FC<InventoryModalProps> = ({
                 {filteredItems.length > 0 ? (
                   <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-7 xl:grid-cols-8 gap-4">
                     {filteredItems.map((item, index) => (
-                      <ItemTooltip key={item.id} itemId={parseInt(item.id)} position={getTooltipPosition(index) as 'top' | 'bottom'}>
+                      <ItemTooltip
+                        key={item.id}
+                        itemId={parseInt(item.id)}
+                        position={getTooltipPosition(index) as 'top' | 'bottom'}
+                        floorPriceEth={floorPriceMap[item.id]}
+                        showUsdPrice={showUsdPrices}
+                        ethUsd={ethUsd}
+                      >
                         <div className="group">
                           {/* Item Card Container */}
                           <div className="bg-gray-900/40 border border-gray-700/50 rounded-lg p-3 hover:bg-gray-800/60 hover:border-cyan-400/40 transition-all duration-200 hover:shadow-lg hover:shadow-cyan-400/10">
