@@ -19,7 +19,9 @@ import {
   Filter,
   RefreshCw,
   Maximize2,
-  Minimize2
+  Minimize2,
+  Coins,
+  Lock
 } from 'lucide-react'
 import ItemCard from './ItemCard'
 import ItemIcon from './ItemIcon'
@@ -70,7 +72,7 @@ const InventoryModal: React.FC<InventoryModalProps> = ({
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([])
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [searchTerm, setSearchTerm] = useState('')
-  const [sortBy, setSortBy] = useState<'name' | 'quantity' | 'rarity'>('rarity')
+  const [sortBy, setSortBy] = useState<'name' | 'quantity' | 'rarity' | 'value'>('rarity')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const [loading, setLoading] = useState(false)
   const [mounted, setMounted] = useState(false)
@@ -79,6 +81,31 @@ const InventoryModal: React.FC<InventoryModalProps> = ({
   const [ethUsd, setEthUsd] = useState<number>(0)
   const [showUsdPrices, setShowUsdPrices] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(true)
+  const [hideSoulbound, setHideSoulbound] = useState(false)
+
+  // Latch toggle (screenshot-like) – reusable
+  const LatchToggle = ({ isOn, onToggle, className = '' }: { isOn: boolean; onToggle: () => void; className?: string }) => (
+    <button
+      onClick={onToggle}
+      aria-pressed={isOn}
+      className={`relative inline-flex items-center w-14 h-7 rounded-full transition-colors duration-200 ${
+        isOn
+          ? 'bg-gradient-to-r from-cyan-500/60 to-emerald-400/60 border border-cyan-300/60 shadow-[0_0_12px_rgba(34,211,238,0.35)]'
+          : 'bg-gray-800/80 border border-gray-700 shadow-inner'
+      } ${className}`}
+      title={isOn ? 'On' : 'Off'}
+    >
+      <span
+        className={`absolute top-[3px] left-[3px] w-5 h-5 rounded-full flex items-center justify-center transition-transform duration-200 ${
+          isOn ? 'translate-x-7' : 'translate-x-0'
+        }`}
+      >
+        <span className={`w-5 h-5 rounded-full bg-black border-2 ${isOn ? 'border-cyan-200' : 'border-white/70'} flex items-center justify-center`}>
+          <span className={`w-2 h-2 rounded-full ${isOn ? 'bg-cyan-200' : 'bg-gray-500'}`} />
+        </span>
+      </span>
+    </button>
+  )
 
   useEffect(() => {
     setMounted(true)
@@ -265,6 +292,10 @@ const InventoryModal: React.FC<InventoryModalProps> = ({
         matchesCategory = item.category === selectedCategory
       }
       
+      if (hideSoulbound && selectedCategory !== 'soulbound') {
+        matchesCategory = matchesCategory && item.soulbound === false
+      }
+      
       const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase())
       return matchesCategory && matchesSearch
     })
@@ -280,6 +311,12 @@ const InventoryModal: React.FC<InventoryModalProps> = ({
         case 'rarity':
           comparison = a.rarity - b.rarity
           break
+        case 'value': {
+          const aVal = (floorPriceMap[a.id] || 0) * a.quantity
+          const bVal = (floorPriceMap[b.id] || 0) * b.quantity
+          comparison = aVal - bVal
+          break
+        }
       }
       return sortOrder === 'asc' ? comparison : -comparison
     })
@@ -388,21 +425,21 @@ const InventoryModal: React.FC<InventoryModalProps> = ({
                 </div>
               </div>
               <div className="flex items-center space-x-2">
-                {/* Currency toggle */}
-                <button
-                  onClick={() => setShowUsdPrices(!showUsdPrices)}
-                  className={`px-3 py-2 rounded border transition-colors font-mono text-xs ${
-                    showUsdPrices 
-                      ? 'bg-green-400/20 border-green-400/50 text-green-400' 
-                      : 'bg-black/40 border-cyan-400/30 text-cyan-400 hover:bg-cyan-400/10'
-                  }`}
-                  title="Toggle currency"
-                >
-                  {showUsdPrices ? 'USD' : 'ETH'}
-                </button>
-                {ethUsd > 0 && (
-                  <span className="text-xs text-gray-400 font-mono">ETH: ${ethUsd.toFixed(0)}</span>
-                )}
+                {/* Currency latch toggle */}
+                <div className="inline-flex items-center select-none">
+                  <span className="text-[12px] font-mono text-gray-400 mr-3 tracking-wider">CURRENCY</span>
+                  <span className="text-[11px] font-mono text-gray-500 mr-2">ETH</span>
+                  <LatchToggle isOn={showUsdPrices} onToggle={() => setShowUsdPrices(!showUsdPrices)} />
+                  <span className="text-[11px] font-mono text-gray-500 ml-2">USD</span>
+                </div>
+                {/* No ETH price in inventory header per request */}
+                {/* Items latch toggle */}
+                <div className="inline-flex items-center select-none">
+                  <span className="text-[12px] font-mono text-gray-400 mr-3 tracking-wider">ITEMS</span>
+                  <span className="text-[11px] font-mono text-gray-500 mr-2">ALL</span>
+                  <LatchToggle isOn={hideSoulbound} onToggle={() => setHideSoulbound(!hideSoulbound)} />
+                  <span className="text-[11px] font-mono text-gray-500 ml-2">TRADEABLE</span>
+                </div>
                 {/* Fullscreen toggle */}
                 <button
                   onClick={() => setIsFullscreen(!isFullscreen)}
@@ -453,11 +490,13 @@ const InventoryModal: React.FC<InventoryModalProps> = ({
                 value={`${sortBy}-${sortOrder}`}
                 onChange={(e) => {
                   const [field, order] = e.target.value.split('-')
-                  setSortBy(field as 'name' | 'quantity' | 'rarity')
+                  setSortBy(field as 'name' | 'quantity' | 'rarity' | 'value')
                   setSortOrder(order as 'asc' | 'desc')
                 }}
                 className="px-4 py-2 bg-gray-900/50 border border-cyan-400/20 rounded-lg text-white focus:border-cyan-400 focus:outline-none transition-colors font-mono text-sm"
               >
+                <option value="value-desc">Total Value ↓</option>
+                <option value="value-asc">Total Value ↑</option>
                 <option value="rarity-desc">Rarity ↓</option>
                 <option value="rarity-asc">Rarity ↑</option>
                 <option value="quantity-desc">Quantity ↓</option>
@@ -517,11 +556,15 @@ const InventoryModal: React.FC<InventoryModalProps> = ({
                               )}
                             </div>
                             
-                            {/* Quantity Badge */}
-                            <div className="flex justify-center">
-                              <div className="bg-gradient-to-r from-cyan-500 to-blue-500 text-white text-xs font-bold rounded-full px-2 py-1 min-w-[24px] text-center shadow-sm">
-                                {item.quantity > 999 ? `${Math.floor(item.quantity / 1000)}k` : item.quantity}
-                              </div>
+                            {/* Footer: Quantity (left) and Total Value (right) */}
+                            <div className="mt-2 pt-1 border-t border-gray-700/40 flex items-center justify-between">
+                              <span className="text-[12px] font-mono text-gray-200 font-semibold">x{item.quantity > 999 ? `${Math.floor(item.quantity / 1000)}k` : item.quantity}</span>
+                              {(() => {
+                                const floor = floorPriceMap[item.id] || 0
+                                const total = floor * item.quantity
+                                if (!total) return null
+                                return <span className="text-[12px] font-mono text-yellow-300 font-semibold">{formatPrice(total)}</span>
+                              })()}
                             </div>
                           </div>
                         </div>
