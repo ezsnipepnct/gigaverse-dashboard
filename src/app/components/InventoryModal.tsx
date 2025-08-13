@@ -78,7 +78,7 @@ const InventoryModal: React.FC<InventoryModalProps> = ({
   const [floorPriceMap, setFloorPriceMap] = useState<Record<string, number>>({})
   const [ethUsd, setEthUsd] = useState<number>(0)
   const [showUsdPrices, setShowUsdPrices] = useState(false)
-  const [isFullscreen, setIsFullscreen] = useState(false)
+  const [isFullscreen, setIsFullscreen] = useState(true)
 
   useEffect(() => {
     setMounted(true)
@@ -351,7 +351,7 @@ const InventoryModal: React.FC<InventoryModalProps> = ({
           exit={{ scale: 0.8, opacity: 0, y: 50 }}
           transition={{ type: 'spring', damping: 20, stiffness: 300 }}
           className={`bg-gradient-to-br from-gray-900/95 to-black/95 border-2 border-cyan-400/50 rounded-xl ${
-            isFullscreen ? 'w-[95vw] max-w-[95vw] h-[95vh] max-h-[95vh]' : 'max-w-5xl w-full max-h-[95vh]'
+            isFullscreen ? 'w-[96vw] max-w-[96vw] h-[96vh] max-h-[96vh]' : 'max-w-5xl w-full max-h-[95vh]'
           } mx-4 backdrop-blur-md overflow-hidden shadow-2xl shadow-cyan-400/10`}
           style={{
             backgroundImage: `radial-gradient(circle at 50% 50%, rgba(6, 182, 212, 0.03) 0%, transparent 50%)`
@@ -371,14 +371,19 @@ const InventoryModal: React.FC<InventoryModalProps> = ({
                 </motion.div>
                 <div>
                   <h2 className="text-3xl font-bold font-mono text-transparent bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text mb-1 tracking-wide">INVENTORY</h2>
-                  <p className="text-gray-400 font-mono text-sm tracking-wide">
-                    <span className="text-cyan-400 font-semibold">{inventoryItems.length}</span> items • <span className="text-cyan-400 font-semibold">{getTotalValue().toLocaleString()}</span> total
-                  </p>
-                  <div className="text-gray-400 font-mono text-xs mt-1">
-                    Est. Value: <span className="text-yellow-400 font-semibold">{formatPrice(getEstimatedValueEth())}</span>
-                    {ethUsd > 0 && (
-                      <span className="ml-2 text-gray-500">{showUsdPrices ? '(USD)' : '(ETH)'}</span>
-                    )}
+                  <div className="mt-2 grid grid-cols-3 gap-2">
+                    <div className="bg-black/40 border border-cyan-400/30 rounded px-3 py-2">
+                      <div className="text-xs text-gray-400 font-mono">Items</div>
+                      <div className="text-cyan-400 font-mono font-bold">{inventoryItems.length}</div>
+                    </div>
+                    <div className="bg-black/40 border border-cyan-400/30 rounded px-3 py-2">
+                      <div className="text-xs text-gray-400 font-mono">Total Qty</div>
+                      <div className="text-cyan-400 font-mono font-bold">{getTotalValue().toLocaleString()}</div>
+                    </div>
+                    <div className="bg-black/40 border border-yellow-400/30 rounded px-3 py-2">
+                      <div className="text-xs text-gray-400 font-mono">Est. Value</div>
+                      <div className="text-yellow-400 font-mono font-bold">{formatPrice(getEstimatedValueEth())}</div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -480,7 +485,7 @@ const InventoryModal: React.FC<InventoryModalProps> = ({
             ) : (
               <>
                 {filteredItems.length > 0 ? (
-                  <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-7 xl:grid-cols-8 gap-4">
+                  <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12 2xl:grid-cols-12 gap-4">
                     {filteredItems.map((item, index) => (
                       <ItemTooltip
                         key={item.id}
