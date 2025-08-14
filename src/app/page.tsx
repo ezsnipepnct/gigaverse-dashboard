@@ -1682,7 +1682,7 @@ export default function GigaverseDashboard() {
            initial={{ opacity: 0 }}
            animate={{ opacity: 1 }}
            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+           className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
            onClick={() => setShowDeals(false)}
          >
            <motion.div
@@ -1690,7 +1690,7 @@ export default function GigaverseDashboard() {
              animate={{ scale: 1, opacity: 1, y: 0 }}
              exit={{ scale: 0.8, opacity: 0, y: 50 }}
              transition={{ type: 'spring', damping: 20, stiffness: 300 }}
-              className="bg-black/90 border-2 border-cyan-400/50 rounded-xl p-0 max-w-[90vw] w-full mx-4 backdrop-blur-md max-h-[92vh] overflow-hidden"
+             className="bg-black/90 border-2 border-cyan-400/50 rounded-xl p-0 max-w-6xl w-full mx-4 backdrop-blur-md max-h-[90vh] overflow-hidden"
              onClick={(e) => e.stopPropagation()}
            >
              <DealsModal onClose={() => setShowDeals(false)} />

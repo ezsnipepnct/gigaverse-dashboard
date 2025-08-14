@@ -17,9 +17,6 @@ import {
   Zap
 } from 'lucide-react'
 import { agwAuthService } from '@/lib/agw-auth'
-import ItemIcon from './ItemIcon'
-import ItemTooltip from './ItemTooltip'
-import { marketPriceService } from '../services/marketPrices'
 
 interface DealsModalProps {
   onClose: () => void
@@ -61,7 +58,6 @@ const DealsModal: React.FC<DealsModalProps> = ({ onClose }) => {
   const [error, setError] = useState<string | null>(null)
   const [tradeStates, setTradeStates] = useState<TradeState>({})
   const [tradeMessages, setTradeMessages] = useState<{[dealId: string]: string}>({})
-  const [floorPriceMap, setFloorPriceMap] = useState<Record<string, number>>({})
   const [timeInfo, setTimeInfo] = useState({
     currentDay: 0,
     currentWeek: 0,
@@ -77,18 +73,6 @@ const DealsModal: React.FC<DealsModalProps> = ({ onClose }) => {
   useEffect(() => {
     fetchDealsData()
     fetchPlayerBalances()
-  }, [])
-
-  // Load market floors once for floor price display
-  useEffect(() => {
-    ;(async () => {
-      try {
-        const floors = await marketPriceService.getFloorMap()
-        setFloorPriceMap(floors)
-      } catch (err) {
-        console.error('Failed to fetch floor price map for deals:', err)
-      }
-    })()
   }, [])
 
   // Function to fetch recipe player data for completion tracking
@@ -695,20 +679,16 @@ const DealsModal: React.FC<DealsModalProps> = ({ onClose }) => {
                   <div className="space-y-4">
                     {/* Input Item */}
                     <div className="flex items-center space-x-3">
-                      <ItemTooltip itemId={deal.inputItem.id} position="right">
-                        <ItemIcon itemId={deal.inputItem.id} size="medium" showRarity className="w-12 h-12" />
-                      </ItemTooltip>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-mono font-bold text-white text-sm truncate">{deal.inputItem.name}</h4>
-                        <div className="flex items-center space-x-3 text-xs font-mono mt-1">
-                          <span className="text-gray-500">ID: {deal.inputItem.id}</span>
-                          {(() => {
-                            const priceEth = floorPriceMap[deal.inputItem.id.toString()] || 0
-                            if (!priceEth || priceEth <= 0) return null
-                            const formatted = priceEth < 0.001 ? `${(priceEth * 1000).toFixed(2)} mETH` : `${priceEth.toFixed(4)} ETH`
-                            return <span className="text-yellow-400">Floor: {formatted}</span>
-                          })()}
-                        </div>
+                      <div className="w-12 h-12 bg-gray-800/50 rounded border border-gray-600/50 flex items-center justify-center">
+                        {/* Assuming inputItem.iconUrl is available from the new Deal interface */}
+                        {/* This part needs to be updated if inputItem is removed from Deal */}
+                        {/* For now, using a placeholder or assuming it's handled */}
+                        <Package className="w-6 h-6 text-gray-400" />
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-mono font-bold text-white text-sm">{deal.name}</h4>
+                        {/* Description and iconUrl are removed from Deal, so this will be empty */}
+                        <p className="text-xs text-gray-400 line-clamp-1">No description available</p>
                       </div>
                     </div>
 
