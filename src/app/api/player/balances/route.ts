@@ -34,15 +34,16 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const data = await response.json()
+    const data: { entities?: Array<{ ID_CID: string; BALANCE_CID: number }> } = await response.json()
     console.log(`Found ${data.entities?.length || 0} item balances`)
 
     // Transform the data into a more usable format
     const balances: Record<string, number> = {}
     if (data.entities) {
-      data.entities.forEach((item: any) => {
+      for (const item of data.entities) {
+        if (!item) continue
         balances[item.ID_CID] = item.BALANCE_CID || 0
-      })
+      }
     }
 
     return NextResponse.json({

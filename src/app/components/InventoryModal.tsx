@@ -6,19 +6,17 @@ import {
   X, 
   Package, 
   Search,
-  Sword,
-  Shield,
-  Beaker,
-  Gem,
-  Wrench,
-  Scroll,
-  Zap,
-  Star,
-  AlertCircle,
-  CheckCircle,
-  Filter,
-  ArrowUpDown
+  RefreshCw,
+  Maximize2,
+  Minimize2,
+  Coins
 } from 'lucide-react'
+// import ItemCard from './ItemCard'
+import ItemIcon from './ItemIcon'
+import ItemTooltip from './ItemTooltip'
+import { itemMetadataService } from '../services/itemMetadata'
+import { agwAuthService } from '@/lib/agw-auth'
+import { marketPriceService } from '../services/marketPrices'
 
 interface InventoryModalProps {
   isOpen: boolean
@@ -37,20 +35,15 @@ interface InventoryItem {
   description?: string
   usedInRecipes?: string[]
   canCraft?: boolean
+  soulbound?: boolean
 }
 
 const WALLET_ADDRESS = "0xb0d90D52C7389824D4B22c06bcdcCD734E3162b7"
 
 // JWT Token management
 const getJWTToken = () => {
-  const hardcodedToken = "eyJhbGciOiJIUzI1NiJ9.eyJhZGRyZXNzIjoiMHhiMGQ5MEQ1MkM3Mzg5ODI0RDRCMjJjMDZiY2RjQ0Q3MzRFMzE2MmI3IiwidXNlciI6eyJfaWQiOiI2N2I5MjE1YTEwOGFlZGRiNDA5YTdlNzMiLCJ3YWxsZXRBZGRyZXNzIjoiMHhiMGQ5MGQ1MmM3Mzg5ODI0ZDRiMjJjMDZiY2RjY2Q3MzRlMzE2MmI3IiwidXNlcm5hbWUiOiIweGIwZDkwRDUyQzczODk4MjRENEIyMmMwNmJjZGNjZDczNEUzMTYyYjciLCJjYXNlU2Vuc2l0aXZlQWRkcmVzcyI6IjB4YjBkOTBENTJDNzM4OTgyNEQ0QjIyYzA2YmNkY0NENzM0RTMxNjJiNyIsIl9fdiI6MH0sImdhbWVBY2NvdW50Ijp7Im5vb2IiOnsiX2lkIjoiNjdiOTIxNzRlM2MzOWRjYTZmZGFkZjA5IiwiZG9jSWQiOiIyMTQyNCIsInRhYmxlTmFtZSI6IkdpZ2FOb29iTkZUIiwiTEFTVF9UUkFOU0ZFUl9USU1FX0NJRCI6MTc0MDE4NTk2NCwiY3JlYXRlZEF0IjoiMjAyNS0wMi0yMlQwMDo1OTozMi45NDZaIiwidXBkYXRlZEF0IjoiMjAyNS0wMi0yMlQwMDo1OTozMy4xNjVaIiwiTEVWRUxfQ0lEIjoxLCJJU19OT09CX0NJRCI6dHJ1ZSwiSU5JVElBTElaRURfQ0lEIjp0cnVlLCJPV05FUl9DSUQiOiIweGIwZDkwZDUyYzczODk4MjRkNGIyMmMwNmJjZGNjZDczNGUzMTYyYjcifSwiYWxsb3dlZFRvQ3JlYXRlQWNjb3VudCI6dHJ1ZSwiY2FuRW50ZXJHYW1lIjp0cnVlLCJub29iUGFzc0JhbGFuY2UiOjAsImxhc3ROb29iSWQiOjczODg0LCJtYXhOb29iSWQiOjEwMDAwfSwiZXhwIjoxNzUwMTE2NDMxfQ.M26R6pDnFSSIbMXHa6kOhT_Hrjn3U7nkm_sGv0rY0uY"
-  
-  if (hardcodedToken) {
-    return hardcodedToken
-  }
-  
   if (typeof window !== 'undefined') {
-    return localStorage.getItem('jwt_token') || localStorage.getItem('authToken') || ''
+    return agwAuthService.getJWT() || ''
   }
   return ''
 }
@@ -64,18 +57,97 @@ const InventoryModal: React.FC<InventoryModalProps> = ({
 }) => {
   const [gameItems, setGameItems] = useState<any[]>([])
   const [recipes, setRecipes] = useState<any[]>([])
+  const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([])
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [searchTerm, setSearchTerm] = useState('')
-  const [sortBy, setSortBy] = useState<'name' | 'quantity' | 'rarity'>('quantity')
+  const [sortBy, setSortBy] = useState<'name' | 'quantity' | 'rarity' | 'value'>('rarity')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const [loading, setLoading] = useState(false)
+  const [mounted, setMounted] = useState(false)
+  const [windowWidth, setWindowWidth] = useState(0)
+  const [floorPriceMap, setFloorPriceMap] = useState<Record<string, number>>({})
+  const [ethUsd, setEthUsd] = useState<number>(0)
+  const [showUsdPrices, setShowUsdPrices] = useState(false)
+  const [isFullscreen, setIsFullscreen] = useState(true)
+  const [hideSoulbound, setHideSoulbound] = useState(false)
+
+  // Latch toggle (screenshot-like) – reusable
+  const LatchToggle = ({ isOn, onToggle, className = '' }: { isOn: boolean; onToggle: () => void; className?: string }) => (
+    <button
+      onClick={onToggle}
+      aria-pressed={isOn}
+      className={`relative inline-flex items-center w-14 h-7 rounded-full transition-colors duration-200 ${
+        isOn
+          ? 'bg-gradient-to-r from-cyan-500/60 to-emerald-400/60 border border-cyan-300/60 shadow-[0_0_12px_rgba(34,211,238,0.35)]'
+          : 'bg-gray-800/80 border border-gray-700 shadow-inner'
+      } ${className}`}
+      title={isOn ? 'On' : 'Off'}
+    >
+      <span
+        className={`absolute top-[3px] left-[3px] w-5 h-5 rounded-full flex items-center justify-center transition-transform duration-200 ${
+          isOn ? 'translate-x-7' : 'translate-x-0'
+        }`}
+      >
+        <span className={`w-5 h-5 rounded-full bg-black border-2 ${isOn ? 'border-cyan-200' : 'border-white/70'} flex items-center justify-center`}>
+          <span className={`w-2 h-2 rounded-full ${isOn ? 'bg-cyan-200' : 'bg-gray-500'}`} />
+        </span>
+      </span>
+    </button>
+  )
+
+  useEffect(() => {
+    setMounted(true)
+    
+    // Set initial window width
+    setWindowWidth(window.innerWidth)
+    
+    // Listen for window resize
+    const handleResize = () => {
+      setWindowWidth(window.innerWidth)
+    }
+    
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   // Fetch game items and recipes for context
   useEffect(() => {
     if (isOpen) {
       fetchGameData()
+      // Fetch market floor prices and ETH price (cached)
+      ;(async () => {
+        try {
+          const [floors, eth] = await Promise.all([
+            marketPriceService.getFloorMap(),
+            marketPriceService.getEthUsd()
+          ])
+          setFloorPriceMap(floors)
+          setEthUsd(eth)
+        } catch (err) {
+          console.error('Failed to load market data for inventory:', err)
+        }
+      })()
     }
   }, [isOpen])
+
+  // Load inventory items when game data or player balances change
+  useEffect(() => {
+    if (gameItems.length > 0 && Object.keys(playerBalances).length > 0) {
+      loadInventoryItems()
+    }
+  }, [gameItems, recipes, playerBalances])
+
+  const loadInventoryItems = async () => {
+    try {
+      setLoading(true)
+      const items = await getInventoryItems()
+      setInventoryItems(items)
+    } catch (error) {
+      console.error('Failed to load inventory items:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const fetchGameData = async () => {
     try {
@@ -100,16 +172,16 @@ const InventoryModal: React.FC<InventoryModalProps> = ({
     }
   }
 
-  // Transform player balances into inventory items
-  const getInventoryItems = (): InventoryItem[] => {
+  // Transform player balances into inventory items with enhanced metadata support
+  const getInventoryItems = async (): Promise<InventoryItem[]> => {
     const items: InventoryItem[] = []
     
-    Object.entries(playerBalances).forEach(([itemId, quantity]) => {
+    for (const [itemId, quantity] of Object.entries(playerBalances)) {
       if (quantity > 0) {
         const gameItem = gameItems.find(item => item.docId === itemId)
         const itemName = gameItem?.NAME_CID || `Item #${itemId}`
         
-        // Categorize items based on ID ranges and names
+        // Enhanced categorization - these will be supplemented by real metadata
         let category = 'Materials'
         if (itemName.toLowerCase().includes('potion') || itemName.toLowerCase().includes('juice')) {
           category = 'Consumables'
@@ -123,22 +195,36 @@ const InventoryModal: React.FC<InventoryModalProps> = ({
           category = 'Scrolls'
         }
 
-        // Determine rarity based on quantity (corrected logic)
-        let rarity = 0 // Default to common
+        // Basic rarity fallback (will be overridden by real metadata)
+        let rarity = 0
+        let soulbound = false
+        let description = gameItem?.DESCRIPTION_CID || `A valuable ${category.toLowerCase().slice(0, -1)}`
         
-        // Fixed quantity-based rarity - higher quantities = more common
-        if (quantity >= 10000) {
-          rarity = 0 // Common - very abundant
-        } else if (quantity >= 2000) {
-          rarity = 1 // Uncommon
-        } else if (quantity >= 500) {
-          rarity = 2 // Rare
-        } else if (quantity >= 100) {
-          rarity = 3 // Epic
-        } else if (quantity >= 20) {
-          rarity = 4 // Legendary
-        } else {
-          rarity = 0 // Common - very low quantities are usually common materials you haven't collected much of
+        // Fetch real metadata from the service
+        try {
+          const metadata = await itemMetadataService.getItem(parseInt(itemId))
+          if (metadata) {
+            rarity = metadata.rarity
+            soulbound = metadata.soulbound
+            description = metadata.description || description
+            category = metadata.category || category
+          }
+        } catch (error) {
+          console.warn(`Failed to fetch metadata for item ${itemId}:`, error)
+          // Use fallback values
+          if (quantity >= 10000) {
+            rarity = 0 // Common
+          } else if (quantity >= 2000) {
+            rarity = 1 // Uncommon
+          } else if (quantity >= 500) {
+            rarity = 2 // Rare
+          } else if (quantity >= 100) {
+            rarity = 3 // Epic
+          } else if (quantity >= 20) {
+            rarity = 4 // Legendary
+          } else {
+            rarity = 0 // Common
+          }
         }
 
         // Check if used in recipes
@@ -152,33 +238,52 @@ const InventoryModal: React.FC<InventoryModalProps> = ({
           quantity,
           category,
           rarity,
-          description: gameItem?.DESCRIPTION_CID || `A valuable ${category.toLowerCase().slice(0, -1)}`,
+          description,
           usedInRecipes,
-          canCraft: usedInRecipes.length > 0
+          canCraft: usedInRecipes.length > 0,
+          soulbound
         })
       }
-    })
+    }
 
     return items
   }
 
-  const inventoryItems = getInventoryItems()
+  // Get unique categories for dropdown
+  const getUniqueCategories = () => {
+    const categories = new Set(inventoryItems.map(item => item.category))
+    return Array.from(categories)
+  }
 
-  // Get unique categories
-  const categories = [
-    { id: 'all', name: 'All Items', icon: Package, count: inventoryItems.length },
-    { id: 'Consumables', name: 'Consumables', icon: Beaker, count: inventoryItems.filter(i => i.category === 'Consumables').length },
-    { id: 'Materials', name: 'Materials', icon: Wrench, count: inventoryItems.filter(i => i.category === 'Materials').length },
-    { id: 'Weapons', name: 'Weapons', icon: Sword, count: inventoryItems.filter(i => i.category === 'Weapons').length },
-    { id: 'Armor', name: 'Armor', icon: Shield, count: inventoryItems.filter(i => i.category === 'Armor').length },
-    { id: 'Gems', name: 'Gems', icon: Gem, count: inventoryItems.filter(i => i.category === 'Gems').length },
-    { id: 'Scrolls', name: 'Scrolls', icon: Scroll, count: inventoryItems.filter(i => i.category === 'Scrolls').length },
-  ].filter(cat => cat.count > 0 || cat.id === 'all')
+  // Get filter options including soulbound
+  const getFilterOptions = () => {
+    const categories = getUniqueCategories()
+    const options = [
+      { value: 'all', label: 'All Categories' },
+      ...categories.map(cat => ({ value: cat, label: cat })),
+      { value: 'soulbound', label: 'Soulbound Items' },
+      { value: 'tradeable', label: 'Tradeable Items' }
+    ]
+    return options
+  }
 
   // Filter and sort items
   const filteredItems = inventoryItems
     .filter(item => {
-      const matchesCategory = selectedCategory === 'all' || item.category === selectedCategory
+      let matchesCategory = true
+      
+      if (selectedCategory === 'soulbound') {
+        matchesCategory = item.soulbound === true
+      } else if (selectedCategory === 'tradeable') {
+        matchesCategory = item.soulbound === false
+      } else if (selectedCategory !== 'all') {
+        matchesCategory = item.category === selectedCategory
+      }
+      
+      if (hideSoulbound && selectedCategory !== 'soulbound') {
+        matchesCategory = matchesCategory && item.soulbound === false
+      }
+      
       const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase())
       return matchesCategory && matchesSearch
     })
@@ -194,46 +299,67 @@ const InventoryModal: React.FC<InventoryModalProps> = ({
         case 'rarity':
           comparison = a.rarity - b.rarity
           break
+        case 'value': {
+          const aVal = (floorPriceMap[a.id] || 0) * a.quantity
+          const bVal = (floorPriceMap[b.id] || 0) * b.quantity
+          comparison = aVal - bVal
+          break
+        }
       }
       return sortOrder === 'asc' ? comparison : -comparison
     })
-
-  const getRarityColor = (rarity: number) => {
-    switch (rarity) {
-      case 5: return 'text-red-400 border-red-400 bg-red-400/10' // Mythic
-      case 4: return 'text-yellow-400 border-yellow-400 bg-yellow-400/10' // Legendary
-      case 3: return 'text-purple-400 border-purple-400 bg-purple-400/10' // Epic
-      case 2: return 'text-blue-400 border-blue-400 bg-blue-400/10' // Rare
-      case 1: return 'text-green-400 border-green-400 bg-green-400/10' // Uncommon
-      case 0: 
-      default: return 'text-gray-400 border-gray-400 bg-gray-400/10' // Common
-    }
-  }
-
-  const getRarityName = (rarity: number) => {
-    switch (rarity) {
-      case 5: return 'MYTHIC'
-      case 4: return 'LEGENDARY'
-      case 3: return 'EPIC'
-      case 2: return 'RARE'
-      case 1: return 'UNCOMMON'
-      case 0:
-      default: return 'COMMON'
-    }
-  }
 
   const getTotalValue = () => {
     return inventoryItems.reduce((total, item) => total + item.quantity, 0)
   }
 
-  const getRarestItem = () => {
-    return inventoryItems.reduce((rarest, item) => 
-      item.rarity > rarest.rarity ? item : rarest, 
-      inventoryItems[0] || { name: 'None', rarity: 0 }
-    )
+  const getEstimatedValueEth = () => {
+    return inventoryItems.reduce((sum, item) => {
+      const floor = floorPriceMap[item.id] || 0
+      if (floor > 0) {
+        return sum + floor * item.quantity
+      }
+      return sum
+    }, 0)
   }
 
-  if (!isOpen) return null
+  const formatPrice = (priceEth: number) => {
+    if (!priceEth || priceEth <= 0) return 'N/A'
+    if (showUsdPrices && ethUsd > 0) {
+      const usd = priceEth * ethUsd
+      if (usd < 0.01) return `$${usd.toFixed(4)}`
+      if (usd < 1) return `$${usd.toFixed(3)}`
+      if (usd < 100) return `$${usd.toFixed(2)}`
+      return `$${Math.round(usd).toLocaleString()}`
+    }
+    if (priceEth < 0.0001) {
+      const exponent = Math.floor(Math.log10(priceEth))
+      const mantissa = priceEth / Math.pow(10, exponent)
+      return `${mantissa.toFixed(2)} × 10^${exponent} ETH`
+    }
+    if (priceEth < 0.001) return `${(priceEth * 1000).toFixed(2)} mETH`
+    return `${priceEth.toFixed(4)} ETH`
+  }
+
+  // Calculate grid columns based on window width (matching Tailwind responsive classes)
+  const getGridColumns = () => {
+    if (windowWidth >= 1280) return 8      // xl:grid-cols-8
+    if (windowWidth >= 1024) return 7      // lg:grid-cols-7
+    if (windowWidth >= 768) return 6       // md:grid-cols-6
+    if (windowWidth >= 640) return 5       // sm:grid-cols-5
+    return 4                               // grid-cols-4
+  }
+
+  // Calculate tooltip position based on item index in grid
+  const getTooltipPosition = (index: number) => {
+    const columns = getGridColumns()
+    const row = Math.floor(index / columns) + 1  // Row number (1-based)
+    
+    // Use 'bottom' position for items in top 2 rows to avoid cutoff
+    return row <= 2 ? 'bottom' : 'top'
+  }
+
+  if (!mounted || !isOpen) return null
 
   return (
     <AnimatePresence>
@@ -241,258 +367,218 @@ const InventoryModal: React.FC<InventoryModalProps> = ({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
         onClick={onClose}
       >
         <motion.div
-          initial={{ scale: 0.8, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          exit={{ scale: 0.8, opacity: 0 }}
-          className="bg-black/90 border-2 border-cyan-400/50 rounded-lg max-w-7xl w-full max-h-[90vh] overflow-hidden"
+          initial={{ scale: 0.8, opacity: 0, y: 50 }}
+          animate={{ scale: 1, opacity: 1, y: 0 }}
+          exit={{ scale: 0.8, opacity: 0, y: 50 }}
+          transition={{ type: 'spring', damping: 20, stiffness: 300 }}
+          className={`bg-gradient-to-br from-gray-900/95 to-black/95 border-2 border-cyan-400/50 rounded-xl ${
+            isFullscreen ? 'w-[96vw] max-w-[96vw] h-[96vh] max-h-[96vh]' : 'max-w-5xl w-full max-h-[95vh]'
+          } mx-4 backdrop-blur-md overflow-hidden shadow-2xl shadow-cyan-400/10`}
           style={{
-            clipPath: 'polygon(20px 0%, 100% 0%, calc(100% - 20px) 100%, 0% 100%)'
+            backgroundImage: `radial-gradient(circle at 50% 50%, rgba(6, 182, 212, 0.03) 0%, transparent 50%)`
           }}
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Header */}
-          <div className="border-b border-cyan-400/30 p-6 bg-gradient-to-r from-cyan-400/10 to-transparent">
+          {/* Header - Enhanced Style */}
+          <div className="border-b border-cyan-400/20 bg-gradient-to-r from-gray-800/50 to-gray-900/50 p-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
-                <div className="p-3 bg-cyan-400/20 border border-cyan-400/50 rounded-full">
-                  <Package className="w-8 h-8 text-cyan-400" />
-                </div>
+                <motion.div
+                  animate={{ scale: [1, 1.1, 1] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                  className="inline-flex items-center justify-center w-12 h-12 bg-cyan-400/20 rounded-full"
+                >
+                  <Package className="w-6 h-6 text-cyan-400" />
+                </motion.div>
                 <div>
-                  <h2 className="text-3xl font-bold text-cyan-400 font-mono tracking-wider neon-pulse">
-                    GIGAVERSE INVENTORY
-                  </h2>
-                  <p className="text-cyan-300/70 font-mono">
-                    {inventoryItems.length} unique items • {getTotalValue().toLocaleString()} total quantity
-                  </p>
+                  <h2 className="text-3xl font-bold font-mono text-transparent bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text mb-1 tracking-wide">INVENTORY</h2>
+                  <div className="mt-2 grid grid-cols-3 gap-2">
+                    <div className="bg-black/40 border border-cyan-400/30 rounded px-3 py-2">
+                      <div className="text-xs text-gray-400 font-mono">Items</div>
+                      <div className="text-cyan-400 font-mono font-bold">{inventoryItems.length}</div>
+                    </div>
+                    <div className="bg-black/40 border border-cyan-400/30 rounded px-3 py-2">
+                      <div className="text-xs text-gray-400 font-mono">Total Qty</div>
+                      <div className="text-cyan-400 font-mono font-bold">{getTotalValue().toLocaleString()}</div>
+                    </div>
+                    <div className="bg-black/40 border border-yellow-400/30 rounded px-3 py-2">
+                      <div className="text-xs text-gray-400 font-mono">Est. Value</div>
+                      <div className="text-yellow-400 font-mono font-bold">{formatPrice(getEstimatedValueEth())}</div>
+                    </div>
+                  </div>
                 </div>
               </div>
-              <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2">
+                {/* Currency latch toggle */}
+                <div className="inline-flex items-center select-none">
+                  <span className="text-[12px] font-mono text-gray-400 mr-3 tracking-wider">CURRENCY</span>
+                  <span className="text-[11px] font-mono text-gray-500 mr-2">ETH</span>
+                  <LatchToggle isOn={showUsdPrices} onToggle={() => setShowUsdPrices(!showUsdPrices)} />
+                  <span className="text-[11px] font-mono text-gray-500 ml-2">USD</span>
+                </div>
+                {/* No ETH price in inventory header per request */}
+                {/* Items latch toggle */}
+                <div className="inline-flex items-center select-none">
+                  <span className="text-[12px] font-mono text-gray-400 mr-3 tracking-wider">ITEMS</span>
+                  <span className="text-[11px] font-mono text-gray-500 mr-2">ALL</span>
+                  <LatchToggle isOn={hideSoulbound} onToggle={() => setHideSoulbound(!hideSoulbound)} />
+                  <span className="text-[11px] font-mono text-gray-500 ml-2">TRADEABLE</span>
+                </div>
+                {/* Fullscreen toggle */}
+                <button
+                  onClick={() => setIsFullscreen(!isFullscreen)}
+                  className="p-3 text-gray-400 hover:text-cyan-400 hover:bg-cyan-400/10 rounded-lg transition-all duration-200 border border-transparent hover:border-cyan-400/30"
+                  title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
+                >
+                  {isFullscreen ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
+                </button>
                 <button
                   onClick={onRefreshBalances}
                   disabled={balancesLoading}
-                  className="p-2 bg-green-400/20 border border-green-400/50 rounded text-green-400 hover:bg-green-400/30 transition-colors disabled:opacity-50"
-                  title="Refresh Inventory"
+                  className="p-3 text-gray-400 hover:text-cyan-400 hover:bg-cyan-400/10 rounded-lg transition-all duration-200 border border-transparent hover:border-cyan-400/30"
+                  title="Refresh Data"
                 >
-                  <Package className={`w-5 h-5 ${balancesLoading ? 'animate-pulse' : ''}`} />
+                  <RefreshCw className={`w-5 h-5 ${balancesLoading ? 'animate-spin' : ''}`} />
                 </button>
                 <button
                   onClick={onClose}
-                  className="p-2 text-gray-400 hover:text-red-400 transition-colors"
+                  className="p-3 text-gray-400 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all duration-200 border border-transparent hover:border-red-400/30"
                 >
-                  <X className="w-6 h-6" />
+                  <X className="w-5 h-5" />
                 </button>
               </div>
             </div>
-          </div>
 
-          {/* Controls */}
-          <div className="p-6 border-b border-cyan-400/20 bg-black/40">
-            <div className="flex flex-wrap items-center gap-4 mb-4">
-              {/* Search */}
-              <div className="relative flex-1 min-w-64">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+            {/* Search and Filter - Match CraftingStation Style */}
+            <div className="flex items-center space-x-4 mt-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <input
                   type="text"
                   placeholder="Search items..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 bg-black/60 border border-gray-600 rounded font-mono text-sm text-white placeholder-gray-400 focus:border-cyan-400 focus:outline-none"
+                  className="w-full pl-10 pr-4 py-2 bg-gray-900/50 border border-cyan-400/20 rounded-lg text-white placeholder-gray-400 focus:border-cyan-400 focus:outline-none transition-colors font-mono text-sm"
                 />
               </div>
-
-              {/* Sort */}
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="px-4 py-2 bg-gray-900/50 border border-cyan-400/20 rounded-lg text-white focus:border-cyan-400 focus:outline-none transition-colors font-mono text-sm"
+              >
+                {getFilterOptions().map(option => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
               <select
                 value={`${sortBy}-${sortOrder}`}
                 onChange={(e) => {
                   const [field, order] = e.target.value.split('-')
-                  setSortBy(field as 'name' | 'quantity' | 'rarity')
+                  setSortBy(field as 'name' | 'quantity' | 'rarity' | 'value')
                   setSortOrder(order as 'asc' | 'desc')
                 }}
-                className="px-4 py-2 bg-black/60 border border-gray-600 rounded font-mono text-sm text-white focus:border-cyan-400 focus:outline-none"
+                className="px-4 py-2 bg-gray-900/50 border border-cyan-400/20 rounded-lg text-white focus:border-cyan-400 focus:outline-none transition-colors font-mono text-sm"
               >
-                <option value="quantity-desc">Quantity (High to Low)</option>
-                <option value="quantity-asc">Quantity (Low to High)</option>
-                <option value="name-asc">Name (A to Z)</option>
-                <option value="name-desc">Name (Z to A)</option>
-                <option value="rarity-desc">Rarity (High to Low)</option>
-                <option value="rarity-asc">Rarity (Low to High)</option>
+                <option value="value-desc">Total Value ↓</option>
+                <option value="value-asc">Total Value ↑</option>
+                <option value="rarity-desc">Rarity ↓</option>
+                <option value="rarity-asc">Rarity ↑</option>
+                <option value="quantity-desc">Quantity ↓</option>
+                <option value="quantity-asc">Quantity ↑</option>
+                <option value="name-asc">Name A-Z</option>
+                <option value="name-desc">Name Z-A</option>
               </select>
-
-              {/* Stats */}
-              <div className="flex items-center space-x-4 text-sm font-mono">
-                <span className="text-gray-400">
-                  Showing: <span className="text-cyan-400">{filteredItems.length}</span>
-                </span>
-                <span className="text-gray-400">
-                  Rarest: <span className="text-yellow-400">{getRarestItem().name}</span>
-                </span>
-              </div>
-            </div>
-
-            {/* Rarity Legend */}
-            <div className="bg-black/60 border border-gray-600/50 rounded p-3">
-              <h4 className="text-gray-300 font-mono text-xs mb-2 flex items-center">
-                <Star className="w-3 h-3 mr-1" />
-                RARITY LEGEND
-              </h4>
-              <div className="flex flex-wrap gap-3 text-xs font-mono">
-                <div className="flex items-center space-x-1">
-                  <div className="w-3 h-3 border border-gray-400 bg-gray-400/10 rounded"></div>
-                  <span className="text-gray-400">COMMON</span>
-                </div>
-                <div className="flex items-center space-x-1">
-                  <div className="w-3 h-3 border border-green-400 bg-green-400/10 rounded"></div>
-                  <span className="text-green-400">UNCOMMON</span>
-                </div>
-                <div className="flex items-center space-x-1">
-                  <div className="w-3 h-3 border border-blue-400 bg-blue-400/10 rounded"></div>
-                  <span className="text-blue-400">RARE</span>
-                </div>
-                <div className="flex items-center space-x-1">
-                  <div className="w-3 h-3 border border-purple-400 bg-purple-400/10 rounded"></div>
-                  <span className="text-purple-400">EPIC</span>
-                </div>
-                <div className="flex items-center space-x-1">
-                  <div className="w-3 h-3 border border-yellow-400 bg-yellow-400/10 rounded"></div>
-                  <span className="text-yellow-400">LEGENDARY</span>
-                </div>
-                <div className="flex items-center space-x-1">
-                  <div className="w-3 h-3 border border-red-400 bg-red-400/10 rounded"></div>
-                  <span className="text-red-400">MYTHIC</span>
-                </div>
-                <div className="flex items-center space-x-1 ml-4">
-                  <div className="w-3 h-3 border-2 border-green-400 rounded animate-pulse"></div>
-                  <span className="text-green-400">CRAFTING MATERIAL</span>
-                </div>
-              </div>
             </div>
           </div>
 
-          <div className="flex h-[calc(90vh-280px)]">
-            {/* Category Sidebar */}
-            <div className="w-64 border-r border-cyan-400/20 bg-black/20 p-4">
-              <h3 className="text-lg font-bold text-cyan-400 font-mono mb-4">CATEGORIES</h3>
-              <div className="space-y-2">
-                {categories.map((category) => {
-                  const Icon = category.icon
-                  const isSelected = selectedCategory === category.id
-                  
-                  return (
-                    <button
-                      key={category.id}
-                      onClick={() => setSelectedCategory(category.id)}
-                      className={`
-                        w-full p-3 rounded border-2 transition-all duration-300 font-mono text-left
-                        ${isSelected 
-                          ? 'border-cyan-400 bg-cyan-400/10 text-cyan-400' 
-                          : 'border-gray-600 hover:border-cyan-400/50 text-gray-300 hover:text-cyan-400'
-                        }
-                      `}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                          <Icon className="w-5 h-5" />
-                          <span className="text-sm">{category.name}</span>
-                        </div>
-                        <span className="text-xs bg-gray-700 px-2 py-1 rounded">
-                          {category.count}
-                        </span>
-                      </div>
-                    </button>
-                  )
-                })}
+          {/* Main Content - Grid View Only */}
+          <div className="p-6 overflow-y-auto max-h-[calc(95vh-220px)]">
+            {loading ? (
+              <div className="flex items-center justify-center h-64">
+                <div className="text-center">
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+                    className="w-16 h-16 border-3 border-cyan-400/20 border-t-cyan-400 rounded-full mx-auto mb-4 shadow-lg"
+                  />
+                  <p className="text-cyan-400 font-mono text-lg font-semibold tracking-wide">LOADING INVENTORY...</p>
+                  <p className="text-gray-500 font-mono text-sm mt-2">Fetching your items</p>
+                </div>
               </div>
-            </div>
-
-            {/* Items Grid */}
-            <div className="flex-1 p-6 overflow-y-auto">
-              {loading ? (
-                <div className="flex items-center justify-center h-64">
-                  <div className="text-center">
-                    <motion.div
-                      animate={{ rotate: 360 }}
-                      transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
-                      className="w-16 h-16 border-4 border-cyan-400/30 border-t-cyan-400 rounded-full mx-auto mb-4"
-                    />
-                    <p className="text-cyan-400 font-mono">LOADING INVENTORY...</p>
-                  </div>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
-                  {filteredItems.map((item) => (
-                    <motion.div
-                      key={item.id}
-                      whileHover={{ scale: 1.02 }}
-                      className={`
-                        p-4 border-2 bg-black/40 backdrop-blur-sm rounded transition-all duration-300 min-h-[140px] flex flex-col
-                        ${getRarityColor(item.rarity)}
-                        ${item.canCraft ? 'ring-2 ring-green-400/30' : ''}
-                      `}
-                      style={{
-                        clipPath: 'polygon(10px 0%, 100% 0%, calc(100% - 10px) 100%, 0% 100%)'
-                      }}
-                    >
-                      <div className="mb-3">
-                        {/* Item Header with Name and Quantity */}
-                        <div className="flex items-start justify-between mb-2">
-                          <h4 className="font-bold font-mono text-sm line-clamp-2 flex-1 pr-2">
-                            {item.name}
-                          </h4>
-                          <div className="text-right flex-shrink-0 min-w-0">
-                            <div className="text-lg font-bold font-mono text-cyan-400 break-all">
-                              {item.quantity.toLocaleString()}
+            ) : (
+              <>
+                {filteredItems.length > 0 ? (
+                  <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12 2xl:grid-cols-12 gap-4">
+                    {filteredItems.map((item, index) => (
+                      <ItemTooltip
+                        key={item.id}
+                        itemId={parseInt(item.id)}
+                        position={getTooltipPosition(index) as 'top' | 'bottom'}
+                        floorPriceEth={floorPriceMap[item.id]}
+                        showUsdPrice={showUsdPrices}
+                        ethUsd={ethUsd}
+                      >
+                        <div className="group">
+                          {/* Item Card Container */}
+                          <div className="bg-gray-900/40 border border-gray-700/50 rounded-lg p-3 hover:bg-gray-800/60 hover:border-cyan-400/40 transition-all duration-200 hover:shadow-lg hover:shadow-cyan-400/10">
+                            {/* Icon Container */}
+                            <div className="relative flex justify-center mb-2">
+                              <ItemIcon
+                                itemId={parseInt(item.id)}
+                                size="large"
+                                showRarity
+                                onClick={(itemMetadata) => {
+                                  if (itemMetadata) {
+                                    console.log('Item clicked:', itemMetadata)
+                                  }
+                                }}
+                                className="transition-transform duration-200 group-hover:scale-110"
+                              />
+                              {/* Crafting indicator */}
+                              {item.canCraft && (
+                                <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full border border-gray-800 shadow-sm" />
+                              )}
                             </div>
-                            <div className="text-xs text-gray-400 font-mono">QTY</div>
+                            
+                            {/* Footer: Quantity (left) and Total Value (right) */}
+                            <div className="mt-2 pt-1 border-t border-gray-700/40 flex items-center justify-between">
+                              <span className="text-[12px] font-mono text-gray-200 font-semibold">x{item.quantity > 999 ? `${Math.floor(item.quantity / 1000)}k` : item.quantity}</span>
+                              {(() => {
+                                const floor = floorPriceMap[item.id] || 0
+                                const total = floor * item.quantity
+                                if (!total) return null
+                                return <span className="text-[12px] font-mono text-yellow-300 font-semibold">{formatPrice(total)}</span>
+                              })()}
+                            </div>
                           </div>
                         </div>
-                        
-                        {/* Rarity and Category Tags */}
-                        <div className="flex items-center space-x-2 flex-wrap gap-1">
-                          <span className={`px-2 py-1 text-xs font-mono border rounded ${getRarityColor(item.rarity)}`}>
-                            {getRarityName(item.rarity)}
-                          </span>
-                          <span className="px-2 py-1 text-xs font-mono bg-gray-700 rounded">
-                            {item.category}
-                          </span>
-                        </div>
-                      </div>
-
-                      {item.description && (
-                        <p className="text-xs text-gray-400 font-mono mb-3 line-clamp-2">
-                          {item.description}
-                        </p>
-                      )}
-
-                      {/* Spacer to push crafting info to bottom */}
-                      <div className="flex-1"></div>
-
-                      {item.canCraft && item.usedInRecipes && item.usedInRecipes.length > 0 && (
-                        <div className="border-t border-green-400/30 pt-3 mt-auto">
-                          <div className="flex items-center space-x-2 mb-1">
-                            <Wrench className="w-3 h-3 text-green-400" />
-                            <span className="text-xs font-mono text-green-400">CRAFTING MATERIAL</span>
-                          </div>
-                          <div className="text-xs text-gray-400 font-mono">
-                            Used in {item.usedInRecipes.length} recipe{item.usedInRecipes.length > 1 ? 's' : ''}
-                          </div>
-                        </div>
-                      )}
-                    </motion.div>
-                  ))}
-                </div>
-              )}
-
-              {!loading && filteredItems.length === 0 && (
-                <div className="text-center py-16">
-                  <Package className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-                  <p className="text-gray-400 font-mono">No items found matching your criteria</p>
-                </div>
-              )}
-            </div>
+                      </ItemTooltip>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-20">
+                    <div className="bg-gray-800/30 rounded-full p-6 w-24 h-24 mx-auto mb-6 border border-gray-700/50">
+                      <Package className="w-12 h-12 text-gray-500 mx-auto" />
+                    </div>
+                    <p className="text-gray-400 font-mono text-lg font-semibold mb-2">No items found</p>
+                    {searchTerm && (
+                      <p className="text-gray-500 font-mono text-sm">
+                        Try adjusting your search or category filter
+                      </p>
+                    )}
+                    {!searchTerm && selectedCategory === 'all' && (
+                      <p className="text-gray-500 font-mono text-sm">
+                        Your inventory appears to be empty
+                      </p>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
           </div>
         </motion.div>
       </motion.div>

@@ -2,30 +2,31 @@ import { NextRequest, NextResponse } from 'next/server'
 
 const WALLET_ADDRESS = "0xb0d90D52C7389824D4B22c06bcdcCD734E3162b7"
 
-// JWT Token management - now gets token from request headers
-const getJWTToken = (request: NextRequest) => {
-  // First try to get from Authorization header
-  const authHeader = request.headers.get('authorization')
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    return authHeader.substring(7)
-  }
-  
-  // Fallback to hardcoded token for backward compatibility
-  const hardcodedToken = "eyJhbGciOiJIUzI1NiJ9.eyJhZGRyZXNzIjoiMHhiMGQ5MEQ1MkM3Mzg5ODI0RDRCMjJjMDZiY2RjQ0Q3MzRFMzE2MmI3IiwidXNlciI6eyJfaWQiOiI2N2I5MjE1YTEwOGFlZGRiNDA5YTdlNzMiLCJ3YWxsZXRBZGRyZXNzIjoiMHhiMGQ5MGQ1MmM3Mzg5ODI0ZDRiMjJjMDZiY2RjY2Q3MzRlMzE2MmI3IiwidXNlcm5hbWUiOiIweGIwZDkwRDUyQzczODk4MjRENEIyMmMwNmJjZGNjRDczNEUzMTYyYjciLCJjYXNlU2Vuc2l0aXZlQWRkcmVzcyI6IjB4YjBkOTBENTJDNzM4OTgyNEQ0QjIyYzA2YmNkY0NENzM0RTMxNjJiNyIsIl9fdiI6MH0sImdhbWVBY2NvdW50Ijp7Im5vb2IiOnsiX2lkIjoiNjdiOTIxNzRlM2MzOWRjYTZmZGFkZjA5IiwiZG9jSWQiOiIyMTQyNCIsInRhYmxlTmFtZSI6IkdpZ2FOb29iTkZUIiwiTEFTVF9UUkFOU0ZFUl9USU1FX0NJRCI6MTc0MDE4NTk2NCwiY3JlYXRlZEF0IjoiMjAyNS0wMi0yMlQwMDo1OTozMi45NDZaIiwidXBkYXRlZEF0IjoiMjAyNS0wMi0yMlQwMDo1OTozMy4xNjVaIiwiTEVWRUxfQ0lEIjoxLCJJU19OT09CX0NJRCI6dHJ1ZSwiSU5JVElBTElaRURfQ0lEIjp0cnVlLCJPV05FUl9DSUQiOiIweGIwZDkwZDUyYzczODk4MjRkNGIyMmMwNmJjZGNjZDczNGUzMTYyYjciLCJhbGxvd2VkVG9DcmVhdGVBY2NvdW50Ijp0cnVlLCJjYW5FbnRlckdhbWUiOnRydWUsIm5vb2JQYXNzQmFsYW5jZSI6MCwibGFzdE5vb2JJZCI6NzM4ODQsIm1heE5vb2JJZCI6MTAwMDB9LCJleHAiOjE3NTAxMTY0MzF9.M26R6pDnFSSIbMXHa6kOhT_Hrjn3U7nkm_sGv0rY0uY"
-  return hardcodedToken
+interface ROM {
+  romId: string
+  energy: number
+  maxEnergy: number
+  percentage: number
 }
 
-async function getSortedROMs(request: NextRequest) {
-  const jwtToken = getJWTToken(request)
-  const url = `https://gigaverse.io/api/roms/player/${WALLET_ADDRESS.toLowerCase()}`
-  
+interface ClaimResult {
+  success: boolean
+  totalClaimed: number
+  claimedRoms: Array<{ id: string; amount: number }>
+  errors: Array<{ id: string; error: string }>
+}
+
+async function getSortedRoms(jwtToken: string): Promise<ROM[]> {
   console.log(`Fetching ROMs for wallet: ${WALLET_ADDRESS}`)
   
-  const response = await fetch(url, {
+  const response = await fetch(`https://gigaverse.io/api/roms/player/${WALLET_ADDRESS.toLowerCase()}`, {
     headers: {
       'accept': '*/*',
       'content-type': 'application/json',
-      'authorization': `Bearer ${jwtToken}`
+      'authorization': `Bearer ${jwtToken}`,
+      'origin': 'https://gigaverse.io',
+      'referer': 'https://gigaverse.io/play',
+      'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36'
     }
   })
   
@@ -35,117 +36,167 @@ async function getSortedROMs(request: NextRequest) {
   }
   
   const data = await response.json()
-  const roms = []
+  const roms: ROM[] = []
   
   for (const entity of data.entities || []) {
     const stats = entity.factoryStats || {}
-    const rom = {
-      RomID: entity.docId,
-      Energy: stats.energyCollectable || 0,
-      Dust: stats.dustCollectable || 0,
-      Shards: stats.shardCollectable || 0
+    const energy = stats.energyCollectable || 0
+    const maxEnergy = stats.maxEnergy || 0
+    
+    if (maxEnergy > 0) {  // Only include ROMs with valid maxEnergy
+      roms.push({
+        romId: entity.docId,
+        energy: energy,
+        maxEnergy: maxEnergy,
+        percentage: energy / maxEnergy
+      })
     }
-    roms.push(rom)
   }
   
-  // Sort by energy (highest first)
-  return roms.sort((a, b) => (b.Energy || 0) - (a.Energy || 0))
+  // Sort ROMs by percentage full (highest first) - this prioritizes full ROMs
+  const sortedRoms = roms.sort((a, b) => b.percentage - a.percentage)
+  
+  console.log(`Found ${sortedRoms.length} ROMs. Top 5 by energy percentage:`)
+  sortedRoms.slice(0, 5).forEach(rom => {
+    console.log(`  ROM ${rom.romId}: ${rom.energy}/${rom.maxEnergy} (${(rom.percentage * 100).toFixed(1)}%)`)
+  })
+  
+  return sortedRoms
 }
 
-async function claimEnergyFromROMs(sortedROMs: any[], threshold: number = 200, request: NextRequest) {
-  const jwtToken = getJWTToken(request)
-  const url = "https://gigaverse.io/api/roms/factory/claim"
+async function claimEnergyFromRom(romId: string, jwtToken: string): Promise<{ success: boolean; error?: string }> {
+  const payload = { romId: romId, claimId: "energy" }
+  
+  try {
+    const response = await fetch("https://gigaverse.io/api/roms/factory/claim", {
+      method: 'POST',
+      headers: {
+        'accept': '*/*',
+        'content-type': 'application/json',
+        'authorization': `Bearer ${jwtToken}`,
+        'origin': 'https://gigaverse.io',
+        'referer': 'https://gigaverse.io/play',
+        'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36'
+      },
+      body: JSON.stringify(payload)
+    })
+    
+    if (response.ok) {
+      const result = await response.json()
+      return { success: result.success || true }
+    } else {
+      const errorText = await response.text()
+      return { success: false, error: `HTTP ${response.status}: ${errorText}` }
+    }
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+  }
+}
+
+async function claimEnergy(jwtToken: string, threshold: number = 200): Promise<ClaimResult> {
+  console.log('\n=== Claiming Energy ===')
+  
+  const sortedRoms = await getSortedRoms(jwtToken)
+  
+  if (sortedRoms.length === 0) {
+    return {
+      success: false,
+      totalClaimed: 0,
+      claimedRoms: [],
+      errors: [{ id: 'general', error: 'No ROM data available' }]
+    }
+  }
+  
   let totalClaimed = 0
-  const claimedROMs = []
+  const claimedRoms: Array<{ id: string; amount: number }> = []
+  const errors: Array<{ id: string; error: string }> = []
   
-  console.log("=== Claiming Energy ===")
-  
-  for (const rom of sortedROMs) {
-    const energy = rom.Energy || 0
-    if (energy < 10) {
-      console.log(`Skipping ROM ${rom.RomID} (energy: ${energy}) - below minimum threshold.`)
+  for (const rom of sortedRoms) {
+    const energy = rom.energy
+    
+    if (energy < 10) {  // Skip if energy is too low
+      console.log(`  Skipping ROM ${rom.romId} (energy: ${energy}) - below minimum threshold.`)
       continue
     }
     
-    if (totalClaimed >= threshold) {
-      console.log(`Reached energy threshold (${threshold}). Stopping claims.`)
-      break
+    // Check if claiming this ROM would exceed our target threshold
+    if (totalClaimed + energy > threshold) {
+      console.log(`  Skipping ROM ${rom.romId} (${energy} energy) - would exceed threshold (${totalClaimed} + ${energy} > ${threshold})`)
+      continue
     }
     
-    const payload = { romId: rom.RomID, claimId: "energy" }
+    console.log(`  Claiming energy from ROM ${rom.romId} (${energy} energy, ${(rom.percentage * 100).toFixed(1)}% full)...`)
     
-    console.log(`Claiming energy from ROM ${rom.RomID} (${energy} energy)...`)
+    const result = await claimEnergyFromRom(rom.romId, jwtToken)
     
-    try {
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'accept': '*/*',
-          'content-type': 'application/json',
-          'authorization': `Bearer ${jwtToken}`
-        },
-        body: JSON.stringify(payload)
-      })
+    if (result.success) {
+      console.log(`  ✅ Claimed ${energy} energy from ROM ${rom.romId}`)
+      totalClaimed += energy
+      claimedRoms.push({ id: rom.romId, amount: energy })
       
-      // Delay between requests
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      if (response.ok) {
-        const result = await response.json()
-        if (result.success) {
-          console.log(`✅ Claimed ${energy} energy from ROM ${rom.RomID}`)
-          totalClaimed += energy
-          claimedROMs.push({ id: rom.RomID, amount: energy })
-        } else {
-          console.error(`❌ Failed to claim energy from ROM ${rom.RomID}: ${response.status}`)
-        }
-      } else {
-        console.error(`❌ Failed to claim energy from ROM ${rom.RomID}: ${response.status}`)
+      // Check if we've reached our target exactly
+      if (totalClaimed >= threshold) {
+        console.log(`  Reached energy threshold (${threshold}). Stopping claims.`)
+        break
       }
-    } catch (error) {
-      console.error(`❌ Error claiming energy from ROM ${rom.RomID}:`, error)
+    } else {
+      console.log(`  ❌ Failed to claim energy from ROM ${rom.romId}: ${result.error}`)
+      errors.push({ id: rom.romId, error: result.error || 'Unknown error' })
     }
+    
+    // Delay between requests to avoid rate limiting
+    await new Promise(resolve => setTimeout(resolve, 1000))
   }
   
-  console.log(`Total energy claimed: ${totalClaimed}`)
+  console.log(`\nTotal energy claimed: ${totalClaimed}`)
   
-  return { total: totalClaimed, claimed_roms: claimedROMs }
+  return {
+    success: totalClaimed > 0 || errors.length === 0,
+    totalClaimed,
+    claimedRoms,
+    errors
+  }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const { threshold = 200 } = body
+    const { threshold = 200 } = await request.json()
     
-    console.log("📦 RESOURCE CLAIMING PROCESS 📦")
-    console.log("Fetching ROM data...")
-    
-    const sortedROMs = await getSortedROMs(request)
-    
-    if (!sortedROMs || sortedROMs.length === 0) {
-      return NextResponse.json({
-        success: false,
-        error: "No ROM data available"
-      })
+    // Get JWT token from Authorization header
+    const authorization = request.headers.get('Authorization')
+    if (!authorization || !authorization.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'No valid authorization token provided' }, { status: 401 })
     }
     
-    console.log(`✅ Found ${sortedROMs.length} ROMs`)
+    const jwtToken = authorization.substring(7) // Remove 'Bearer ' prefix
     
-    const energyResult = await claimEnergyFromROMs(sortedROMs, threshold, request)
+    console.log(`Starting energy claim process with threshold: ${threshold}`)
     
-    console.log("📦 CLAIMING PROCESS COMPLETE 📦")
+    const result = await claimEnergy(jwtToken, threshold)
     
-    return NextResponse.json({
-      success: true,
-      energy: energyResult,
-      message: `Successfully claimed ${energyResult.total} energy from ${energyResult.claimed_roms.length} ROMs`
-    })
+    if (result.success) {
+      return NextResponse.json({
+        success: true,
+        energy: {
+          total: result.totalClaimed,
+          claimed_roms: result.claimedRoms
+        },
+        errors: result.errors.length > 0 ? result.errors : undefined
+      })
+    } else {
+      return NextResponse.json({
+        success: false,
+        error: 'Energy claiming failed',
+        details: result.errors
+      }, { status: 500 })
+    }
     
   } catch (error) {
-    console.error('Energy claiming error:', error)
-    return NextResponse.json({
+    console.error('Error claiming energy:', error)
+    return NextResponse.json({ 
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
-    })
+      error: 'Failed to claim energy',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 })
   }
 } 

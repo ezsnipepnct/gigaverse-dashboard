@@ -26,7 +26,6 @@ import {
   Settings,
   Bell,
   BarChart3,
-
   Download,
   Share,
   Bookmark,
@@ -47,6 +46,9 @@ import {
   Maximize2,
   Minimize2
 } from 'lucide-react'
+import { itemMetadataService } from '@/app/services/itemMetadata'
+import ItemIcon from './ItemIcon'
+import ItemTooltip from './ItemTooltip'
 
 interface GigamarketProps {
   isOpen: boolean
@@ -58,7 +60,7 @@ interface MarketItem {
   ETH_MINT_PRICE_CID: number
   name?: string
   description?: string
-  rarity?: string
+  rarity?: number
   rarityName?: string
   category?: string
   type?: string
@@ -87,21 +89,9 @@ interface MarketItem {
   expirationTime?: string
 }
 
-interface StaticItem {
-  ID_CID: number
-  NAME_CID: string
-  DESCRIPTION_CID?: string
-  RARITY_CID: number
-  RARITY_NAME: string
-  TYPE_CID: string
-  IMG_URL_CID?: string
-  ICON_URL_CID?: string
-}
-
 const Gigamarket: React.FC<GigamarketProps> = ({ isOpen, onClose }) => {
   const [marketData, setMarketData] = useState<MarketItem[]>([])
   const [filteredData, setFilteredData] = useState<MarketItem[]>([])
-  const [staticItems, setStaticItems] = useState<StaticItem[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [sortBy, setSortBy] = useState<'price' | 'id' | 'rarity' | 'name' | 'volume' | 'change'>('price')
@@ -124,8 +114,56 @@ const Gigamarket: React.FC<GigamarketProps> = ({ isOpen, onClose }) => {
   const [showPriceHistory, setShowPriceHistory] = useState(false)
   const [comparisonItems, setComparisonItems] = useState<Set<string>>(new Set())
   const [showComparison, setShowComparison] = useState(false)
+  const [showUsdPrices, setShowUsdPrices] = useState(false)
+  const [ethPrice, setEthPrice] = useState<number>(0)
+  const [lastCurrencyMode, setLastCurrencyMode] = useState<'eth' | 'usd'>('eth')
 
-  // Fetch both marketplace and static data
+  // Fetch ETH price from CoinGecko API
+  useEffect(() => {
+    const fetchEthPrice = async () => {
+      try {
+        const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd')
+        const data = await response.json()
+        setEthPrice(data.ethereum.usd)
+      } catch (error) {
+        console.error('Failed to fetch ETH price:', error)
+        setEthPrice(3000) // Fallback price
+      }
+    }
+    fetchEthPrice()
+  }, [])
+
+  // Auto-convert price range when switching currencies
+  useEffect(() => {
+    if (ethPrice > 0) {
+      const currentMode = showUsdPrices ? 'usd' : 'eth'
+      
+      if (lastCurrencyMode !== currentMode) {
+        if (currentMode === 'usd' && lastCurrencyMode === 'eth') {
+          // Converting from ETH to USD
+          setPriceRange(prev => ({
+            min: Math.round(prev.min * ethPrice * 100) / 100,
+            max: Math.round(prev.max * ethPrice * 100) / 100
+          }))
+        } else if (currentMode === 'eth' && lastCurrencyMode === 'usd') {
+          // Converting from USD to ETH
+          setPriceRange(prev => ({
+            min: Math.round((prev.min / ethPrice) * 10000) / 10000,
+            max: Math.round((prev.max / ethPrice) * 10000) / 10000
+          }))
+        }
+        setLastCurrencyMode(currentMode)
+        console.log(`💰 Converted price range from ${lastCurrencyMode} to ${currentMode}:`, {
+          ethPrice,
+          newRange: currentMode === 'usd' 
+            ? `$${(priceRange.min * ethPrice).toFixed(2)} - $${(priceRange.max * ethPrice).toFixed(2)}`
+            : `${(priceRange.min / ethPrice).toFixed(4)} - ${(priceRange.max / ethPrice).toFixed(4)} ETH`
+        })
+      }
+    }
+  }, [showUsdPrices, ethPrice, lastCurrencyMode])
+
+  // Fetch marketplace data and enhance with item metadata
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -135,64 +173,58 @@ const Gigamarket: React.FC<GigamarketProps> = ({ isOpen, onClose }) => {
         const marketResponse = await fetch('https://gigaverse.io/api/marketplace/item/floor/all')
         const marketData = await marketResponse.json()
         
-        // Fetch static item data for names, descriptions, etc.
-        const staticResponse = await fetch('https://gigaverse.io/api/offchain/static')
-        const staticData = await staticResponse.json()
+        console.log('Marketplace API response:', marketData)
         
-        setStaticItems(staticData.items || [])
-        
-        // Create a lookup map for static items
-        const staticItemMap = new Map<number, StaticItem>()
-        if (staticData.items) {
-          staticData.items.forEach((item: StaticItem) => {
-            staticItemMap.set(item.ID_CID, item)
-          })
-        }
-        
-        // Process and merge the data
-        const processedData = marketData.entities.map((item: MarketItem, index: number) => {
-          const staticItem = staticItemMap.get(item.GAME_ITEM_ID_CID)
-          const basePrice = item.ETH_MINT_PRICE_CID / 1000000000000000000
-          
-          return {
-            ...item,
-            priceInEth: basePrice,
-            name: staticItem?.NAME_CID || `Item #${item.GAME_ITEM_ID_CID}`,
-            description: staticItem?.DESCRIPTION_CID || '',
-            rarity: getRarityFromNumber(staticItem?.RARITY_CID || 0),
-            rarityName: staticItem?.RARITY_NAME || 'Unknown',
-            type: staticItem?.TYPE_CID || 'Unknown',
-            category: getCategoryFromType(staticItem?.TYPE_CID || 'Unknown'),
-            imageUrl: staticItem?.IMG_URL_CID || '',
-            iconUrl: staticItem?.ICON_URL_CID || '',
-            // Mock additional data for demo purposes
-            volume: Math.floor(Math.random() * 1000) + 10,
-            priceChange: (Math.random() - 0.5) * 20,
-            priceHistory: Array.from({length: 7}, () => basePrice * (0.8 + Math.random() * 0.4)),
-            lastSale: basePrice * (0.9 + Math.random() * 0.2),
-            available: Math.random() > 0.2,
-            owner: `0x${Math.random().toString(16).substr(2, 8)}...`,
-            stats: {
-              attack: Math.floor(Math.random() * 100) + 1,
-              defense: Math.floor(Math.random() * 100) + 1,
-              speed: Math.floor(Math.random() * 100) + 1,
-              magic: Math.floor(Math.random() * 100) + 1,
-            },
-            attributes: ['Rare', 'Enchanted', 'Battle-tested'].slice(0, Math.floor(Math.random() * 3) + 1),
-            tradingVolume24h: Math.random() * 50,
-            floorPrice: basePrice * 0.8,
-            avgPrice: basePrice * 1.1,
-            totalSupply: Math.floor(Math.random() * 10000) + 100,
-            holders: Math.floor(Math.random() * 500) + 10,
-            listingTime: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString(),
-            expirationTime: new Date(Date.now() + Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString()
-          }
-        })
+        // Process and enhance the data with item metadata
+        const processedData = await Promise.all(
+          marketData.entities
+            .filter((item: any) => item.ETH_MINT_PRICE_CID > 0) // Only show items with prices
+            .map(async (item: any) => {
+              const basePrice = item.ETH_MINT_PRICE_CID / 1000000000000000000 // Convert from wei to ETH
+              
+              // Get item metadata
+              const metadata = await itemMetadataService.getItem(item.GAME_ITEM_ID_CID)
+              
+              return {
+                ...item,
+                priceInEth: basePrice,
+                name: metadata?.name || `Item #${item.GAME_ITEM_ID_CID}`,
+                description: metadata?.description || '',
+                rarity: metadata?.rarity || 0,
+                rarityName: getRarityName(metadata?.rarity || 0),
+                                 type: metadata?.type || 'Unknown',
+                 category: getCategoryFromType(metadata?.type || 'Unknown'),
+                imageUrl: metadata?.image || '',
+                iconUrl: metadata?.icon || '',
+                // Mock additional data for demo purposes
+                volume: Math.floor(Math.random() * 1000) + 10,
+                priceChange: (Math.random() - 0.5) * 20,
+                priceHistory: Array.from({length: 7}, () => basePrice * (0.8 + Math.random() * 0.4)),
+                lastSale: basePrice * (0.9 + Math.random() * 0.2),
+                available: Math.random() > 0.2,
+                owner: `0x${Math.random().toString(16).substr(2, 8)}...`,
+                stats: {
+                  attack: Math.floor(Math.random() * 100) + 1,
+                  defense: Math.floor(Math.random() * 100) + 1,
+                  speed: Math.floor(Math.random() * 100) + 1,
+                  magic: Math.floor(Math.random() * 100) + 1,
+                },
+                attributes: ['Rare', 'Enchanted', 'Battle-tested'].slice(0, Math.floor(Math.random() * 3) + 1),
+                tradingVolume24h: Math.random() * 50,
+                floorPrice: basePrice * 0.8,
+                avgPrice: basePrice * 1.1,
+                totalSupply: Math.floor(Math.random() * 10000) + 100,
+                holders: Math.floor(Math.random() * 500) + 10,
+                listingTime: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString(),
+                expirationTime: new Date(Date.now() + Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString()
+              }
+            })
+        )
         
         setMarketData(processedData)
         setFilteredData(processedData)
       } catch (error) {
-        console.error('Failed to fetch data:', error)
+        console.error('Failed to fetch marketplace data:', error)
       } finally {
         setLoading(false)
       }
@@ -203,41 +235,86 @@ const Gigamarket: React.FC<GigamarketProps> = ({ isOpen, onClose }) => {
     }
   }, [isOpen])
 
-  const getRarityFromNumber = (rarityNum: number): string => {
-    const rarities = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic']
-    return rarities[rarityNum] || 'common'
+  const getRarityName = (rarity: number): string => {
+    const rarityNames = ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary', 'Relic']
+    return rarityNames[rarity] || 'Unknown'
   }
 
   const getCategoryFromType = (type: string): string => {
     const typeMap: { [key: string]: string } = {
-      'Gear': 'gear',
-      'Skin': 'cosmetic',
-      'Consumable': 'consumable',
-      'Material': 'material',
-      'Collectable': 'collectible',
-      'Unknown': 'misc'
+      'Consumable': 'consumables',
+      'Material': 'materials',
+      'Collectable': 'collectables',
+      'Equipment': 'equipment',
+      'Weapon': 'weapons',
+      'Armor': 'armor'
     }
-    return typeMap[type] || 'misc'
+    return typeMap[type] || 'other'
   }
 
-  const getRarityColor = (rarity: string) => {
-    switch (rarity.toLowerCase()) {
-      case 'mythic': return 'text-red-400 border-red-400 bg-red-400/10'
-      case 'legendary': return 'text-yellow-400 border-yellow-400 bg-yellow-400/10'
-      case 'epic': return 'text-purple-400 border-purple-400 bg-purple-400/10'
-      case 'rare': return 'text-blue-400 border-blue-400 bg-blue-400/10'
-      case 'uncommon': return 'text-green-400 border-green-400 bg-green-400/10'
-      default: return 'text-gray-400 border-gray-400 bg-gray-400/10'
-    }
+  const getRarityColor = (rarity: number) => {
+    const colors = [
+      'from-gray-400 to-gray-600',      // Common
+      'from-green-400 to-green-600',    // Uncommon
+      'from-blue-400 to-blue-600',      // Rare
+      'from-purple-400 to-purple-600',  // Epic
+      'from-yellow-400 to-yellow-600',  // Legendary
+      'from-red-600 to-red-800'         // Relic (dark red)
+    ]
+    return colors[rarity] || colors[0]
+  }
+
+  const getRarityCardStyling = (rarity: number) => {
+    const rarityStyles = [
+      {
+        border: 'border-gray-300',
+        glow: 'shadow-gray-500/20',
+        background: 'bg-gradient-to-br from-gray-50 to-gray-100',
+        hover: 'hover:shadow-gray-500/30'
+      },
+      {
+        border: 'border-green-300',
+        glow: 'shadow-green-500/20',
+        background: 'bg-gradient-to-br from-green-50 to-green-100',
+        hover: 'hover:shadow-green-500/30'
+      },
+      {
+        border: 'border-blue-300',
+        glow: 'shadow-blue-500/20',
+        background: 'bg-gradient-to-br from-blue-50 to-blue-100',
+        hover: 'hover:shadow-blue-500/30'
+      },
+      {
+        border: 'border-purple-300',
+        glow: 'shadow-purple-500/20',
+        background: 'bg-gradient-to-br from-purple-50 to-purple-100',
+        hover: 'hover:shadow-purple-500/30'
+      },
+      {
+        border: 'border-yellow-300',
+        glow: 'shadow-yellow-500/20',
+        background: 'bg-gradient-to-br from-yellow-50 to-yellow-100',
+        hover: 'hover:shadow-yellow-500/30'
+      },
+      {
+        border: 'border-red-600',
+        glow: 'shadow-red-500/30',
+        background: 'bg-gradient-to-br from-red-50 to-red-100',
+        hover: 'hover:shadow-red-500/40'
+      }
+    ]
+    
+    return rarityStyles[rarity] || rarityStyles[0]
   }
 
   const getCategoryIcon = (category: string) => {
     switch (category) {
-      case 'gear': return Shield
-      case 'cosmetic': return Sparkles
-      case 'consumable': return Beaker
-      case 'material': return Package
-      case 'collectible': return Star
+      case 'consumables': return Beaker
+      case 'materials': return Package
+      case 'collectables': return Star
+      case 'equipment': return Shield
+      case 'weapons': return Sword
+      case 'armor': return Shield
       default: return Zap
     }
   }
@@ -247,9 +324,10 @@ const Gigamarket: React.FC<GigamarketProps> = ({ isOpen, onClose }) => {
     let filtered = marketData.filter(item => {
       const matchesSearch = item.name?.toLowerCase().includes(searchTerm.toLowerCase())
       const matchesCategory = selectedCategory === 'all' || item.category === selectedCategory
-      const matchesRarity = selectedRarity === 'all' || item.rarity === selectedRarity
-      const matchesPrice = (item.priceInEth || 0) >= priceRange.min && (item.priceInEth || 0) <= priceRange.max
-      const matchesFavorites = !showFavorites || favorites.has(item.GAME_ITEM_ID_CID.toString())
+      const matchesRarity = selectedRarity === 'all' || item.rarity === parseInt(selectedRarity)
+      const itemPrice = showUsdPrices && ethPrice > 0 ? (item.priceInEth || 0) * ethPrice : (item.priceInEth || 0)
+      const matchesPrice = itemPrice >= priceRange.min && itemPrice <= priceRange.max
+              const matchesFavorites = !showFavorites || favorites.has(item.GAME_ITEM_ID_CID.toString())
       const matchesAvailable = !showOnlyAvailable || item.available
       const matchesOwner = selectedOwner === 'all' || item.owner === selectedOwner
       
@@ -277,20 +355,37 @@ const Gigamarket: React.FC<GigamarketProps> = ({ isOpen, onClose }) => {
           comparison = (a.priceChange || 0) - (b.priceChange || 0)
           break
         case 'rarity':
-          const rarityOrder = { common: 1, uncommon: 2, rare: 3, epic: 4, legendary: 5, mythic: 6 }
-          comparison = (rarityOrder[a.rarity as keyof typeof rarityOrder] || 0) - 
-                      (rarityOrder[b.rarity as keyof typeof rarityOrder] || 0)
+          comparison = (a.rarity || 0) - (b.rarity || 0)
           break
       }
       return sortOrder === 'asc' ? comparison : -comparison
     })
 
     setFilteredData(filtered)
-  }, [marketData, searchTerm, sortBy, sortOrder, selectedCategory, selectedRarity, priceRange, showFavorites, favorites, showOnlyAvailable, selectedOwner])
+  }, [marketData, searchTerm, sortBy, sortOrder, selectedCategory, selectedRarity, priceRange, showFavorites, favorites, showOnlyAvailable, selectedOwner, showUsdPrices, ethPrice])
 
   const formatPrice = (price: number) => {
     if (price === 0) return 'FREE'
-    if (price < 0.001) return `${(price * 1000).toFixed(3)} mETH`
+    
+    if (showUsdPrices && ethPrice > 0) {
+      const usdPrice = price * ethPrice
+      if (usdPrice < 0.01) return `$${usdPrice.toFixed(4)}`
+      if (usdPrice < 1) return `$${usdPrice.toFixed(3)}`
+      if (usdPrice < 100) return `$${usdPrice.toFixed(2)}`
+      return `$${Math.round(usdPrice).toLocaleString()}`
+    }
+    
+    // ETH formatting with scientific notation for small values
+    if (price < 0.0001) {
+      const exponent = Math.floor(Math.log10(price))
+      const mantissa = price / Math.pow(10, exponent)
+      return `${mantissa.toFixed(2)} × 10^${exponent} ETH`
+    }
+    
+    if (price < 0.001) {
+      return `${(price * 1000).toFixed(2)} mETH`
+    }
+    
     return `${price.toFixed(4)} ETH`
   }
 
@@ -300,7 +395,7 @@ const Gigamarket: React.FC<GigamarketProps> = ({ isOpen, onClose }) => {
   }
 
   const getUniqueRarities = () => {
-    const rarities = new Set(marketData.map(item => item.rarity).filter(Boolean) as string[])
+    const rarities = new Set(marketData.map(item => item.rarity).filter(Boolean) as number[])
     return Array.from(rarities)
   }
 
@@ -378,259 +473,209 @@ const Gigamarket: React.FC<GigamarketProps> = ({ isOpen, onClose }) => {
           onClick={onClose}
         >
           <motion.div
-            initial={{ scale: 0.8, opacity: 0 }}
+            initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.8, opacity: 0 }}
-            className="bg-black/90 border-2 border-purple-400/50 rounded-lg max-w-7xl w-full max-h-[90vh] overflow-hidden"
-            style={{
-              clipPath: 'polygon(20px 0%, 100% 0%, calc(100% - 20px) 100%, 0% 100%)'
-            }}
+            exit={{ scale: 0.95, opacity: 0 }}
+            className="bg-black/90 border border-cyan-400/50 rounded-lg max-w-7xl w-full max-h-[95vh] overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Header */}
-            <div className="border-b border-purple-400/30 p-6 bg-gradient-to-r from-purple-400/10 to-transparent">
+            {/* Streamlined Header */}
+            <div className="border-b border-cyan-400/20 p-4 bg-cyan-400/5">
               <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <div className="p-3 bg-purple-400/20 border border-purple-400/50 rounded-full">
-                    <ShoppingCart className="w-8 h-8 text-purple-400" />
-                  </div>
+                <div className="flex items-center space-x-3">
+                  <ShoppingCart className="w-6 h-6 text-cyan-400" />
                   <div>
-                    <h2 className="text-3xl font-bold text-purple-400 font-mono tracking-wider neon-pulse">
+                    <h1 className="text-xl font-bold text-cyan-400 font-mono">
                       GIGAMARKET
-                    </h2>
-                    <p className="text-purple-300/70 font-mono">LIVE BLOCKCHAIN MARKETPLACE</p>
+                    </h1>
+                    <p className="text-cyan-400/70 font-mono text-sm">
+                      {filteredData.length} items • Digital Asset Trading
+                    </p>
                   </div>
                 </div>
                 <button
                   onClick={onClose}
-                  className="p-2 text-gray-400 hover:text-red-400 transition-colors"
+                  className="p-2 text-gray-400 hover:text-cyan-400 transition-colors"
                 >
-                  <X className="w-6 h-6" />
+                  <X className="w-5 h-5" />
                 </button>
               </div>
             </div>
 
-            {/* Controls */}
-            <div className="p-6 border-b border-purple-400/20 bg-black/40">
-              {/* Main Controls Row */}
-              <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-4">
+            {/* Streamlined Controls */}
+            <div className="p-4 border-b border-cyan-400/20 bg-black/20">
+              <div className="flex items-center gap-4 mb-3">
                 {/* Search */}
-                <div className="relative md:col-span-2">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <input
                     type="text"
                     placeholder="Search items..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 bg-black/60 border border-gray-600 rounded font-mono text-sm text-white placeholder-gray-400 focus:border-purple-400 focus:outline-none"
+                    className="w-full pl-10 pr-4 py-2 bg-black/60 border border-cyan-400/30 rounded font-mono text-sm text-white placeholder-gray-500 focus:border-cyan-400 focus:outline-none"
                   />
                 </div>
 
-                {/* Category Filter */}
+                {/* Sort */}
+                <select
+                  value={`${sortBy}-${sortOrder}`}
+                  onChange={(e) => {
+                    const [field, order] = e.target.value.split('-')
+                    setSortBy(field as any)
+                    setSortOrder(order as 'asc' | 'desc')
+                  }}
+                  className="px-3 py-2 bg-black/60 border border-cyan-400/30 rounded font-mono text-sm text-white focus:border-cyan-400 focus:outline-none"
+                >
+                  <option value="price-desc">Price ↓</option>
+                  <option value="price-asc">Price ↑</option>
+                  <option value="name-asc">Name A-Z</option>
+                  <option value="name-desc">Name Z-A</option>
+                  <option value="rarity-desc">Rarity ↓</option>
+                  <option value="rarity-asc">Rarity ↑</option>
+                </select>
+
+                {/* View Mode */}
+                <div className="flex border border-cyan-400/30 rounded overflow-hidden">
+                  <button
+                    onClick={() => setViewMode('grid')}
+                    className={`p-2 font-mono text-sm ${viewMode === 'grid' ? 'bg-cyan-400/20 text-cyan-400' : 'text-gray-400 hover:text-cyan-400'}`}
+                  >
+                    <Grid className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => setViewMode('list')}
+                    className={`p-2 font-mono text-sm ${viewMode === 'list' ? 'bg-cyan-400/20 text-cyan-400' : 'text-gray-400 hover:text-cyan-400'}`}
+                  >
+                    <List className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* Currency Toggle */}
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => setShowUsdPrices(!showUsdPrices)}
+                    className={`px-3 py-2 rounded border transition-colors font-mono text-sm ${
+                      showUsdPrices 
+                        ? 'bg-green-400/20 border-green-400/50 text-green-400' 
+                        : 'bg-black/60 border-cyan-400/30 text-cyan-400 hover:bg-cyan-400/10'
+                    }`}
+                  >
+                    {showUsdPrices ? 'USD' : 'ETH'}
+                  </button>
+                  {ethPrice > 0 && (
+                    <span className="text-xs text-gray-400 font-mono">
+                      ETH: ${ethPrice.toFixed(0)}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Filter Tags */}
+              <div className="flex items-center gap-2 text-xs">
+                <span className="text-gray-400 font-mono">Filters:</span>
                 <select
                   value={selectedCategory}
                   onChange={(e) => setSelectedCategory(e.target.value)}
-                  className="px-4 py-2 bg-black/60 border border-gray-600 rounded font-mono text-sm text-white focus:border-purple-400 focus:outline-none"
+                  className="px-2 py-1 bg-black/60 border border-cyan-400/30 rounded font-mono text-xs text-white focus:border-cyan-400 focus:outline-none"
                 >
                   <option value="all">All Categories</option>
-                  {getUniqueCategories().map(category => (
-                    <option key={category} value={category}>
-                      {category.charAt(0).toUpperCase() + category.slice(1)}
-                    </option>
+                  {getUniqueCategories().map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
                   ))}
                 </select>
-
-                {/* Rarity Filter */}
                 <select
                   value={selectedRarity}
                   onChange={(e) => setSelectedRarity(e.target.value)}
-                  className="px-4 py-2 bg-black/60 border border-gray-600 rounded font-mono text-sm text-white focus:border-purple-400 focus:outline-none"
+                  className="px-2 py-1 bg-black/60 border border-cyan-400/30 rounded font-mono text-xs text-white focus:border-cyan-400 focus:outline-none"
                 >
                   <option value="all">All Rarities</option>
                   {getUniqueRarities().map(rarity => (
-                    <option key={rarity} value={rarity}>
-                      {rarity.charAt(0).toUpperCase() + rarity.slice(1)}
-                    </option>
+                    <option key={rarity} value={rarity}>{rarity}</option>
                   ))}
                 </select>
-
-                {/* Sort By */}
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as any)}
-                  className="px-4 py-2 bg-black/60 border border-gray-600 rounded font-mono text-sm text-white focus:border-purple-400 focus:outline-none"
-                >
-                  <option value="price">Sort by Price</option>
-                  <option value="name">Sort by Name</option>
-                  <option value="volume">Sort by Volume</option>
-                  <option value="change">Sort by Change</option>
-                  <option value="id">Sort by ID</option>
-                  <option value="rarity">Sort by Rarity</option>
-                </select>
-
-                {/* Sort Order */}
-                <button
-                  onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                  className="flex items-center justify-center space-x-2 px-4 py-2 bg-purple-400/20 border border-purple-400/50 rounded font-mono text-sm text-purple-400 hover:bg-purple-400/30 transition-colors"
-                >
-                  <ArrowUpDown className="w-4 h-4" />
-                  <span>{sortOrder === 'asc' ? '↑' : '↓'}</span>
-                </button>
               </div>
-
-              {/* Secondary Controls Row */}
-              <div className="flex flex-wrap items-center justify-between gap-4">
-                <div className="flex items-center space-x-4">
-                  {/* View Mode Toggle */}
-                  <div className="flex items-center space-x-2 bg-black/60 border border-gray-600 rounded p-1">
-                    <button
-                      onClick={() => setViewMode('grid')}
-                      className={`p-2 rounded transition-colors ${viewMode === 'grid' ? 'bg-purple-400/30 text-purple-400' : 'text-gray-400 hover:text-white'}`}
-                    >
-                      <Grid className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => setViewMode('list')}
-                      className={`p-2 rounded transition-colors ${viewMode === 'list' ? 'bg-purple-400/30 text-purple-400' : 'text-gray-400 hover:text-white'}`}
-                    >
-                      <List className="w-4 h-4" />
-                    </button>
-                  </div>
-
-                  {/* Quick Filters */}
-                  <button
-                    onClick={() => setShowFavorites(!showFavorites)}
-                    className={`flex items-center space-x-2 px-3 py-2 rounded font-mono text-sm transition-colors ${showFavorites ? 'bg-red-400/20 border border-red-400/50 text-red-400' : 'bg-black/60 border border-gray-600 text-gray-400 hover:text-white'}`}
-                  >
-                    <Heart className="w-4 h-4" />
-                    <span>Favorites</span>
-                  </button>
-
-                  <button
-                    onClick={() => setShowOnlyAvailable(!showOnlyAvailable)}
-                    className={`flex items-center space-x-2 px-3 py-2 rounded font-mono text-sm transition-colors ${showOnlyAvailable ? 'bg-green-400/20 border border-green-400/50 text-green-400' : 'bg-black/60 border border-gray-600 text-gray-400 hover:text-white'}`}
-                  >
-                    <Check className="w-4 h-4" />
-                    <span>Available</span>
-                  </button>
-
-                  <button
-                    onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-                    className="flex items-center space-x-2 px-3 py-2 bg-black/60 border border-gray-600 rounded font-mono text-sm text-gray-400 hover:text-white transition-colors"
-                  >
-                    <Settings className="w-4 h-4" />
-                    <span>Advanced</span>
-                  </button>
-                </div>
-
-                <div className="flex items-center space-x-4">
-                  {/* Items per page */}
-                  <select
-                    value={itemsPerPage}
-                    onChange={(e) => {
-                      setItemsPerPage(Number(e.target.value))
-                      setCurrentPage(1)
-                    }}
-                    className="px-3 py-2 bg-black/60 border border-gray-600 rounded font-mono text-sm text-white focus:border-purple-400 focus:outline-none"
-                  >
-                    <option value={10}>10 per page</option>
-                    <option value={20}>20 per page</option>
-                    <option value={50}>50 per page</option>
-                    <option value={100}>100 per page</option>
-                  </select>
-
-                  {/* Comparison Counter */}
-                  {comparisonItems.size > 0 && (
-                    <button
-                      onClick={() => setShowComparison(true)}
-                      className="flex items-center space-x-2 px-3 py-2 bg-blue-400/20 border border-blue-400/50 rounded font-mono text-sm text-blue-400 hover:bg-blue-400/30 transition-colors"
-                    >
-                      <BarChart3 className="w-4 h-4" />
-                      <span>Compare ({comparisonItems.size})</span>
-                    </button>
-                  )}
-
-                  {/* Refresh */}
-                  <button
-                    onClick={() => window.location.reload()}
-                    className="p-2 bg-black/60 border border-gray-600 rounded text-gray-400 hover:text-white transition-colors"
-                  >
-                    <RefreshCw className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Advanced Filters */}
-              {showAdvancedFilters && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="mt-4 p-4 bg-black/40 border border-gray-600 rounded"
-                >
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {/* Price Range */}
-                    <div>
-                      <label className="block text-sm font-mono text-gray-400 mb-2">Price Range (ETH)</label>
-                      <div className="flex items-center space-x-2">
-                        <input
-                          type="number"
-                          placeholder="Min"
-                          value={priceRange.min}
-                          onChange={(e) => setPriceRange({...priceRange, min: Number(e.target.value)})}
-                          className="w-full px-3 py-2 bg-black/60 border border-gray-600 rounded font-mono text-sm text-white focus:border-purple-400 focus:outline-none"
-                        />
-                        <span className="text-gray-400">-</span>
-                        <input
-                          type="number"
-                          placeholder="Max"
-                          value={priceRange.max}
-                          onChange={(e) => setPriceRange({...priceRange, max: Number(e.target.value)})}
-                          className="w-full px-3 py-2 bg-black/60 border border-gray-600 rounded font-mono text-sm text-white focus:border-purple-400 focus:outline-none"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Owner Filter */}
-                    <div>
-                      <label className="block text-sm font-mono text-gray-400 mb-2">Owner</label>
-                      <select
-                        value={selectedOwner}
-                        onChange={(e) => setSelectedOwner(e.target.value)}
-                        className="w-full px-3 py-2 bg-black/60 border border-gray-600 rounded font-mono text-sm text-white focus:border-purple-400 focus:outline-none"
-                      >
-                        <option value="all">All Owners</option>
-                        {getUniqueOwners().map(owner => (
-                          <option key={owner} value={owner}>
-                            {owner}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {/* Reset Filters */}
-                    <div className="flex items-end">
-                      <button
-                        onClick={() => {
-                          setSearchTerm('')
-                          setSelectedCategory('all')
-                          setSelectedRarity('all')
-                          setPriceRange({ min: 0, max: 10 })
-                          setSelectedOwner('all')
-                          setShowFavorites(false)
-                          setShowOnlyAvailable(false)
-                          setSortBy('price')
-                          setSortOrder('desc')
-                        }}
-                        className="w-full px-4 py-2 bg-red-400/20 border border-red-400/50 rounded font-mono text-sm text-red-400 hover:bg-red-400/30 transition-colors"
-                      >
-                        Reset All Filters
-                      </button>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
             </div>
+
+            {/* Advanced Filters */}
+            {showAdvancedFilters && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="mt-4 p-4 bg-black/40 border border-gray-600 rounded"
+              >
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Price Range */}
+                  <div>
+                    <label className="block text-sm font-mono text-gray-400 mb-2">
+                      Price Range ({showUsdPrices ? 'USD' : 'ETH'})
+                      {showUsdPrices && ethPrice > 0 && (
+                        <span className="ml-2 text-xs text-cyan-400">
+                          (ETH: ${ethPrice.toFixed(0)})
+                        </span>
+                      )}
+                    </label>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="number"
+                        placeholder={showUsdPrices ? "Min USD" : "Min ETH"}
+                        value={priceRange.min}
+                        onChange={(e) => setPriceRange({...priceRange, min: Number(e.target.value)})}
+                        className="w-full px-3 py-2 bg-black/60 border border-gray-600 rounded font-mono text-sm text-white focus:border-purple-400 focus:outline-none"
+                        step={showUsdPrices ? "1" : "0.0001"}
+                      />
+                      <span className="text-gray-400">-</span>
+                      <input
+                        type="number"
+                        placeholder={showUsdPrices ? "Max USD" : "Max ETH"}
+                        value={priceRange.max}
+                        onChange={(e) => setPriceRange({...priceRange, max: Number(e.target.value)})}
+                        className="w-full px-3 py-2 bg-black/60 border border-gray-600 rounded font-mono text-sm text-white focus:border-purple-400 focus:outline-none"
+                        step={showUsdPrices ? "1" : "0.0001"}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Owner Filter */}
+                  <div>
+                    <label className="block text-sm font-mono text-gray-400 mb-2">Owner</label>
+                    <select
+                      value={selectedOwner}
+                      onChange={(e) => setSelectedOwner(e.target.value)}
+                      className="w-full px-3 py-2 bg-black/60 border border-gray-600 rounded font-mono text-sm text-white focus:border-purple-400 focus:outline-none"
+                    >
+                      <option value="all">All Owners</option>
+                      {getUniqueOwners().map(owner => (
+                        <option key={owner} value={owner}>
+                          {owner}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Reset Filters */}
+                  <div className="flex items-end">
+                    <button
+                      onClick={() => {
+                        setSearchTerm('')
+                        setSelectedCategory('all')
+                        setSelectedRarity('all')
+                        setPriceRange({ min: 0, max: 10 })
+                        setSelectedOwner('all')
+                        setShowFavorites(false)
+                        setShowOnlyAvailable(false)
+                        setSortBy('price')
+                        setSortOrder('desc')
+                      }}
+                      className="w-full px-4 py-2 bg-red-400/20 border border-red-400/50 rounded font-mono text-sm text-red-400 hover:bg-red-400/30 transition-colors"
+                    >
+                      Reset All Filters
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            )}
 
             {/* Market Items Grid */}
             <div className="p-6 max-h-[calc(90vh-300px)] overflow-y-auto">
@@ -651,7 +696,8 @@ const Gigamarket: React.FC<GigamarketProps> = ({ isOpen, onClose }) => {
                   : "space-y-4"
                 }>
                   {getPaginatedItems().map((item, index) => {
-                    const CategoryIcon = getCategoryIcon(item.category || 'misc')
+                    const CategoryIcon = getCategoryIcon(item.category || 'other')
+                    const rarityStyle = getRarityCardStyling(item.rarity || 0)
                     
                     return (
                       <motion.div
@@ -659,30 +705,40 @@ const Gigamarket: React.FC<GigamarketProps> = ({ isOpen, onClose }) => {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: index * 0.02 }}
-                        className={`bg-black/60 border border-gray-600 hover:border-purple-400/50 rounded transition-all duration-300 hover:shadow-lg hover:shadow-purple-400/20 group cursor-pointer ${
-                          viewMode === 'grid' ? 'p-4' : 'p-4 flex items-center space-x-4'
-                        } ${!item.available ? 'opacity-50' : ''} ${
+                        whileHover={{ scale: 1.03, y: -5 }}
+                        className={`relative overflow-hidden rounded-xl cursor-pointer group transition-all duration-300 ${
+                          viewMode === 'grid' ? 'p-5' : 'p-4 flex items-center space-x-4'
+                        } ${!item.available ? 'opacity-60' : ''} ${
                           comparisonItems.has(item.GAME_ITEM_ID_CID.toString()) ? 'ring-2 ring-blue-400' : ''
-                        }`}
-                        style={viewMode === 'grid' ? {
-                          clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)'
-                        } : {}}
+                        } ${rarityStyle.border} ${rarityStyle.glow}`}
                         onClick={() => {
                           setSelectedItem(item)
                           setShowItemModal(true)
                         }}
                       >
+                        {/* Subtle animated background overlay */}
+                        <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                        
+                        {/* Rarity corner accent */}
+                        <div className={`absolute top-0 right-0 w-0 h-0 border-l-[20px] border-l-transparent border-t-[20px] border-t-${rarityStyle.border.replace('border-', '')}/60`} />
+                        
                         {viewMode === 'grid' ? (
                           <>
-                            {/* Grid View */}
-                            {/* Item Header */}
-                            <div className="flex items-center justify-between mb-3">
+                            {/* Grid View - Enhanced Design */}
+                            {/* Item Header with better styling */}
+                            <div className="relative z-10 flex items-center justify-between mb-4">
                               <div className="flex items-center space-x-2">
-                                <CategoryIcon className="w-4 h-4 text-purple-400" />
-                                <span className="text-xs font-mono text-gray-400">#{item.GAME_ITEM_ID_CID}</span>
-                                <span className="text-xs font-mono text-gray-500">{item.type}</span>
+                                <div className={`p-1.5 rounded-lg bg-${rarityStyle.background} border border-${rarityStyle.border}`}>
+                                  <CategoryIcon className={`w-3.5 h-3.5 text-${rarityStyle.border.replace('border-', '')}`} />
+                                </div>
+                                <div className="flex flex-col">
+                                  <span className="text-xs font-mono text-gray-300">#{item.GAME_ITEM_ID_CID}</span>
+                                  <span className="text-xs font-mono text-gray-500">{item.type}</span>
+                                </div>
                                 {!item.available && (
-                                  <span className="text-xs font-mono text-red-400">SOLD</span>
+                                  <span className="px-2 py-0.5 text-xs font-mono text-red-400 bg-red-400/20 border border-red-400/40 rounded">
+                                    SOLD
+                                  </span>
                                 )}
                               </div>
                               <div className="flex items-center space-x-2">
@@ -691,156 +747,139 @@ const Gigamarket: React.FC<GigamarketProps> = ({ isOpen, onClose }) => {
                                     e.stopPropagation()
                                     toggleFavorite(item.GAME_ITEM_ID_CID.toString())
                                   }}
-                                  className={`p-1 rounded transition-colors ${
+                                  className={`p-1.5 rounded-lg transition-all duration-200 ${
                                     favorites.has(item.GAME_ITEM_ID_CID.toString()) 
-                                      ? 'text-red-400 hover:text-red-300' 
-                                      : 'text-gray-400 hover:text-red-400'
+                                      ? 'text-red-400 bg-red-400/20 border border-red-400/40 hover:scale-110' 
+                                      : 'text-gray-400 bg-gray-400/10 border border-gray-400/30 hover:text-red-400 hover:bg-red-400/10 hover:scale-110'
                                   }`}
                                 >
                                   <Heart className="w-3 h-3" />
                                 </button>
-                                <span className={`px-2 py-1 text-xs font-mono border rounded ${getRarityColor(item.rarity || 'common')}`}>
-                                  {(item.rarityName || item.rarity || 'COMMON').toUpperCase()}
-                                </span>
                               </div>
                             </div>
 
-                            {/* Item Image */}
-                            {item.iconUrl && (
-                              <div className="w-full h-16 mb-3 flex items-center justify-center bg-gray-800/50 rounded">
-                                <img 
-                                  src={item.iconUrl} 
-                                  alt={item.name}
-                                  className="max-h-12 max-w-12 object-contain"
-                                  onError={(e) => {
-                                    e.currentTarget.style.display = 'none'
-                                  }}
-                                />
-                              </div>
-                            )}
+                            {/* Rarity Badge - Prominent */}
+                                                         <div className={`inline-flex items-center px-3 py-1.5 mb-4 bg-${rarityStyle.background} border border-${rarityStyle.border}/50 rounded-lg text-${rarityStyle.border.replace('border-', '')} font-mono text-xs font-bold`}>
+                               <div className={`w-2 h-2 bg-${rarityStyle.border.replace('border-', '')} rounded-full mr-2 animate-pulse`} />
+                               {(item.rarityName || getRarityName(item.rarity || 0) || 'COMMON').toUpperCase()}
+                             </div>
 
-                            {/* Item Name */}
-                            <h4 className="font-bold font-mono text-white mb-2 group-hover:text-purple-400 transition-colors text-sm leading-tight">
+                            {/* Item Image - Enhanced Container */}
+                            <div className={`relative w-full h-16 mb-3 flex items-center justify-center bg-black/30 border border-${rarityStyle.border}/30 rounded-lg overflow-hidden group-hover:border-${rarityStyle.border}/50 transition-all duration-300`}>
+                              <ItemTooltip itemId={item.GAME_ITEM_ID_CID} position="right">
+                                <ItemIcon 
+                                  itemId={item.GAME_ITEM_ID_CID}
+                                  size="large"
+                                  showRarity={true}
+                                  className="group-hover:scale-110 transition-transform duration-300"
+                                />
+                              </ItemTooltip>
+                              {/* Subtle glow effect */}
+                              <div className={`absolute inset-0 bg-gradient-to-t from-${rarityStyle.border.replace('border-', '')}/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
+                            </div>
+
+                            {/* Item Name - Enhanced Typography */}
+                            <h4 className={`font-bold font-mono text-white mb-2 text-${rarityStyle.border.replace('border-', '')} group-hover:text-${rarityStyle.border.replace('border-', '')} transition-colors text-sm leading-tight`}>
                               {item.name}
                             </h4>
 
-                            {/* Stats Preview */}
-                            {item.stats && (
-                              <div className="grid grid-cols-2 gap-1 mb-3">
-                                <div className="flex items-center space-x-1">
-                                  <Sword className="w-3 h-3 text-red-400" />
-                                  <span className="text-xs font-mono text-gray-400">{item.stats.attack}</span>
-                                </div>
-                                <div className="flex items-center space-x-1">
-                                  <Shield className="w-3 h-3 text-blue-400" />
-                                  <span className="text-xs font-mono text-gray-400">{item.stats.defense}</span>
-                                </div>
-                                <div className="flex items-center space-x-1">
-                                  <Zap className="w-3 h-3 text-yellow-400" />
-                                  <span className="text-xs font-mono text-gray-400">{item.stats.speed}</span>
-                                </div>
-                                <div className="flex items-center space-x-1">
-                                  <Sparkles className="w-3 h-3 text-purple-400" />
-                                  <span className="text-xs font-mono text-gray-400">{item.stats.magic}</span>
-                                </div>
-                              </div>
-                            )}
 
-                            {/* Price and Change */}
-                            <div className="flex items-center justify-between mb-3">
-                              <div className="flex items-center space-x-2">
-                                <Coins className="w-4 h-4 text-yellow-400" />
-                                <span className="font-mono text-yellow-400 font-bold text-sm">
-                                  {formatPrice(item.priceInEth || 0)}
-                                </span>
+
+                            {/* Price Section - Enhanced Design */}
+                            <div className="mb-4">
+                              <div className="flex items-center justify-center mb-2">
+                                <div className={`flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-yellow-400/20 to-amber-400/20 border border-yellow-400/50 rounded-lg`}>
+                                  <Coins className="w-4 h-4 text-yellow-400" />
+                                  <span className="font-mono text-yellow-400 font-bold text-lg">
+                                    {formatPrice(item.priceInEth || 0)}
+                                  </span>
+                                </div>
                               </div>
                               
-                              <div className="flex items-center space-x-2">
+                              {/* Market Stats */}
+                              <div className="flex items-center justify-between text-xs">
                                 {item.priceChange !== undefined && (
-                                  <div className={`flex items-center space-x-1 ${
-                                    item.priceChange >= 0 ? 'text-green-400' : 'text-red-400'
+                                  <div className={`flex items-center space-x-1 px-2 py-1 rounded ${
+                                    item.priceChange >= 0 ? 'text-green-400 bg-green-400/20' : 'text-red-400 bg-red-400/20'
                                   }`}>
                                     {item.priceChange >= 0 ? (
                                       <TrendingUp className="w-3 h-3" />
                                     ) : (
                                       <TrendingDown className="w-3 h-3" />
                                     )}
-                                    <span className="text-xs font-mono">
+                                    <span className="font-mono font-semibold">
                                       {item.priceChange >= 0 ? '+' : ''}{item.priceChange.toFixed(1)}%
                                     </span>
                                   </div>
                                 )}
-                                <span className="text-xs font-mono text-gray-400">
+                                <span className="font-mono text-gray-400">
                                   Vol: {item.volume}
                                 </span>
                               </div>
                             </div>
 
-                            {/* Action Buttons */}
-                            <div className="flex space-x-1">
+                            {/* Action Buttons - Enhanced Design */}
+                            <div className="grid grid-cols-2 gap-2">
                               <button 
                                 onClick={(e) => {
                                   e.stopPropagation()
                                   setSelectedItem(item)
                                   setShowItemModal(true)
                                 }}
-                                className="flex-1 px-2 py-1 bg-purple-400/20 border border-purple-400/50 rounded font-mono text-xs text-purple-400 hover:bg-purple-400/30 transition-colors"
+                                className={`flex items-center justify-center px-3 py-2 bg-${rarityStyle.border.replace('border-', '')}/20 border border-${rarityStyle.border}/50 rounded-lg font-mono text-xs text-${rarityStyle.border.replace('border-', '')} hover:bg-${rarityStyle.border.replace('border-', '')}/30 hover:scale-105 transition-all duration-200`}
                               >
-                                <Eye className="w-3 h-3 inline mr-1" />
+                                <Eye className="w-3 h-3 mr-1" />
                                 VIEW
                               </button>
-                              <button 
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  toggleComparison(item.GAME_ITEM_ID_CID.toString())
-                                }}
-                                className={`px-2 py-1 rounded font-mono text-xs transition-colors ${
-                                  comparisonItems.has(item.GAME_ITEM_ID_CID.toString())
-                                    ? 'bg-blue-400/30 border border-blue-400/50 text-blue-400'
-                                    : 'bg-gray-400/20 border border-gray-400/50 text-gray-400 hover:bg-gray-400/30'
-                                }`}
-                              >
-                                <BarChart3 className="w-3 h-3" />
-                              </button>
-                              <button 
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  toggleWatchlist(item.GAME_ITEM_ID_CID.toString())
-                                }}
-                                className={`px-2 py-1 rounded font-mono text-xs transition-colors ${
-                                  watchlist.has(item.GAME_ITEM_ID_CID.toString())
-                                    ? 'bg-yellow-400/30 border border-yellow-400/50 text-yellow-400'
-                                    : 'bg-gray-400/20 border border-gray-400/50 text-gray-400 hover:bg-gray-400/30'
-                                }`}
-                              >
-                                <Bell className="w-3 h-3" />
-                              </button>
-                              {item.available && (
-                                <button className="flex-1 px-2 py-1 bg-green-400/20 border border-green-400/50 rounded font-mono text-xs text-green-400 hover:bg-green-400/30 transition-colors">
-                                  <ShoppingCart className="w-3 h-3 inline mr-1" />
-                                  BUY
+                              <div className="flex space-x-1">
+                                <button 
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    toggleComparison(item.GAME_ITEM_ID_CID.toString())
+                                  }}
+                                  className={`flex-1 p-2 rounded-lg font-mono text-xs transition-all duration-200 hover:scale-105 ${
+                                    comparisonItems.has(item.GAME_ITEM_ID_CID.toString())
+                                      ? 'bg-blue-400/30 border border-blue-400/50 text-blue-400'
+                                      : 'bg-gray-400/20 border border-gray-400/50 text-gray-400 hover:bg-gray-400/30'
+                                  }`}
+                                >
+                                  <BarChart3 className="w-3 h-3" />
                                 </button>
-                              )}
+                                <button 
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    toggleWatchlist(item.GAME_ITEM_ID_CID.toString())
+                                  }}
+                                  className={`flex-1 p-2 rounded-lg font-mono text-xs transition-all duration-200 hover:scale-105 ${
+                                    watchlist.has(item.GAME_ITEM_ID_CID.toString())
+                                      ? 'bg-yellow-400/30 border border-yellow-400/50 text-yellow-400'
+                                      : 'bg-gray-400/20 border border-gray-400/50 text-gray-400 hover:bg-gray-400/30'
+                                  }`}
+                                >
+                                  <Bell className="w-3 h-3" />
+                                </button>
+                              </div>
                             </div>
+                            
+                            {item.available && (
+                              <button className="w-full mt-2 px-3 py-2 bg-gradient-to-r from-green-400/20 to-emerald-400/20 border border-green-400/50 rounded-lg font-mono text-sm text-green-400 hover:bg-gradient-to-r hover:from-green-400/30 hover:to-emerald-400/30 hover:scale-105 transition-all duration-200">
+                                <ShoppingCart className="w-4 h-4 inline mr-2" />
+                                BUY NOW
+                              </button>
+                            )}
                           </>
                         ) : (
                           <>
                             {/* List View */}
                             <div className="flex-shrink-0">
-                              {item.iconUrl ? (
-                                <img 
-                                  src={item.iconUrl} 
-                                  alt={item.name}
-                                  className="w-16 h-16 object-contain bg-gray-800/50 rounded p-2"
-                                  onError={(e) => {
-                                    e.currentTarget.style.display = 'none'
-                                  }}
+                              <ItemTooltip itemId={item.GAME_ITEM_ID_CID} position="right">
+                                <ItemIcon 
+                                  itemId={item.GAME_ITEM_ID_CID}
+                                  size="medium"
+                                  showRarity={true}
+                                  className="w-16 h-16"
                                 />
-                              ) : (
-                                <div className="w-16 h-16 bg-gray-800/50 rounded flex items-center justify-center">
-                                  <CategoryIcon className="w-8 h-8 text-purple-400" />
-                                </div>
-                              )}
+                              </ItemTooltip>
                             </div>
 
                             <div className="flex-grow min-w-0">
@@ -851,8 +890,8 @@ const Gigamarket: React.FC<GigamarketProps> = ({ isOpen, onClose }) => {
                                   </h4>
                                   <div className="flex items-center space-x-4 mt-1">
                                     <span className="text-sm font-mono text-gray-400">#{item.GAME_ITEM_ID_CID}</span>
-                                    <span className={`px-2 py-1 text-xs font-mono border rounded ${getRarityColor(item.rarity || 'common')}`}>
-                                      {(item.rarityName || item.rarity || 'COMMON').toUpperCase()}
+                                    <span className={`px-2 py-1 text-xs font-mono border rounded ${rarityStyle.border}`}>
+                                      {(item.rarityName || getRarityName(item.rarity || 0) || 'COMMON').toUpperCase()}
                                     </span>
                                     <span className="text-sm font-mono text-gray-500">{item.type}</span>
                                     {!item.available && (
@@ -867,20 +906,6 @@ const Gigamarket: React.FC<GigamarketProps> = ({ isOpen, onClose }) => {
                                 </div>
 
                                 <div className="flex items-center space-x-6">
-                                  {/* Stats */}
-                                  {item.stats && (
-                                    <div className="flex items-center space-x-4">
-                                      <div className="flex items-center space-x-1">
-                                        <Sword className="w-4 h-4 text-red-400" />
-                                        <span className="text-sm font-mono text-gray-400">{item.stats.attack}</span>
-                                      </div>
-                                      <div className="flex items-center space-x-1">
-                                        <Shield className="w-4 h-4 text-blue-400" />
-                                        <span className="text-sm font-mono text-gray-400">{item.stats.defense}</span>
-                                      </div>
-                                    </div>
-                                  )}
-
                                   {/* Price */}
                                   <div className="text-right">
                                     <div className="flex items-center space-x-2">
@@ -1008,17 +1033,17 @@ const Gigamarket: React.FC<GigamarketProps> = ({ isOpen, onClose }) => {
                     Page {currentPage} of {getTotalPages()}
                   </div>
                   <div className="text-gray-400">
-                    {staticItems.length} total items in database
+                    {marketData.length} total items in database
                   </div>
                 </div>
 
                 {/* Center Stats */}
                 <div className="space-y-2">
                   <div className="text-purple-400">
-                    Total Volume: {filteredData.reduce((sum, item) => sum + (item.priceInEth || 0), 0).toFixed(2)} ETH
+                    Total Volume: {formatPrice(filteredData.reduce((sum, item) => sum + (item.priceInEth || 0), 0))}
                   </div>
                   <div className="text-blue-400">
-                    Avg Price: {filteredData.length > 0 ? (filteredData.reduce((sum, item) => sum + (item.priceInEth || 0), 0) / filteredData.length).toFixed(4) : '0'} ETH
+                    Avg Price: {filteredData.length > 0 ? formatPrice(filteredData.reduce((sum, item) => sum + (item.priceInEth || 0), 0) / filteredData.length) : 'N/A'}
                   </div>
                   <div className="text-green-400">
                     Available: {filteredData.filter(item => item.available).length} items
@@ -1069,28 +1094,20 @@ const Gigamarket: React.FC<GigamarketProps> = ({ isOpen, onClose }) => {
             <div className="border-b border-purple-400/30 p-6 bg-gradient-to-r from-purple-400/10 to-transparent">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
-                  <div className="w-16 h-16 bg-gray-800/50 rounded flex items-center justify-center">
-                    {selectedItem.iconUrl ? (
-                      <img 
-                        src={selectedItem.iconUrl} 
-                        alt={selectedItem.name}
-                        className="max-h-12 max-w-12 object-contain"
-                        onError={(e) => {
-                          e.currentTarget.style.display = 'none'
-                        }}
-                      />
-                    ) : (
-                      <Package className="w-8 h-8 text-purple-400" />
-                    )}
-                  </div>
+                  <ItemIcon 
+                    itemId={selectedItem.GAME_ITEM_ID_CID}
+                    size="large"
+                    showRarity={true}
+                    className="w-16 h-16"
+                  />
                   <div>
                     <h2 className="text-2xl font-bold text-white font-mono">
                       {selectedItem.name}
                     </h2>
                     <div className="flex items-center space-x-4 mt-1">
                       <span className="text-gray-400 font-mono">#{selectedItem.GAME_ITEM_ID_CID}</span>
-                      <span className={`px-2 py-1 text-xs font-mono border rounded ${getRarityColor(selectedItem.rarity || 'common')}`}>
-                        {(selectedItem.rarityName || selectedItem.rarity || 'COMMON').toUpperCase()}
+                      <span className={`px-2 py-1 text-xs font-mono border rounded ${getRarityCardStyling(selectedItem.rarity || 0).border}`}>
+                        {(selectedItem.rarityName || getRarityName(selectedItem.rarity || 0) || 'COMMON').toUpperCase()}
                       </span>
                       <span className="text-gray-500 font-mono">{selectedItem.type}</span>
                     </div>
@@ -1230,7 +1247,7 @@ const Gigamarket: React.FC<GigamarketProps> = ({ isOpen, onClose }) => {
                       <div className="bg-black/40 border border-gray-600 rounded p-3">
                         <div className="text-gray-400 font-mono text-xs mb-1">VOLUME (24H)</div>
                         <div className="text-white font-mono font-bold">
-                          {selectedItem.tradingVolume24h?.toFixed(2)} ETH
+                          {formatPrice(selectedItem.tradingVolume24h || 0)}
                         </div>
                       </div>
                       <div className="bg-black/40 border border-gray-600 rounded p-3">
@@ -1328,4 +1345,4 @@ const Gigamarket: React.FC<GigamarketProps> = ({ isOpen, onClose }) => {
   )
 }
 
-export default Gigamarket 
+export default Gigamarket

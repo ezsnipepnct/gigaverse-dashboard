@@ -1,0 +1,2386 @@
+Fishing Game start - 
+api call - https://gigaverse.io/api/fishing/action
+
+payload - {"action":"start_run","actionToken":"","data":{"cards":[],"nodeId":"2"}}
+
+response - 
+{
+    "success": true,
+    "message": "Game started successfully.",
+    "data": {
+        "doc": {
+            "docId": "1052932",
+            "docType": "FISHING_GAME",
+            "data": {
+                "deckCardData": [
+                    {
+                        "id": 1,
+                        "startingAmount": 1,
+                        "manaCost": 1,
+                        "hitZones": [
+                            1,
+                            2,
+                            3
+                        ],
+                        "critZones": [],
+                        "hitEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": 5
+                            }
+                        ],
+                        "missEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": -3
+                            }
+                        ],
+                        "critEffects": [],
+                        "unlockLevel": 0,
+                        "rarity": 0,
+                        "isDayCard": false,
+                        "earnable": false
+                    },
+                    {
+                        "id": 2,
+                        "startingAmount": 1,
+                        "manaCost": 1,
+                        "hitZones": [
+                            4,
+                            5,
+                            6
+                        ],
+                        "critZones": [],
+                        "hitEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": 5
+                            }
+                        ],
+                        "missEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": -3
+                            }
+                        ],
+                        "critEffects": [],
+                        "unlockLevel": 0,
+                        "rarity": 0,
+                        "isDayCard": false,
+                        "earnable": false
+                    },
+                    {
+                        "id": 3,
+                        "startingAmount": 1,
+                        "manaCost": 1,
+                        "hitZones": [
+                            7,
+                            8,
+                            9
+                        ],
+                        "critZones": [],
+                        "hitEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": 5
+                            }
+                        ],
+                        "missEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": -3
+                            }
+                        ],
+                        "critEffects": [],
+                        "unlockLevel": 0,
+                        "rarity": 0,
+                        "isDayCard": false,
+                        "earnable": false
+                    },
+                    {
+                        "id": 4,
+                        "startingAmount": 1,
+                        "manaCost": 1,
+                        "hitZones": [
+                            1,
+                            4,
+                            7
+                        ],
+                        "critZones": [],
+                        "hitEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": 5
+                            }
+                        ],
+                        "missEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": -3
+                            }
+                        ],
+                        "critEffects": [],
+                        "unlockLevel": 0,
+                        "rarity": 0,
+                        "isDayCard": false,
+                        "earnable": false
+                    },
+                    {
+                        "id": 5,
+                        "startingAmount": 1,
+                        "manaCost": 1,
+                        "hitZones": [
+                            2,
+                            5,
+                            8
+                        ],
+                        "critZones": [],
+                        "hitEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": 5
+                            }
+                        ],
+                        "missEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": -3
+                            }
+                        ],
+                        "critEffects": [],
+                        "unlockLevel": 0,
+                        "rarity": 0,
+                        "isDayCard": false,
+                        "earnable": false
+                    },
+                    {
+                        "id": 6,
+                        "startingAmount": 1,
+                        "manaCost": 1,
+                        "hitZones": [
+                            3,
+                            6,
+                            9
+                        ],
+                        "critZones": [],
+                        "hitEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": 5
+                            }
+                        ],
+                        "missEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": -3
+                            }
+                        ],
+                        "critEffects": [],
+                        "unlockLevel": 0,
+                        "rarity": 0,
+                        "isDayCard": false,
+                        "earnable": false
+                    },
+                    {
+                        "id": 7,
+                        "startingAmount": 1,
+                        "manaCost": 1,
+                        "hitZones": [
+                            1,
+                            3,
+                            7,
+                            9
+                        ],
+                        "critZones": [],
+                        "hitEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": 6
+                            }
+                        ],
+                        "missEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": -3
+                            }
+                        ],
+                        "critEffects": [],
+                        "unlockLevel": 0,
+                        "rarity": 0,
+                        "isDayCard": false,
+                        "earnable": true
+                    },
+                    {
+                        "id": 8,
+                        "startingAmount": 1,
+                        "manaCost": 1,
+                        "hitZones": [
+                            2,
+                            4,
+                            6,
+                            8
+                        ],
+                        "critZones": [],
+                        "hitEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": 5
+                            }
+                        ],
+                        "missEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": -5
+                            }
+                        ],
+                        "critEffects": [],
+                        "unlockLevel": 0,
+                        "rarity": 1,
+                        "isDayCard": false,
+                        "earnable": true
+                    },
+                    {
+                        "id": 9,
+                        "startingAmount": 1,
+                        "manaCost": 1,
+                        "hitZones": [
+                            1,
+                            2,
+                            3,
+                            4,
+                            6,
+                            7,
+                            8,
+                            9
+                        ],
+                        "critZones": [],
+                        "hitEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": 2
+                            }
+                        ],
+                        "missEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": -4
+                            }
+                        ],
+                        "critEffects": [],
+                        "unlockLevel": 0,
+                        "rarity": 0,
+                        "isDayCard": false,
+                        "earnable": true
+                    },
+                    {
+                        "id": 10,
+                        "startingAmount": 1,
+                        "manaCost": 1,
+                        "hitZones": [],
+                        "critZones": [
+                            5
+                        ],
+                        "hitEffects": [],
+                        "missEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": -5
+                            }
+                        ],
+                        "critEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": 10
+                            }
+                        ],
+                        "unlockLevel": 0,
+                        "rarity": 0,
+                        "isDayCard": false,
+                        "earnable": true
+                    },
+                    {
+                        "id": 35,
+                        "startingAmount": 0,
+                        "manaCost": 1,
+                        "hitZones": [
+                            1,
+                            4,
+                            7
+                        ],
+                        "critZones": [
+                            2
+                        ],
+                        "hitEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": 5
+                            }
+                        ],
+                        "missEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": -3
+                            }
+                        ],
+                        "critEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": 8
+                            }
+                        ],
+                        "unlockLevel": 0,
+                        "rarity": 0,
+                        "isDayCard": true,
+                        "earnable": true
+                    }
+                ],
+                "playerMaxHp": 8,
+                "playerHp": 8,
+                "fishHp": 11,
+                "fishMaxHp": 17,
+                "fishPosition": [
+                    3,
+                    2
+                ],
+                "previousFishPosition": [
+                    3,
+                    2
+                ],
+                "fullDeck": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10,
+                    35
+                ],
+                "nextCardIndex": 3,
+                "cardInDrawPile": 8,
+                "hand": [
+                    9,
+                    4,
+                    8
+                ],
+                "discard": [],
+                "jebaitorTriggered": false,
+                "day": 20272,
+                "week": 25
+            },
+            "COMPLETE_CID": false,
+            "LEVEL_CID": 5,
+            "ID_CID": "2",
+            "PLAYER_CID": "0xb0d90d52c7389824d4b22c06bcdccd734e3162b7",
+            "DAY_CID": 20272,
+            "_id": "686739aa7cfc6f0811d74b3f",
+            "createdAt": "2025-07-04T02:17:14.503Z",
+            "updatedAt": "2025-07-04T02:17:14.503Z",
+            "__v": 0
+        },
+        "events": []
+    },
+    "actionToken": 1751595434620
+}
+
+First CARD PLAYED - 
+api call - https://gigaverse.io/api/fishing/action
+
+payload - {"action":"play_cards","actionToken":"1751595434620","data":{"cards":[1],"nodeId":""}}
+
+response - 
+{
+    "success": true,
+    "message": "Cards played successfully.",
+    "data": {
+        "doc": {
+            "_id": "686739aa7cfc6f0811d74b3f",
+            "docId": "1052932",
+            "docType": "FISHING_GAME",
+            "data": {
+                "deckCardData": [
+                    {
+                        "id": 1,
+                        "startingAmount": 1,
+                        "manaCost": 1,
+                        "hitZones": [
+                            1,
+                            2,
+                            3
+                        ],
+                        "critZones": [],
+                        "hitEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": 5
+                            }
+                        ],
+                        "missEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": -3
+                            }
+                        ],
+                        "critEffects": [],
+                        "unlockLevel": 0,
+                        "rarity": 0,
+                        "isDayCard": false,
+                        "earnable": false
+                    },
+                    {
+                        "id": 2,
+                        "startingAmount": 1,
+                        "manaCost": 1,
+                        "hitZones": [
+                            4,
+                            5,
+                            6
+                        ],
+                        "critZones": [],
+                        "hitEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": 5
+                            }
+                        ],
+                        "missEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": -3
+                            }
+                        ],
+                        "critEffects": [],
+                        "unlockLevel": 0,
+                        "rarity": 0,
+                        "isDayCard": false,
+                        "earnable": false
+                    },
+                    {
+                        "id": 3,
+                        "startingAmount": 1,
+                        "manaCost": 1,
+                        "hitZones": [
+                            7,
+                            8,
+                            9
+                        ],
+                        "critZones": [],
+                        "hitEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": 5
+                            }
+                        ],
+                        "missEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": -3
+                            }
+                        ],
+                        "critEffects": [],
+                        "unlockLevel": 0,
+                        "rarity": 0,
+                        "isDayCard": false,
+                        "earnable": false
+                    },
+                    {
+                        "id": 4,
+                        "startingAmount": 1,
+                        "manaCost": 1,
+                        "hitZones": [
+                            1,
+                            4,
+                            7
+                        ],
+                        "critZones": [],
+                        "hitEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": 5
+                            }
+                        ],
+                        "missEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": -3
+                            }
+                        ],
+                        "critEffects": [],
+                        "unlockLevel": 0,
+                        "rarity": 0,
+                        "isDayCard": false,
+                        "earnable": false
+                    },
+                    {
+                        "id": 5,
+                        "startingAmount": 1,
+                        "manaCost": 1,
+                        "hitZones": [
+                            2,
+                            5,
+                            8
+                        ],
+                        "critZones": [],
+                        "hitEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": 5
+                            }
+                        ],
+                        "missEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": -3
+                            }
+                        ],
+                        "critEffects": [],
+                        "unlockLevel": 0,
+                        "rarity": 0,
+                        "isDayCard": false,
+                        "earnable": false
+                    },
+                    {
+                        "id": 6,
+                        "startingAmount": 1,
+                        "manaCost": 1,
+                        "hitZones": [
+                            3,
+                            6,
+                            9
+                        ],
+                        "critZones": [],
+                        "hitEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": 5
+                            }
+                        ],
+                        "missEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": -3
+                            }
+                        ],
+                        "critEffects": [],
+                        "unlockLevel": 0,
+                        "rarity": 0,
+                        "isDayCard": false,
+                        "earnable": false
+                    },
+                    {
+                        "id": 7,
+                        "startingAmount": 1,
+                        "manaCost": 1,
+                        "hitZones": [
+                            1,
+                            3,
+                            7,
+                            9
+                        ],
+                        "critZones": [],
+                        "hitEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": 6
+                            }
+                        ],
+                        "missEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": -3
+                            }
+                        ],
+                        "critEffects": [],
+                        "unlockLevel": 0,
+                        "rarity": 0,
+                        "isDayCard": false,
+                        "earnable": true
+                    },
+                    {
+                        "id": 8,
+                        "startingAmount": 1,
+                        "manaCost": 1,
+                        "hitZones": [
+                            2,
+                            4,
+                            6,
+                            8
+                        ],
+                        "critZones": [],
+                        "hitEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": 5
+                            }
+                        ],
+                        "missEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": -5
+                            }
+                        ],
+                        "critEffects": [],
+                        "unlockLevel": 0,
+                        "rarity": 1,
+                        "isDayCard": false,
+                        "earnable": true
+                    },
+                    {
+                        "id": 9,
+                        "startingAmount": 1,
+                        "manaCost": 1,
+                        "hitZones": [
+                            1,
+                            2,
+                            3,
+                            4,
+                            6,
+                            7,
+                            8,
+                            9
+                        ],
+                        "critZones": [],
+                        "hitEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": 2
+                            }
+                        ],
+                        "missEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": -4
+                            }
+                        ],
+                        "critEffects": [],
+                        "unlockLevel": 0,
+                        "rarity": 0,
+                        "isDayCard": false,
+                        "earnable": true
+                    },
+                    {
+                        "id": 10,
+                        "startingAmount": 1,
+                        "manaCost": 1,
+                        "hitZones": [],
+                        "critZones": [
+                            5
+                        ],
+                        "hitEffects": [],
+                        "missEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": -5
+                            }
+                        ],
+                        "critEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": 10
+                            }
+                        ],
+                        "unlockLevel": 0,
+                        "rarity": 0,
+                        "isDayCard": false,
+                        "earnable": true
+                    },
+                    {
+                        "id": 35,
+                        "startingAmount": 0,
+                        "manaCost": 1,
+                        "hitZones": [
+                            1,
+                            4,
+                            7
+                        ],
+                        "critZones": [
+                            2
+                        ],
+                        "hitEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": 5
+                            }
+                        ],
+                        "missEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": -3
+                            }
+                        ],
+                        "critEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": 8
+                            }
+                        ],
+                        "unlockLevel": 0,
+                        "rarity": 0,
+                        "isDayCard": true,
+                        "earnable": true
+                    }
+                ],
+                "playerMaxHp": 8,
+                "playerHp": 7,
+                "fishHp": 6,
+                "fishMaxHp": 17,
+                "fishPosition": [
+                    2,
+                    1
+                ],
+                "previousFishPosition": [
+                    3,
+                    2
+                ],
+                "fullDeck": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10,
+                    35
+                ],
+                "nextCardIndex": 3,
+                "cardInDrawPile": 8,
+                "hand": [
+                    9,
+                    8
+                ],
+                "discard": [
+                    4
+                ],
+                "jebaitorTriggered": false,
+                "day": 20272,
+                "week": 25
+            },
+            "COMPLETE_CID": false,
+            "LEVEL_CID": 5,
+            "ID_CID": "2",
+            "PLAYER_CID": "0xb0d90d52c7389824d4b22c06bcdccd734e3162b7",
+            "DAY_CID": 20272,
+            "createdAt": "2025-07-04T02:17:14.503Z",
+            "updatedAt": "2025-07-04T02:17:26.033Z",
+            "__v": 0
+        },
+        "events": [
+            {
+                "type": "FISH_MOVED",
+                "value": 4,
+                "playerId": -1,
+                "batch": 0,
+                "data": {}
+            },
+            {
+                "type": "CARD_PLAYED",
+                "value": 1,
+                "playerId": 0,
+                "batch": 1,
+                "data": {
+                    "result": 1
+                }
+            },
+            {
+                "type": "HIT",
+                "value": 5,
+                "playerId": 0,
+                "batch": 1,
+                "data": {
+                    "result": 11
+                }
+            },
+            {
+                "type": "FISH_HP_DIFF",
+                "value": 5,
+                "playerId": 0,
+                "batch": 1,
+                "data": {
+                    "result": 6
+                }
+            }
+        ]
+    },
+    "gameItemBalanceChanges": [],
+    "actionToken": 1751595446231
+}
+
+3. Play 2nd card - 
+api call - https://gigaverse.io/api/fishing/action
+payload - {"action":"play_cards","actionToken":"1751595446231","data":{"cards":[1],"nodeId":""}}
+response - 
+{
+    "success": true,
+    "message": "Cards played successfully.",
+    "data": {
+        "doc": {
+            "_id": "686739aa7cfc6f0811d74b3f",
+            "docId": "1052932",
+            "docType": "FISHING_GAME",
+            "data": {
+                "deckCardData": [
+                    {
+                        "id": 1,
+                        "startingAmount": 1,
+                        "manaCost": 1,
+                        "hitZones": [
+                            1,
+                            2,
+                            3
+                        ],
+                        "critZones": [],
+                        "hitEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": 5
+                            }
+                        ],
+                        "missEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": -3
+                            }
+                        ],
+                        "critEffects": [],
+                        "unlockLevel": 0,
+                        "rarity": 0,
+                        "isDayCard": false,
+                        "earnable": false
+                    },
+                    {
+                        "id": 2,
+                        "startingAmount": 1,
+                        "manaCost": 1,
+                        "hitZones": [
+                            4,
+                            5,
+                            6
+                        ],
+                        "critZones": [],
+                        "hitEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": 5
+                            }
+                        ],
+                        "missEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": -3
+                            }
+                        ],
+                        "critEffects": [],
+                        "unlockLevel": 0,
+                        "rarity": 0,
+                        "isDayCard": false,
+                        "earnable": false
+                    },
+                    {
+                        "id": 3,
+                        "startingAmount": 1,
+                        "manaCost": 1,
+                        "hitZones": [
+                            7,
+                            8,
+                            9
+                        ],
+                        "critZones": [],
+                        "hitEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": 5
+                            }
+                        ],
+                        "missEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": -3
+                            }
+                        ],
+                        "critEffects": [],
+                        "unlockLevel": 0,
+                        "rarity": 0,
+                        "isDayCard": false,
+                        "earnable": false
+                    },
+                    {
+                        "id": 4,
+                        "startingAmount": 1,
+                        "manaCost": 1,
+                        "hitZones": [
+                            1,
+                            4,
+                            7
+                        ],
+                        "critZones": [],
+                        "hitEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": 5
+                            }
+                        ],
+                        "missEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": -3
+                            }
+                        ],
+                        "critEffects": [],
+                        "unlockLevel": 0,
+                        "rarity": 0,
+                        "isDayCard": false,
+                        "earnable": false
+                    },
+                    {
+                        "id": 5,
+                        "startingAmount": 1,
+                        "manaCost": 1,
+                        "hitZones": [
+                            2,
+                            5,
+                            8
+                        ],
+                        "critZones": [],
+                        "hitEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": 5
+                            }
+                        ],
+                        "missEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": -3
+                            }
+                        ],
+                        "critEffects": [],
+                        "unlockLevel": 0,
+                        "rarity": 0,
+                        "isDayCard": false,
+                        "earnable": false
+                    },
+                    {
+                        "id": 6,
+                        "startingAmount": 1,
+                        "manaCost": 1,
+                        "hitZones": [
+                            3,
+                            6,
+                            9
+                        ],
+                        "critZones": [],
+                        "hitEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": 5
+                            }
+                        ],
+                        "missEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": -3
+                            }
+                        ],
+                        "critEffects": [],
+                        "unlockLevel": 0,
+                        "rarity": 0,
+                        "isDayCard": false,
+                        "earnable": false
+                    },
+                    {
+                        "id": 7,
+                        "startingAmount": 1,
+                        "manaCost": 1,
+                        "hitZones": [
+                            1,
+                            3,
+                            7,
+                            9
+                        ],
+                        "critZones": [],
+                        "hitEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": 6
+                            }
+                        ],
+                        "missEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": -3
+                            }
+                        ],
+                        "critEffects": [],
+                        "unlockLevel": 0,
+                        "rarity": 0,
+                        "isDayCard": false,
+                        "earnable": true
+                    },
+                    {
+                        "id": 8,
+                        "startingAmount": 1,
+                        "manaCost": 1,
+                        "hitZones": [
+                            2,
+                            4,
+                            6,
+                            8
+                        ],
+                        "critZones": [],
+                        "hitEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": 5
+                            }
+                        ],
+                        "missEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": -5
+                            }
+                        ],
+                        "critEffects": [],
+                        "unlockLevel": 0,
+                        "rarity": 1,
+                        "isDayCard": false,
+                        "earnable": true
+                    },
+                    {
+                        "id": 9,
+                        "startingAmount": 1,
+                        "manaCost": 1,
+                        "hitZones": [
+                            1,
+                            2,
+                            3,
+                            4,
+                            6,
+                            7,
+                            8,
+                            9
+                        ],
+                        "critZones": [],
+                        "hitEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": 2
+                            }
+                        ],
+                        "missEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": -4
+                            }
+                        ],
+                        "critEffects": [],
+                        "unlockLevel": 0,
+                        "rarity": 0,
+                        "isDayCard": false,
+                        "earnable": true
+                    },
+                    {
+                        "id": 10,
+                        "startingAmount": 1,
+                        "manaCost": 1,
+                        "hitZones": [],
+                        "critZones": [
+                            5
+                        ],
+                        "hitEffects": [],
+                        "missEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": -5
+                            }
+                        ],
+                        "critEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": 10
+                            }
+                        ],
+                        "unlockLevel": 0,
+                        "rarity": 0,
+                        "isDayCard": false,
+                        "earnable": true
+                    },
+                    {
+                        "id": 35,
+                        "startingAmount": 0,
+                        "manaCost": 1,
+                        "hitZones": [
+                            1,
+                            4,
+                            7
+                        ],
+                        "critZones": [
+                            2
+                        ],
+                        "hitEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": 5
+                            }
+                        ],
+                        "missEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": -3
+                            }
+                        ],
+                        "critEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": 8
+                            }
+                        ],
+                        "unlockLevel": 0,
+                        "rarity": 0,
+                        "isDayCard": true,
+                        "earnable": true
+                    }
+                ],
+                "playerMaxHp": 8,
+                "playerHp": 6,
+                "fishHp": 1,
+                "fishMaxHp": 17,
+                "fishPosition": [
+                    3,
+                    2
+                ],
+                "previousFishPosition": [
+                    3,
+                    2
+                ],
+                "fullDeck": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10,
+                    35
+                ],
+                "nextCardIndex": 3,
+                "cardInDrawPile": 8,
+                "hand": [
+                    9
+                ],
+                "discard": [
+                    4,
+                    8
+                ],
+                "jebaitorTriggered": false,
+                "day": 20272,
+                "week": 25
+            },
+            "COMPLETE_CID": false,
+            "LEVEL_CID": 5,
+            "ID_CID": "2",
+            "PLAYER_CID": "0xb0d90d52c7389824d4b22c06bcdccd734e3162b7",
+            "DAY_CID": 20272,
+            "createdAt": "2025-07-04T02:17:14.503Z",
+            "updatedAt": "2025-07-04T02:17:30.226Z",
+            "__v": 0
+        },
+        "events": [
+            {
+                "type": "FISH_MOVED",
+                "value": 8,
+                "playerId": -1,
+                "batch": 0,
+                "data": {}
+            },
+            {
+                "type": "CARD_PLAYED",
+                "value": 1,
+                "playerId": 0,
+                "batch": 1,
+                "data": {
+                    "result": 1
+                }
+            },
+            {
+                "type": "HIT",
+                "value": 5,
+                "playerId": 0,
+                "batch": 1,
+                "data": {
+                    "result": 6
+                }
+            },
+            {
+                "type": "FISH_HP_DIFF",
+                "value": 5,
+                "playerId": 0,
+                "batch": 1,
+                "data": {
+                    "result": 1
+                }
+            }
+        ]
+    },
+    "gameItemBalanceChanges": [],
+    "actionToken": 1751595450299
+}
+
+4. play 4th card (final card) -
+api call - https://gigaverse.io/api/fishing/action
+payload - {"action":"play_cards","actionToken":"1751595450299","data":{"cards":[0],"nodeId":""}}
+response - 
+{
+    "success": true,
+    "message": "Cards played successfully.",
+    "data": {
+        "doc": {
+            "_id": "686739aa7cfc6f0811d74b3f",
+            "docId": "1052932",
+            "docType": "FISHING_GAME",
+            "data": {
+                "deckCardData": [
+                    {
+                        "id": 1,
+                        "startingAmount": 1,
+                        "manaCost": 1,
+                        "hitZones": [
+                            1,
+                            2,
+                            3
+                        ],
+                        "critZones": [],
+                        "hitEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": 5
+                            }
+                        ],
+                        "missEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": -3
+                            }
+                        ],
+                        "critEffects": [],
+                        "unlockLevel": 0,
+                        "rarity": 0,
+                        "isDayCard": false,
+                        "earnable": false
+                    },
+                    {
+                        "id": 2,
+                        "startingAmount": 1,
+                        "manaCost": 1,
+                        "hitZones": [
+                            4,
+                            5,
+                            6
+                        ],
+                        "critZones": [],
+                        "hitEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": 5
+                            }
+                        ],
+                        "missEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": -3
+                            }
+                        ],
+                        "critEffects": [],
+                        "unlockLevel": 0,
+                        "rarity": 0,
+                        "isDayCard": false,
+                        "earnable": false
+                    },
+                    {
+                        "id": 3,
+                        "startingAmount": 1,
+                        "manaCost": 1,
+                        "hitZones": [
+                            7,
+                            8,
+                            9
+                        ],
+                        "critZones": [],
+                        "hitEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": 5
+                            }
+                        ],
+                        "missEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": -3
+                            }
+                        ],
+                        "critEffects": [],
+                        "unlockLevel": 0,
+                        "rarity": 0,
+                        "isDayCard": false,
+                        "earnable": false
+                    },
+                    {
+                        "id": 4,
+                        "startingAmount": 1,
+                        "manaCost": 1,
+                        "hitZones": [
+                            1,
+                            4,
+                            7
+                        ],
+                        "critZones": [],
+                        "hitEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": 5
+                            }
+                        ],
+                        "missEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": -3
+                            }
+                        ],
+                        "critEffects": [],
+                        "unlockLevel": 0,
+                        "rarity": 0,
+                        "isDayCard": false,
+                        "earnable": false
+                    },
+                    {
+                        "id": 5,
+                        "startingAmount": 1,
+                        "manaCost": 1,
+                        "hitZones": [
+                            2,
+                            5,
+                            8
+                        ],
+                        "critZones": [],
+                        "hitEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": 5
+                            }
+                        ],
+                        "missEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": -3
+                            }
+                        ],
+                        "critEffects": [],
+                        "unlockLevel": 0,
+                        "rarity": 0,
+                        "isDayCard": false,
+                        "earnable": false
+                    },
+                    {
+                        "id": 6,
+                        "startingAmount": 1,
+                        "manaCost": 1,
+                        "hitZones": [
+                            3,
+                            6,
+                            9
+                        ],
+                        "critZones": [],
+                        "hitEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": 5
+                            }
+                        ],
+                        "missEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": -3
+                            }
+                        ],
+                        "critEffects": [],
+                        "unlockLevel": 0,
+                        "rarity": 0,
+                        "isDayCard": false,
+                        "earnable": false
+                    },
+                    {
+                        "id": 7,
+                        "startingAmount": 1,
+                        "manaCost": 1,
+                        "hitZones": [
+                            1,
+                            3,
+                            7,
+                            9
+                        ],
+                        "critZones": [],
+                        "hitEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": 6
+                            }
+                        ],
+                        "missEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": -3
+                            }
+                        ],
+                        "critEffects": [],
+                        "unlockLevel": 0,
+                        "rarity": 0,
+                        "isDayCard": false,
+                        "earnable": true
+                    },
+                    {
+                        "id": 8,
+                        "startingAmount": 1,
+                        "manaCost": 1,
+                        "hitZones": [
+                            2,
+                            4,
+                            6,
+                            8
+                        ],
+                        "critZones": [],
+                        "hitEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": 5
+                            }
+                        ],
+                        "missEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": -5
+                            }
+                        ],
+                        "critEffects": [],
+                        "unlockLevel": 0,
+                        "rarity": 1,
+                        "isDayCard": false,
+                        "earnable": true
+                    },
+                    {
+                        "id": 9,
+                        "startingAmount": 1,
+                        "manaCost": 1,
+                        "hitZones": [
+                            1,
+                            2,
+                            3,
+                            4,
+                            6,
+                            7,
+                            8,
+                            9
+                        ],
+                        "critZones": [],
+                        "hitEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": 2
+                            }
+                        ],
+                        "missEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": -4
+                            }
+                        ],
+                        "critEffects": [],
+                        "unlockLevel": 0,
+                        "rarity": 0,
+                        "isDayCard": false,
+                        "earnable": true
+                    },
+                    {
+                        "id": 10,
+                        "startingAmount": 1,
+                        "manaCost": 1,
+                        "hitZones": [],
+                        "critZones": [
+                            5
+                        ],
+                        "hitEffects": [],
+                        "missEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": -5
+                            }
+                        ],
+                        "critEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": 10
+                            }
+                        ],
+                        "unlockLevel": 0,
+                        "rarity": 0,
+                        "isDayCard": false,
+                        "earnable": true
+                    },
+                    {
+                        "id": 35,
+                        "startingAmount": 0,
+                        "manaCost": 1,
+                        "hitZones": [
+                            1,
+                            4,
+                            7
+                        ],
+                        "critZones": [
+                            2
+                        ],
+                        "hitEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": 5
+                            }
+                        ],
+                        "missEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": -3
+                            }
+                        ],
+                        "critEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": 8
+                            }
+                        ],
+                        "unlockLevel": 0,
+                        "rarity": 0,
+                        "isDayCard": true,
+                        "earnable": true
+                    }
+                ],
+                "playerMaxHp": 8,
+                "playerHp": 5,
+                "fishHp": 0,
+                "fishMaxHp": 17,
+                "fishPosition": [
+                    1,
+                    2
+                ],
+                "previousFishPosition": [
+                    3,
+                    2
+                ],
+                "fullDeck": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10,
+                    35
+                ],
+                "nextCardIndex": 6,
+                "cardInDrawPile": 5,
+                "hand": [
+                    1,
+                    10,
+                    6
+                ],
+                "discard": [
+                    4,
+                    8,
+                    9
+                ],
+                "jebaitorTriggered": false,
+                "day": 20272,
+                "week": 25,
+                "caughtFish": {
+                    "gameItemId": 270,
+                    "name": "Black Bass",
+                    "rarity": 0,
+                    "size": "MED",
+                    "startDate": null,
+                    "endDate": null,
+                    "moveDistances": [
+                        1
+                    ],
+                    "levelRequired": 0,
+                    "quality": 1,
+                    "sizes": {
+                        "weight": 5.31,
+                        "length": 45.19,
+                        "girth": 13.05
+                    },
+                    "plusOneRarity": false,
+                    "plusOneQuality": false,
+                    "doubled": false,
+                    "findexResult": {
+                        "newFish": false,
+                        "newLength": false,
+                        "newGirth": false,
+                        "newWeight": false,
+                        "newQuality": false,
+                        "totalCaught": 23
+                    },
+                    "seaweedEarned": 0
+                },
+                "cardsToAdd": [
+                    {
+                        "id": 41,
+                        "startingAmount": 0,
+                        "manaCost": 1,
+                        "hitZones": [
+                            1,
+                            2,
+                            3
+                        ],
+                        "critZones": [
+                            6
+                        ],
+                        "hitEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": 5
+                            }
+                        ],
+                        "missEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": -3
+                            }
+                        ],
+                        "critEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": 8
+                            }
+                        ],
+                        "unlockLevel": 0,
+                        "rarity": 0,
+                        "isDayCard": false,
+                        "earnable": true
+                    },
+                    {
+                        "id": 33,
+                        "startingAmount": 0,
+                        "manaCost": 1,
+                        "hitZones": [
+                            4,
+                            5,
+                            6
+                        ],
+                        "critZones": [
+                            4,
+                            6
+                        ],
+                        "hitEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": 5
+                            }
+                        ],
+                        "missEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": -3
+                            }
+                        ],
+                        "critEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": 8
+                            }
+                        ],
+                        "unlockLevel": 0,
+                        "rarity": 0,
+                        "isDayCard": false,
+                        "earnable": true
+                    },
+                    {
+                        "id": 49,
+                        "startingAmount": 0,
+                        "manaCost": 1,
+                        "hitZones": [
+                            1,
+                            4,
+                            7
+                        ],
+                        "critZones": [
+                            8
+                        ],
+                        "hitEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": 5
+                            }
+                        ],
+                        "missEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": -3
+                            }
+                        ],
+                        "critEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": 8
+                            }
+                        ],
+                        "unlockLevel": 0,
+                        "rarity": 0,
+                        "isDayCard": false,
+                        "earnable": true
+                    }
+                ]
+            },
+            "COMPLETE_CID": true,
+            "LEVEL_CID": 5,
+            "ID_CID": "2",
+            "PLAYER_CID": "0xb0d90d52c7389824d4b22c06bcdccd734e3162b7",
+            "DAY_CID": 20272,
+            "createdAt": "2025-07-04T02:17:14.503Z",
+            "updatedAt": "2025-07-04T02:17:32.147Z",
+            "__v": 0,
+            "SUCCESS_CID": true
+        },
+        "events": [
+            {
+                "type": "FISH_MOVED",
+                "value": 2,
+                "playerId": -1,
+                "batch": 0,
+                "data": {}
+            },
+            {
+                "type": "CARD_PLAYED",
+                "value": 0,
+                "playerId": 0,
+                "batch": 1,
+                "data": {
+                    "result": 1
+                }
+            },
+            {
+                "type": "HIT",
+                "value": 2,
+                "playerId": 0,
+                "batch": 1,
+                "data": {
+                    "result": 1
+                }
+            },
+            {
+                "type": "FISH_HP_DIFF",
+                "value": 2,
+                "playerId": 0,
+                "batch": 1,
+                "data": {
+                    "result": 0
+                }
+            },
+            {
+                "type": "NEW_HAND",
+                "value": [
+                    1,
+                    10,
+                    6
+                ],
+                "playerId": -1,
+                "batch": 2,
+                "data": {}
+            },
+            {
+                "type": "FISH_DIED",
+                "value": 270,
+                "playerId": 0,
+                "batch": 3,
+                "data": {
+                    "fish": {
+                        "gameItemId": 270,
+                        "name": "Black Bass",
+                        "rarity": 0,
+                        "size": "MED",
+                        "startDate": null,
+                        "endDate": null,
+                        "moveDistances": [
+                            1
+                        ],
+                        "levelRequired": 0,
+                        "quality": 1,
+                        "sizes": {
+                            "weight": 5.31,
+                            "length": 45.19,
+                            "girth": 13.05
+                        },
+                        "plusOneRarity": false,
+                        "plusOneQuality": false,
+                        "doubled": false,
+                        "findexResult": {
+                            "newFish": false,
+                            "newLength": false,
+                            "newGirth": false,
+                            "newWeight": false,
+                            "newQuality": false,
+                            "totalCaught": 23
+                        },
+                        "seaweedEarned": 0
+                    }
+                }
+            }
+        ]
+    },
+    "gameItemBalanceChanges": [
+        {
+            "id": 270,
+            "amount": 1,
+            "gearInstanceId": "",
+            "rarity": -1
+        }
+    ],
+    "actionToken": 1751595452320
+}
+
+5. Final action (loot selection when fish is successfully caught )
+api call - https://gigaverse.io/api/fishing/action
+payload - {"action":"loot","actionToken":"1751595452320","data":{"cards":[33],"nodeId":""}}
+response - 
+{
+    "success": true,
+    "message": "Card added to deck successfully.",
+    "data": {
+        "doc": {
+            "_id": "686739aa7cfc6f0811d74b3f",
+            "docId": "1052932",
+            "docType": "FISHING_GAME",
+            "data": {
+                "deckCardData": [
+                    {
+                        "id": 1,
+                        "startingAmount": 1,
+                        "manaCost": 1,
+                        "hitZones": [
+                            1,
+                            2,
+                            3
+                        ],
+                        "critZones": [],
+                        "hitEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": 5
+                            }
+                        ],
+                        "missEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": -3
+                            }
+                        ],
+                        "critEffects": [],
+                        "unlockLevel": 0,
+                        "rarity": 0,
+                        "isDayCard": false,
+                        "earnable": false
+                    },
+                    {
+                        "id": 2,
+                        "startingAmount": 1,
+                        "manaCost": 1,
+                        "hitZones": [
+                            4,
+                            5,
+                            6
+                        ],
+                        "critZones": [],
+                        "hitEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": 5
+                            }
+                        ],
+                        "missEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": -3
+                            }
+                        ],
+                        "critEffects": [],
+                        "unlockLevel": 0,
+                        "rarity": 0,
+                        "isDayCard": false,
+                        "earnable": false
+                    },
+                    {
+                        "id": 3,
+                        "startingAmount": 1,
+                        "manaCost": 1,
+                        "hitZones": [
+                            7,
+                            8,
+                            9
+                        ],
+                        "critZones": [],
+                        "hitEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": 5
+                            }
+                        ],
+                        "missEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": -3
+                            }
+                        ],
+                        "critEffects": [],
+                        "unlockLevel": 0,
+                        "rarity": 0,
+                        "isDayCard": false,
+                        "earnable": false
+                    },
+                    {
+                        "id": 4,
+                        "startingAmount": 1,
+                        "manaCost": 1,
+                        "hitZones": [
+                            1,
+                            4,
+                            7
+                        ],
+                        "critZones": [],
+                        "hitEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": 5
+                            }
+                        ],
+                        "missEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": -3
+                            }
+                        ],
+                        "critEffects": [],
+                        "unlockLevel": 0,
+                        "rarity": 0,
+                        "isDayCard": false,
+                        "earnable": false
+                    },
+                    {
+                        "id": 5,
+                        "startingAmount": 1,
+                        "manaCost": 1,
+                        "hitZones": [
+                            2,
+                            5,
+                            8
+                        ],
+                        "critZones": [],
+                        "hitEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": 5
+                            }
+                        ],
+                        "missEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": -3
+                            }
+                        ],
+                        "critEffects": [],
+                        "unlockLevel": 0,
+                        "rarity": 0,
+                        "isDayCard": false,
+                        "earnable": false
+                    },
+                    {
+                        "id": 6,
+                        "startingAmount": 1,
+                        "manaCost": 1,
+                        "hitZones": [
+                            3,
+                            6,
+                            9
+                        ],
+                        "critZones": [],
+                        "hitEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": 5
+                            }
+                        ],
+                        "missEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": -3
+                            }
+                        ],
+                        "critEffects": [],
+                        "unlockLevel": 0,
+                        "rarity": 0,
+                        "isDayCard": false,
+                        "earnable": false
+                    },
+                    {
+                        "id": 7,
+                        "startingAmount": 1,
+                        "manaCost": 1,
+                        "hitZones": [
+                            1,
+                            3,
+                            7,
+                            9
+                        ],
+                        "critZones": [],
+                        "hitEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": 6
+                            }
+                        ],
+                        "missEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": -3
+                            }
+                        ],
+                        "critEffects": [],
+                        "unlockLevel": 0,
+                        "rarity": 0,
+                        "isDayCard": false,
+                        "earnable": true
+                    },
+                    {
+                        "id": 8,
+                        "startingAmount": 1,
+                        "manaCost": 1,
+                        "hitZones": [
+                            2,
+                            4,
+                            6,
+                            8
+                        ],
+                        "critZones": [],
+                        "hitEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": 5
+                            }
+                        ],
+                        "missEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": -5
+                            }
+                        ],
+                        "critEffects": [],
+                        "unlockLevel": 0,
+                        "rarity": 1,
+                        "isDayCard": false,
+                        "earnable": true
+                    },
+                    {
+                        "id": 9,
+                        "startingAmount": 1,
+                        "manaCost": 1,
+                        "hitZones": [
+                            1,
+                            2,
+                            3,
+                            4,
+                            6,
+                            7,
+                            8,
+                            9
+                        ],
+                        "critZones": [],
+                        "hitEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": 2
+                            }
+                        ],
+                        "missEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": -4
+                            }
+                        ],
+                        "critEffects": [],
+                        "unlockLevel": 0,
+                        "rarity": 0,
+                        "isDayCard": false,
+                        "earnable": true
+                    },
+                    {
+                        "id": 10,
+                        "startingAmount": 1,
+                        "manaCost": 1,
+                        "hitZones": [],
+                        "critZones": [
+                            5
+                        ],
+                        "hitEffects": [],
+                        "missEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": -5
+                            }
+                        ],
+                        "critEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": 10
+                            }
+                        ],
+                        "unlockLevel": 0,
+                        "rarity": 0,
+                        "isDayCard": false,
+                        "earnable": true
+                    },
+                    {
+                        "id": 35,
+                        "startingAmount": 0,
+                        "manaCost": 1,
+                        "hitZones": [
+                            1,
+                            4,
+                            7
+                        ],
+                        "critZones": [
+                            2
+                        ],
+                        "hitEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": 5
+                            }
+                        ],
+                        "missEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": -3
+                            }
+                        ],
+                        "critEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": 8
+                            }
+                        ],
+                        "unlockLevel": 0,
+                        "rarity": 0,
+                        "isDayCard": true,
+                        "earnable": true
+                    }
+                ],
+                "playerMaxHp": 8,
+                "playerHp": 5,
+                "fishHp": 0,
+                "fishMaxHp": 17,
+                "fishPosition": [
+                    1,
+                    2
+                ],
+                "previousFishPosition": [
+                    3,
+                    2
+                ],
+                "fullDeck": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10,
+                    35
+                ],
+                "nextCardIndex": 6,
+                "cardInDrawPile": 5,
+                "hand": [
+                    1,
+                    10,
+                    6
+                ],
+                "discard": [
+                    4,
+                    8,
+                    9
+                ],
+                "jebaitorTriggered": false,
+                "day": 20272,
+                "week": 25,
+                "caughtFish": {
+                    "gameItemId": 270,
+                    "name": "Black Bass",
+                    "rarity": 0,
+                    "size": "MED",
+                    "startDate": null,
+                    "endDate": null,
+                    "moveDistances": [
+                        1
+                    ],
+                    "levelRequired": 0,
+                    "quality": 1,
+                    "sizes": {
+                        "weight": 5.31,
+                        "length": 45.19,
+                        "girth": 13.05
+                    },
+                    "plusOneRarity": false,
+                    "plusOneQuality": false,
+                    "doubled": false,
+                    "findexResult": {
+                        "newFish": false,
+                        "newLength": false,
+                        "newGirth": false,
+                        "newWeight": false,
+                        "newQuality": false,
+                        "totalCaught": 23
+                    },
+                    "seaweedEarned": 0
+                },
+                "cardsToAdd": [
+                    {
+                        "id": 41,
+                        "startingAmount": 0,
+                        "manaCost": 1,
+                        "hitZones": [
+                            1,
+                            2,
+                            3
+                        ],
+                        "critZones": [
+                            6
+                        ],
+                        "hitEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": 5
+                            }
+                        ],
+                        "missEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": -3
+                            }
+                        ],
+                        "critEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": 8
+                            }
+                        ],
+                        "unlockLevel": 0,
+                        "rarity": 0,
+                        "isDayCard": false,
+                        "earnable": true
+                    },
+                    {
+                        "id": 33,
+                        "startingAmount": 0,
+                        "manaCost": 1,
+                        "hitZones": [
+                            4,
+                            5,
+                            6
+                        ],
+                        "critZones": [
+                            4,
+                            6
+                        ],
+                        "hitEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": 5
+                            }
+                        ],
+                        "missEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": -3
+                            }
+                        ],
+                        "critEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": 8
+                            }
+                        ],
+                        "unlockLevel": 0,
+                        "rarity": 0,
+                        "isDayCard": false,
+                        "earnable": true
+                    },
+                    {
+                        "id": 49,
+                        "startingAmount": 0,
+                        "manaCost": 1,
+                        "hitZones": [
+                            1,
+                            4,
+                            7
+                        ],
+                        "critZones": [
+                            8
+                        ],
+                        "hitEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": 5
+                            }
+                        ],
+                        "missEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": -3
+                            }
+                        ],
+                        "critEffects": [
+                            {
+                                "type": "FISH_HP",
+                                "amount": 8
+                            }
+                        ],
+                        "unlockLevel": 0,
+                        "rarity": 0,
+                        "isDayCard": false,
+                        "earnable": true
+                    }
+                ],
+                "cardChosenId": 33
+            },
+            "COMPLETE_CID": true,
+            "LEVEL_CID": 5,
+            "ID_CID": "2",
+            "PLAYER_CID": "0xb0d90d52c7389824d4b22c06bcdccd734e3162b7",
+            "DAY_CID": 20272,
+            "createdAt": "2025-07-04T02:17:14.503Z",
+            "updatedAt": "2025-07-04T02:17:52.628Z",
+            "__v": 0,
+            "SUCCESS_CID": true
+        },
+        "events": []
+    },
+    "actionToken": 1751595473308
+}

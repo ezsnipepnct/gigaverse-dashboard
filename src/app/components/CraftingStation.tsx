@@ -3,42 +3,31 @@
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
-  Wrench, 
-  Zap, 
-  Shield, 
-  Sword, 
   X, 
-  Plus, 
   Sparkles,
-  ArrowRight,
-  Flame,
-  Snowflake,
-  Clock,
   CheckCircle,
-  AlertCircle,
   Package,
-  Beaker,
+  Zap,
   Star,
-  Gem,
+  Search,
+  Plus,
+  Minus,
+  Flame,
+  AlertCircle,
   RefreshCw,
-  Play,
-  Pause,
-  Timer
+  Wrench,
+  Battery,
+  List,
+  Grid3X3
 } from 'lucide-react'
+import ItemIcon from './ItemIcon'
+import ItemTooltip from './ItemTooltip'
+import { itemMetadataService } from '../services/itemMetadata'
+import { agwAuthService } from '@/lib/agw-auth'
 
 interface CraftingStationProps {
   isOpen: boolean
   onClose: () => void
-}
-
-interface GameItem {
-  _id: string
-  docId: string
-  NAME_CID: string
-  MAX_SUPPLY_CID?: number
-  MINT_COUNT_CID?: number
-  BURN_COUNT_CID?: number
-  IS_SOULBOUND_CID?: boolean
 }
 
 interface Recipe {
@@ -48,15 +37,20 @@ interface Recipe {
   DESCRIPTION_CID?: string
   RARITY_CID?: number
   TYPE_CID?: string
-  FACTION_CID?: number
-  COST_CID?: number
-  DURATION_CID?: number
-  REQUIREMENTS_CID?: any[]
-  REWARDS_CID?: any[]
   CATEGORY_CID?: string
-  LEVEL_REQUIRED_CID?: number
   SUCCESS_RATE_CID?: number
   ENERGY_CID?: number
+  REQUIREMENTS_CID?: Array<{
+    itemId: number
+    amount: number
+    name: string
+  }>
+  REWARDS_CID?: Array<{
+    itemId: number
+    amount: number
+    name: string
+  }>
+  unlocked: boolean
 }
 
 interface CraftingInstance {
@@ -73,69 +67,62 @@ interface CraftingInstance {
   LOOT_AMOUNT_CID_array?: number[]
 }
 
-
-
 const WALLET_ADDRESS = "0xb0d90D52C7389824D4B22c06bcdcCD734E3162b7"
-const NOOB_ID = 21424 // This should be dynamic based on user's selected Noob
+const NOOB_ID = 21424
 
-// JWT Token management
 const getJWTToken = () => {
-  // Updated JWT token for testing
-  const hardcodedToken = "eyJhbGciOiJIUzI1NiJ9.eyJhZGRyZXNzIjoiMHhiMGQ5MEQ1MkM3Mzg5ODI0RDRCMjJjMDZiY2RjQ0Q3MzRFMzE2MmI3IiwidXNlciI6eyJfaWQiOiI2N2I5MjE1YTEwOGFlZGRiNDA5YTdlNzMiLCJ3YWxsZXRBZGRyZXNzIjoiMHhiMGQ5MGQ1MmM3Mzg5ODI0ZDRiMjJjMDZiY2RjY2Q3MzRlMzE2MmI3IiwidXNlcm5hbWUiOiIweGIwZDkwRDUyQzczODk4MjRENEIyMmMwNmJjZGNDRDczNEUzMTYyYjciLCJjYXNlU2Vuc2l0aXZlQWRkcmVzcyI6IjB4YjBkOTBENTJDNzM4OTgyNEQ0QjIyYzA2YmNkY0NENzM0RTMxNjJiNyIsIl9fdiI6MH0sImdhbWVBY2NvdW50Ijp7Im5vb2IiOnsiX2lkIjoiNjdiOTIxNzRlM2MzOWRjYTZmZGFkZjA5IiwiZG9jSWQiOiIyMTQyNCIsInRhYmxlTmFtZSI6IkdpZ2FOb29iTkZUIiwiTEFTVF9UUkFOU0ZFUl9USU1FX0NJRCI6MTc0MDE4NTk2NCwiY3JlYXRlZEF0IjoiMjAyNS0wMi0yMlQwMDo1OTozMi45NDZaIiwidXBkYXRlZEF0IjoiMjAyNS0wMi0yMlQwMDo1OTozMy4xNjVaIiwiTEVWRUxfQ0lEIjoxLCJJU19OT09CX0NJRCI6dHJ1ZSwiSU5JVElBTElaRURfQ0lEIjp0cnVlLCJPV05FUl9DSUQiOiIweGIwZDkwZDUyYzczODk4MjRkNGIyMmMwNmJjZGNjZDczNGUzMTYyYjcifSwiYWxsb3dlZFRvQ3JlYXRlQWNjb3VudCI6dHJ1ZSwiY2FuRW50ZXJHYW1lIjp0cnVlLCJub29iUGFzc0JhbGFuY2UiOjAsImxhc3ROb29iSWQiOjczODg0LCJtYXhOb29iSWQiOjEwMDAwfSwiZXhwIjoxNzUwMTE2NDMxfQ.M26R6pDnFSSIbMXHa6kOhT_Hrjn3U7nkm_sGv0rY0uY"
-  
-  // For testing, return the hardcoded token
-  if (hardcodedToken) {
-    return hardcodedToken
-  }
-  
-  // Fallback to localStorage if no hardcoded token
-  if (typeof window !== 'undefined') {
-    return localStorage.getItem('jwt_token') || localStorage.getItem('authToken') || ''
-  }
-  return ''
+  return agwAuthService.getJWT() || ''
 }
 
 const CraftingStation: React.FC<CraftingStationProps> = ({ isOpen, onClose }) => {
-  const [gameItems, setGameItems] = useState<GameItem[]>([])
   const [recipes, setRecipes] = useState<Recipe[]>([])
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null)
   const [craftingInstances, setCraftingInstances] = useState<CraftingInstance[]>([])
   const [loading, setLoading] = useState(true)
   const [crafting, setCrafting] = useState(false)
   const [craftingProgress, setCraftingProgress] = useState(0)
-  const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [searchTerm, setSearchTerm] = useState('')
-  const [mounted, setMounted] = useState(false)
+  const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [craftingQuantity, setCraftingQuantity] = useState(1)
   const [currentCraftIndex, setCurrentCraftIndex] = useState(0)
-  const [craftingDelay, setCraftingDelay] = useState(2000) // 2 seconds default
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [playerBalances, setPlayerBalances] = useState<Record<string, number>>({})
-  const [balancesLoading, setBalancesLoading] = useState(false)
+  const [mounted, setMounted] = useState(false)
+  const [showLockedRecipes, setShowLockedRecipes] = useState(false)
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list')
 
-  // Fix hydration issues
   useEffect(() => {
     setMounted(true)
   }, [])
 
-  // Fetch game items and recipes when component opens
   useEffect(() => {
     if (isOpen) {
       fetchData()
     }
   }, [isOpen])
 
+  // Add preloading effect for recipe items
+  useEffect(() => {
+    if (selectedRecipe) {
+      // Preload all item images for the selected recipe
+      const allItemIds = [
+        ...(selectedRecipe.REQUIREMENTS_CID?.map(req => req.itemId) || []),
+        ...(selectedRecipe.REWARDS_CID?.map(reward => reward.itemId) || [])
+      ];
+      
+      if (allItemIds.length > 0) {
+        console.log(`[CraftingStation] Preloading ${allItemIds.length} items for recipe ${selectedRecipe.NAME_CID}`);
+        itemMetadataService.preloadItems(allItemIds).catch(console.error);
+      }
+    }
+  }, [selectedRecipe]);
+
   const fetchPlayerBalances = async () => {
     try {
-      setBalancesLoading(true)
       const jwtToken = getJWTToken()
-      if (!jwtToken) {
-        console.log('No JWT token available for fetching balances')
-        return
-      }
+      if (!jwtToken) return
 
-      console.log('Fetching player balances...')
       const response = await fetch(`/api/player/balances?wallet=${WALLET_ADDRESS}`, {
         headers: {
           'Authorization': `Bearer ${jwtToken}`,
@@ -146,103 +133,67 @@ const CraftingStation: React.FC<CraftingStationProps> = ({ isOpen, onClose }) =>
         const data = await response.json()
         if (data.success && data.balances) {
           setPlayerBalances(data.balances)
-          console.log('Player balances loaded:', Object.keys(data.balances).length, 'items')
         }
-      } else {
-        console.error('Failed to fetch player balances:', response.status)
       }
     } catch (error) {
       console.error('Error fetching player balances:', error)
-    } finally {
-      setBalancesLoading(false)
     }
   }
 
   const fetchData = async () => {
     try {
       setLoading(true)
-      
-      // Fetch player balances first
       await fetchPlayerBalances()
       
-      // Fetch all recipe definitions
-      console.log('Fetching recipe definitions...')
+      // Fetch all recipes
       const allRecipesResponse = await fetch('https://gigaverse.io/api/offchain/recipes')
       const allRecipesData = await allRecipesResponse.json()
       const allRecipes = allRecipesData.entities || []
-      console.log('All recipes loaded:', allRecipes.length)
       
-      // Fetch player's available recipes
-      console.log('Fetching player recipes...')
+      // Fetch player recipes to determine what's unlocked
       const playerRecipesResponse = await fetch(`https://gigaverse.io/api/offchain/recipes/player/${WALLET_ADDRESS}`)
       const playerRecipesData = await playerRecipesResponse.json()
       const playerRecipes = playerRecipesData.entities || []
-      console.log('Player recipes loaded:', playerRecipes.length)
       
-      // Create a map of player's available recipe IDs
       const playerRecipeIds = new Set(playerRecipes.map((pr: any) => pr.ID_CID))
-      console.log('Player recipe IDs:', Array.from(playerRecipeIds))
-      console.log('Total recipes from API:', allRecipes.length)
-      console.log('Sample recipe docIds:', allRecipes.slice(0, 5).map((r: any) => r.docId))
       
-      // Filter recipes to only show ones the player can craft
-      const availableRecipes = allRecipes.filter((recipe: any) => {
-        // Direct match with player recipe IDs
-        return playerRecipeIds.has(recipe.docId) || playerRecipeIds.has(recipe.ID_CID)
+      // Format all recipes with unlock status
+      const formattedRecipes = allRecipes.map((recipe: any) => {
+        const isUnlocked = playerRecipeIds.has(recipe.docId) || playerRecipeIds.has(recipe.ID_CID)
+        
+        return {
+          _id: recipe.docId,
+          ID_CID: recipe.docId,
+          NAME_CID: recipe.NAME_CID,
+          DESCRIPTION_CID: `Craft ${recipe.NAME_CID}`,
+          RARITY_CID: recipe.TIER_CID || 1,
+          TYPE_CID: 'Consumable',
+          CATEGORY_CID: recipe.TAG_CID_array?.includes('crafting') ? 'Alchemy' : 
+                       recipe.TAG_CID_array?.includes('workbench') ? 'Smithing' : 'General',
+          SUCCESS_RATE_CID: recipe.SUCCESS_RATE_CID || 100,
+          ENERGY_CID: recipe.ENERGY_CID || 0,
+          REQUIREMENTS_CID: recipe.INPUT_NAMES_CID_array?.map((name: string, index: number) => ({
+            itemId: recipe.INPUT_ID_CID_array?.[index] || 0,
+            amount: recipe.INPUT_AMOUNT_CID_array?.[index] || 1,
+            name: name
+          })) || [],
+          REWARDS_CID: recipe.LOOT_ID_CID_array?.map((id: number, index: number) => ({
+            itemId: id,
+            amount: recipe.LOOT_AMOUNT_CID_array?.[index] || 1,
+            name: `Item #${id}`
+          })) || [],
+          unlocked: isUnlocked
+        }
       })
-      
-      console.log('Available recipes for player:', availableRecipes.length)
-      
-      // Convert to our format
-      const formattedRecipes = availableRecipes.map((recipe: any) => ({
-        _id: recipe.docId,
-        ID_CID: recipe.docId,
-        NAME_CID: recipe.NAME_CID,
-        DESCRIPTION_CID: `Craft ${recipe.NAME_CID}`,
-        RARITY_CID: recipe.TIER_CID || 1,
-        TYPE_CID: 'Consumable',
-        FACTION_CID: recipe.FACTION_CID_array?.[0] || 0,
-        COST_CID: 0,
-        DURATION_CID: 0, // Instant crafting
-        CATEGORY_CID: recipe.TAG_CID_array?.includes('crafting') ? 'Alchemy' : 
-                     recipe.TAG_CID_array?.includes('workbench') ? 'Smithing' : 'General',
-        LEVEL_REQUIRED_CID: 1,
-        SUCCESS_RATE_CID: recipe.SUCCESS_RATE_CID || 100,
-        ENERGY_CID: recipe.ENERGY_CID || 0,
-        REQUIREMENTS_CID: recipe.INPUT_NAMES_CID_array?.map((name: string, index: number) => ({
-          itemId: recipe.INPUT_ID_CID_array?.[index] || 0,
-          amount: recipe.INPUT_AMOUNT_CID_array?.[index] || 1,
-          name: name
-        })) || [],
-        REWARDS_CID: recipe.LOOT_ID_CID_array?.map((id: number, index: number) => ({
-          itemId: id,
-          amount: recipe.LOOT_AMOUNT_CID_array?.[index] || 1,
-          name: `Item #${id}`
-        })) || []
-      }))
       
       if (formattedRecipes.length > 0) {
         setRecipes(formattedRecipes)
-        console.log('Set formatted recipes:', formattedRecipes.length)
       } else {
-        console.log('No available recipes found, using mock data')
         setRecipes(getMockRecipes())
-      }
-      
-      // Fetch game items for additional context
-      try {
-        const itemsResponse = await fetch('https://gigaverse.io/api/indexer/gameitems')
-        const itemsData = await itemsResponse.json()
-        setGameItems(itemsData.entities || [])
-        console.log('Game items loaded:', itemsData.entities?.length || 0)
-      } catch (itemError) {
-        console.log('Could not fetch game items:', itemError)
       }
       
     } catch (error) {
       console.error('Failed to fetch crafting data:', error)
-      // Fallback to mock data
-      console.log('Using mock data as fallback')
       setRecipes(getMockRecipes())
     } finally {
       setLoading(false)
@@ -252,102 +203,89 @@ const CraftingStation: React.FC<CraftingStationProps> = ({ isOpen, onClose }) =>
   const getMockRecipes = (): Recipe[] => [
     {
       _id: '1',
-      ID_CID: 'Recipe#9#Faction_5',
+      ID_CID: 'health-potion',
       NAME_CID: 'Health Potion',
       DESCRIPTION_CID: 'Restores health over time',
       RARITY_CID: 1,
       TYPE_CID: 'Consumable',
-      FACTION_CID: 5,
-      COST_CID: 50,
-      DURATION_CID: 0, // Instant
       CATEGORY_CID: 'Alchemy',
-      LEVEL_REQUIRED_CID: 1,
       SUCCESS_RATE_CID: 95,
+      ENERGY_CID: 5,
       REQUIREMENTS_CID: [
         { itemId: 131, amount: 2, name: 'Herb Extract' },
         { itemId: 158, amount: 1, name: 'Pure Water' }
       ],
       REWARDS_CID: [
         { itemId: 200, amount: 1, name: 'Health Potion' }
-      ]
+      ],
+      unlocked: true
     },
     {
       _id: '2',
-      ID_CID: 'Recipe#15#Faction_1',
+      ID_CID: 'steel-blade',
       NAME_CID: 'Steel Blade',
       DESCRIPTION_CID: 'A sharp steel weapon',
       RARITY_CID: 2,
       TYPE_CID: 'Weapon',
-      FACTION_CID: 1,
-      COST_CID: 150,
-      DURATION_CID: 0, // Instant
       CATEGORY_CID: 'Smithing',
-      LEVEL_REQUIRED_CID: 5,
       SUCCESS_RATE_CID: 80,
+      ENERGY_CID: 10,
       REQUIREMENTS_CID: [
         { itemId: 5, amount: 3, name: 'Steel Pipe' },
         { itemId: 4, amount: 5, name: 'Bolt' }
       ],
       REWARDS_CID: [
         { itemId: 201, amount: 1, name: 'Steel Blade' }
-      ]
+      ],
+      unlocked: true
     },
     {
       _id: '3',
-      ID_CID: 'Recipe#22#Faction_3',
+      ID_CID: 'void-crystal',
       NAME_CID: 'Void Crystal',
       DESCRIPTION_CID: 'A mysterious crystal with void energy',
       RARITY_CID: 4,
       TYPE_CID: 'Material',
-      FACTION_CID: 3,
-      COST_CID: 500,
-      DURATION_CID: 0, // Instant
       CATEGORY_CID: 'Enchanting',
-      LEVEL_REQUIRED_CID: 15,
       SUCCESS_RATE_CID: 60,
+      ENERGY_CID: 25,
       REQUIREMENTS_CID: [
         { itemId: 6, amount: 10, name: 'Void Seed' },
-        { itemId: 9, amount: 5, name: 'Vortex Residue' },
-        { itemId: 8, amount: 2, name: 'Temporal Hourglass' }
+        { itemId: 9, amount: 5, name: 'Vortex Residue' }
       ],
       REWARDS_CID: [
         { itemId: 202, amount: 1, name: 'Void Crystal' }
-      ]
+      ],
+      unlocked: false
     }
   ]
 
   const startCrafting = async () => {
     if (!selectedRecipe) return
     
-    // Pre-craft validation
     const craftCheck = canCraftQuantity(selectedRecipe, craftingQuantity)
     if (!craftCheck.canCraft) {
-      const missingItemsText = craftCheck.missingItems
-        .map(item => `${item.name}: need ${item.needed}, have ${item.have}`)
-        .join('\n')
-      setErrorMessage(`Cannot craft ${craftingQuantity} items - insufficient materials:\n\n${missingItemsText}`)
+      setErrorMessage('Insufficient materials for crafting')
       return
     }
     
     try {
       setCrafting(true)
       setCraftingProgress(0)
-      setCurrentCraftIndex(0)
       setErrorMessage(null)
       setSuccessMessage(null)
       
       const jwtToken = getJWTToken()
-      
-      // Check if we have a JWT token
       if (!jwtToken) {
-        console.error('No JWT token found. Please login first.')
-        setErrorMessage('Authentication required. Please login to start crafting.')
+        setErrorMessage('Please login to start crafting')
         setCrafting(false)
         return
       }
       
-      // If crafting quantity is 1, just do it instantly
-      if (craftingQuantity === 1) {
+      for (let i = 0; i < craftingQuantity; i++) {
+        setCurrentCraftIndex(i + 1)
+        setCraftingProgress(((i + 1) / craftingQuantity) * 100)
+        
         const payload = {
           recipeId: selectedRecipe.ID_CID,
           noobId: NOOB_ID,
@@ -355,9 +293,6 @@ const CraftingStation: React.FC<CraftingStationProps> = ({ isOpen, onClose }) =>
           nodeIndex: 0
         }
         
-        console.log('Starting single craft with payload:', payload)
-        
-        // Use our Next.js API route to avoid CORS issues
         const response = await fetch('/api/crafting/start', {
           method: 'POST',
           headers: {
@@ -369,202 +304,72 @@ const CraftingStation: React.FC<CraftingStationProps> = ({ isOpen, onClose }) =>
         
         if (!response.ok) {
           const errorText = await response.text()
-          console.error('Crafting API error:', response.status, errorText)
-          throw new Error(`Crafting failed: ${response.status} - ${errorText}`)
+          throw new Error(`Crafting failed: ${errorText}`)
         }
         
         const result = await response.json()
-        console.log('Crafting response:', result)
-        
         if (result.entities && result.entities.length > 0) {
           const instance = result.entities[0]
           setCraftingInstances(prev => [...prev, instance])
-          setCraftingProgress(100)
-          setSuccessMessage(`Successfully crafted ${selectedRecipe.NAME_CID}!`)
-          
-          // Refresh balances to show updated quantities
-          fetchPlayerBalances()
-          
-          setTimeout(() => {
-            setCrafting(false)
-            setCraftingProgress(0)
-            setSuccessMessage(null)
-          }, 3000) // Show success for 3 seconds
-        } else {
-          console.error('No crafting instance returned:', result)
-          setErrorMessage('Failed to start crafting. Please try again.')
-          setCrafting(false)
-        }
-      } else {
-        // Multiple quantity crafting - show progress
-        console.log(`Starting batch craft: ${craftingQuantity} items`)
-        
-        for (let i = 0; i < craftingQuantity; i++) {
-          setCurrentCraftIndex(i + 1)
-          setCraftingProgress(((i + 1) / craftingQuantity) * 100)
-          
-          const payload = {
-            recipeId: selectedRecipe.ID_CID,
-            noobId: NOOB_ID,
-            gearInstanceId: "",
-            nodeIndex: 0
-          }
-          
-          console.log(`Crafting item ${i + 1}/${craftingQuantity}`)
-          
-          const response = await fetch('/api/crafting/start', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${jwtToken}`,
-            },
-            body: JSON.stringify(payload)
-          })
-          
-          if (!response.ok) {
-            const errorText = await response.text()
-            console.error(`Crafting API error for item ${i + 1}:`, response.status, errorText)
-            
-            // Parse error details if possible
-            let detailedError = `Crafting failed on item ${i + 1}/${craftingQuantity}`
-            let isInsufficientMaterials = false
-            
-            try {
-              const errorObj = JSON.parse(errorText)
-              if (errorObj.details && errorObj.details.message) {
-                detailedError += `\n\nReason: ${errorObj.details.message}`
-                
-                // Check if it's a material shortage (common patterns)
-                const message = errorObj.details.message.toLowerCase()
-                if (message.includes('insufficient') || 
-                    message.includes('need') || 
-                    message.includes('have 0') ||
-                    message.includes('balance')) {
-                  isInsufficientMaterials = true
-                }
-              }
-            } catch (e) {
-              // Error text wasn't JSON, use as is
-              detailedError += `\n\nError: ${errorText}`
-            }
-            
-            // If it's insufficient materials, stop the batch immediately
-            if (isInsufficientMaterials) {
-              detailedError += `\n\n❌ Stopping batch crafting - insufficient materials to continue.`
-              setErrorMessage(detailedError)
-              break
-            }
-            
-            // For other errors, stop batch crafting and show error
-            setErrorMessage(detailedError + `\n\n⚠️ Stopping batch crafting due to error.`)
-            break
-          }
-          
-          const result = await response.json()
-          
-          if (result.entities && result.entities.length > 0) {
-            const instance = result.entities[0]
-            setCraftingInstances(prev => [...prev, instance])
-          }
-          
-          // Delay between crafts to avoid rate limiting and energy issues
-          if (i < craftingQuantity - 1) {
-            await new Promise(resolve => setTimeout(resolve, craftingDelay))
-          }
         }
         
-        // Finished batch crafting
-        const completedItems = currentCraftIndex
-        if (completedItems > 0) {
-          setSuccessMessage(`Successfully crafted ${completedItems} ${selectedRecipe.NAME_CID}${completedItems > 1 ? 's' : ''}!`)
-          
-          // Refresh balances to show updated quantities
-          fetchPlayerBalances()
+        // Small delay between crafts
+        if (i < craftingQuantity - 1) {
+          await new Promise(resolve => setTimeout(resolve, 1000))
         }
-        setTimeout(() => {
-          setCrafting(false)
-          setCraftingProgress(0)
-          setCurrentCraftIndex(0)
-          if (completedItems > 0) {
-            setSuccessMessage(null)
-          }
-        }, 3000)
       }
       
+      setSuccessMessage(`Successfully crafted ${craftingQuantity}x ${getCleanRecipeName(selectedRecipe.NAME_CID)}!`)
+      fetchPlayerBalances()
+      
+      setTimeout(() => {
+        setCrafting(false)
+        setCraftingProgress(0)
+        setSuccessMessage(null)
+      }, 3000)
+      
     } catch (error) {
-      console.error('Failed to start crafting:', error)
-      setErrorMessage(`Crafting failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      console.error('Crafting error:', error)
+      setErrorMessage('Crafting failed. Please try again.')
       setCrafting(false)
-      setCraftingProgress(0)
-      setCurrentCraftIndex(0)
     }
   }
 
   const getRarityColor = (rarity: number) => {
     switch (rarity) {
-      case 5: return 'text-red-400 border-red-400 bg-red-400/10' // Mythic
-      case 4: return 'text-yellow-400 border-yellow-400 bg-yellow-400/10' // Legendary
-      case 3: return 'text-purple-400 border-purple-400 bg-purple-400/10' // Epic
-      case 2: return 'text-blue-400 border-blue-400 bg-blue-400/10' // Rare
-      case 1: return 'text-green-400 border-green-400 bg-green-400/10' // Uncommon
-      default: return 'text-gray-400 border-gray-400 bg-gray-400/10' // Common
+      case 0: return 'text-gray-400'
+      case 1: return 'text-green-400'
+      case 2: return 'text-blue-400'
+      case 3: return 'text-purple-400'
+      case 4: return 'text-yellow-400'
+      case 5: return 'text-violet-400'
+      default: return 'text-gray-400'
     }
   }
 
   const getRarityName = (rarity: number) => {
     switch (rarity) {
-      case 5: return 'MYTHIC'
-      case 4: return 'LEGENDARY'
-      case 3: return 'EPIC'
-      case 2: return 'RARE'
+      case 0: return 'COMMON'
       case 1: return 'UNCOMMON'
+      case 2: return 'RARE'
+      case 3: return 'EPIC'
+      case 4: return 'LEGENDARY'
+      case 5: return 'RELIC'
       default: return 'COMMON'
     }
   }
 
-  const getCategoryIcon = (category: string) => {
-    switch (category?.toLowerCase()) {
-      case 'alchemy': return Beaker
-      case 'smithing': return Sword
-      case 'enchanting': return Sparkles
-      case 'engineering': return Wrench
-      default: return Package
-    }
+  // Helper function to clean recipe names (remove "Craft " prefix)
+  const getCleanRecipeName = (recipeName: string): string => {
+    return recipeName.replace(/^Craft\s+/i, '')
   }
 
-  const getTypeIcon = (type: string) => {
-    switch (type?.toLowerCase()) {
-      case 'weapon': return Sword
-      case 'armor': return Shield
-      case 'consumable': return Beaker
-      case 'material': return Gem
-      default: return Package
+  // Helper function to get the crafted item ID from rewards
+  const getCraftedItemId = (recipe: Recipe): number | null => {
+    if (recipe.REWARDS_CID && recipe.REWARDS_CID.length > 0) {
+      return recipe.REWARDS_CID[0].itemId
     }
-  }
-
-  const formatDuration = (seconds: number) => {
-    const minutes = Math.floor(seconds / 60)
-    const hours = Math.floor(minutes / 60)
-    
-    if (hours > 0) {
-      return `${hours}h ${minutes % 60}m`
-    }
-    return `${minutes}m`
-  }
-
-  const filteredRecipes = recipes.filter(recipe => {
-    const recipeName = recipe.NAME_CID || ''
-    const recipeCategory = recipe.CATEGORY_CID || ''
-    
-    const matchesSearch = recipeName.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesCategory = selectedCategory === 'all' || recipeCategory.toLowerCase() === selectedCategory.toLowerCase()
-    
-    return matchesSearch && matchesCategory
-  })
-
-  const getUniqueCategories = () => {
-    const categories = new Set(recipes.map(recipe => recipe.CATEGORY_CID).filter(Boolean).filter(cat => cat && cat.trim() !== ''))
-    return Array.from(categories)
+    return null
   }
 
   const getPlayerBalance = (itemId: string | number): number => {
@@ -573,10 +378,10 @@ const CraftingStation: React.FC<CraftingStationProps> = ({ isOpen, onClose }) =>
 
   const getMaxCraftableQuantity = (recipe: Recipe): number => {
     if (!recipe.REQUIREMENTS_CID || recipe.REQUIREMENTS_CID.length === 0) {
-      return 100 // No requirements, can craft up to max
+      return 99
     }
 
-    let maxQuantity = 100
+    let maxQuantity = 99
     for (const requirement of recipe.REQUIREMENTS_CID) {
       const available = getPlayerBalance(requirement.itemId)
       const needed = requirement.amount || 1
@@ -614,10 +419,19 @@ const CraftingStation: React.FC<CraftingStationProps> = ({ isOpen, onClose }) =>
     }
   }
 
-  // Don't render until mounted to prevent hydration issues
-  if (!mounted) {
-    return null
+  const getUniqueCategories = () => {
+    const categories = new Set(recipes.map(recipe => recipe.CATEGORY_CID).filter(Boolean))
+    return Array.from(categories)
   }
+
+  const filteredRecipes = recipes.filter(recipe => {
+    const matchesSearch = recipe.NAME_CID?.toLowerCase().includes(searchTerm.toLowerCase()) || false
+    const matchesCategory = selectedCategory === 'all' || recipe.CATEGORY_CID === selectedCategory
+    const matchesUnlockFilter = showLockedRecipes || recipe.unlocked
+    return matchesSearch && matchesCategory && matchesUnlockFilter
+  })
+
+  if (!mounted) return null
 
   return (
     <AnimatePresence>
@@ -626,277 +440,415 @@ const CraftingStation: React.FC<CraftingStationProps> = ({ isOpen, onClose }) =>
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
           onClick={onClose}
         >
           <motion.div
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.8, opacity: 0 }}
-            className="bg-black/90 border-2 border-cyan-400/50 rounded-lg max-w-7xl w-full max-h-[90vh] overflow-hidden"
-            style={{
-              clipPath: 'polygon(20px 0%, 100% 0%, calc(100% - 20px) 100%, 0% 100%)'
-            }}
+            initial={{ scale: 0.8, opacity: 0, y: 50 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            exit={{ scale: 0.8, opacity: 0, y: 50 }}
+            transition={{ type: 'spring', damping: 20, stiffness: 300 }}
+            className="bg-black/90 border-2 border-cyan-400/50 rounded-xl max-w-7xl w-full mx-4 backdrop-blur-md max-h-[90vh] overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="border-b border-cyan-400/30 p-6 bg-gradient-to-r from-cyan-400/10 to-transparent">
+            <div className="border-b border-cyan-400/20 p-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
-                  <div className="p-3 bg-cyan-400/20 border border-cyan-400/50 rounded-full">
-                    <Wrench className="w-8 h-8 text-cyan-400" />
-                  </div>
+                  <motion.div
+                    animate={{ scale: [1, 1.1, 1] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                    className="inline-flex items-center justify-center w-12 h-12 bg-cyan-400/20 rounded-full"
+                  >
+                    <Wrench className="w-6 h-6 text-cyan-400" />
+                  </motion.div>
                   <div>
-                    <h2 className="text-3xl font-bold text-cyan-400 font-mono tracking-wider neon-pulse">
-                      GIGAVERSE CRAFTING
-                    </h2>
-                    <p className="text-cyan-300/70 font-mono">REAL BLOCKCHAIN CRAFTING SYSTEM</p>
+                    <h2 className="text-2xl font-bold font-mono text-cyan-400 mb-1">CRAFTING STATION</h2>
+                    <p className="text-gray-400 font-mono text-sm">Create items from materials</p>
                   </div>
                 </div>
-                <div className="flex items-center space-x-4">
-                  <button
-                    onClick={fetchPlayerBalances}
-                    disabled={balancesLoading}
-                    className="p-2 bg-green-400/20 border border-green-400/50 rounded text-green-400 hover:bg-green-400/30 transition-colors disabled:opacity-50"
-                    title="Refresh Inventory"
-                  >
-                    <Package className={`w-5 h-5 ${balancesLoading ? 'animate-pulse' : ''}`} />
-                  </button>
+                <div className="flex items-center space-x-3">
                   <button
                     onClick={fetchData}
-                    className="p-2 bg-cyan-400/20 border border-cyan-400/50 rounded text-cyan-400 hover:bg-cyan-400/30 transition-colors"
-                    title="Refresh All Data"
+                    className="p-2 text-gray-400 hover:text-cyan-400 transition-colors"
+                    title="Refresh Data"
                   >
                     <RefreshCw className="w-5 h-5" />
                   </button>
                   <button
                     onClick={onClose}
-                    className="p-2 text-gray-400 hover:text-red-400 transition-colors"
+                    className="p-2 text-gray-400 hover:text-cyan-400 transition-colors"
                   >
-                    <X className="w-6 h-6" />
+                    <X className="w-5 h-5" />
                   </button>
                 </div>
               </div>
-            </div>
 
-            {/* Controls */}
-            <div className="p-6 border-b border-cyan-400/20 bg-black/40">
-              <div className="flex flex-wrap items-center gap-4">
-                {/* Search */}
-                <div className="relative flex-1 min-w-64">
+              {/* Search and Filter */}
+              <div className="flex items-center space-x-4 mt-4">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                   <input
                     type="text"
                     placeholder="Search recipes..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full px-4 py-2 bg-black/60 border border-gray-600 rounded font-mono text-sm text-white placeholder-gray-400 focus:border-cyan-400 focus:outline-none"
+                    className="w-full pl-10 pr-4 py-2 bg-gray-900/50 border border-cyan-400/20 rounded-lg text-white placeholder-gray-400 focus:border-cyan-400 focus:outline-none transition-colors font-mono text-sm"
                   />
                 </div>
-
-                {/* Category Filter */}
                 <select
                   value={selectedCategory}
                   onChange={(e) => setSelectedCategory(e.target.value)}
-                  className="px-4 py-2 bg-black/60 border border-gray-600 rounded font-mono text-sm text-white focus:border-cyan-400 focus:outline-none"
+                  className="px-4 py-2 bg-gray-900/50 border border-cyan-400/20 rounded-lg text-white focus:border-cyan-400 focus:outline-none transition-colors font-mono text-sm"
                 >
                   <option value="all">All Categories</option>
                   {getUniqueCategories().map(category => (
-                    <option key={category} value={category}>
-                      {category}
-                    </option>
+                    <option key={category} value={category}>{category}</option>
                   ))}
                 </select>
-
-                {/* Stats */}
-                <div className="flex items-center space-x-4 text-sm font-mono">
-                  <span className="text-gray-400">
-                    Recipes: <span className="text-cyan-400">{filteredRecipes.length}</span>
-                  </span>
-                  <span className="text-gray-400">
-                    Inventory: <span className="text-green-400">{Object.keys(playerBalances).length} items</span>
-                  </span>
-                  <span className="text-gray-400">
-                    Active: <span className="text-orange-400">{craftingInstances.length}</span>
+                
+                {/* View Mode Toggle */}
+                <div className="flex items-center space-x-1 bg-gray-900/50 border border-cyan-400/20 rounded-lg p-1">
+                  <button
+                    onClick={() => setViewMode('list')}
+                    className={`
+                      p-2 rounded transition-all duration-200
+                      ${viewMode === 'list' 
+                        ? 'bg-cyan-400/20 text-cyan-400' 
+                        : 'text-gray-400 hover:text-cyan-400 hover:bg-cyan-400/10'
+                      }
+                    `}
+                    title="List View"
+                  >
+                    <List className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => setViewMode('grid')}
+                    className={`
+                      p-2 rounded transition-all duration-200
+                      ${viewMode === 'grid' 
+                        ? 'bg-cyan-400/20 text-cyan-400' 
+                        : 'text-gray-400 hover:text-cyan-400 hover:bg-cyan-400/10'
+                      }
+                    `}
+                    title="Grid View"
+                  >
+                    <Grid3X3 className="w-4 h-4" />
+                  </button>
+                </div>
+                
+                {/* Show Locked Recipes Toggle */}
+                <div className="flex items-center space-x-3 px-3 py-2 bg-gray-900/50 border border-cyan-400/20 rounded-lg">
+                  <span className="text-cyan-400 font-mono text-sm">Show Locked</span>
+                  <button
+                    onClick={() => setShowLockedRecipes(!showLockedRecipes)}
+                    className={`
+                      relative w-12 h-6 rounded-full transition-all duration-200 focus:outline-none
+                      ${showLockedRecipes ? 'bg-cyan-400/30' : 'bg-gray-600/50'}
+                    `}
+                  >
+                    <motion.div
+                      animate={{ x: showLockedRecipes ? 24 : 2 }}
+                      transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                      className={`
+                        absolute top-1 w-4 h-4 rounded-full shadow-lg
+                        ${showLockedRecipes ? 'bg-cyan-400' : 'bg-gray-400'}
+                      `}
+                    />
+                  </button>
+                  <span className={`font-mono text-xs ${showLockedRecipes ? 'text-cyan-400' : 'text-gray-400'}`}>
+                    {showLockedRecipes ? 'ON' : 'OFF'}
                   </span>
                 </div>
               </div>
             </div>
 
-            <div className="p-6 grid grid-cols-1 lg:grid-cols-3 gap-6 max-h-[calc(90vh-200px)] overflow-y-auto">
+            <div className="flex h-[calc(90vh-200px)]">
               {/* Recipe List */}
-              <div className="lg:col-span-2 space-y-4">
-                <h3 className="text-xl font-bold text-cyan-400 font-mono mb-4">
-                  AVAILABLE RECIPES ({recipes.length} total, {filteredRecipes.length} filtered)
-                </h3>
-                
+              <div className="flex-1 p-6 overflow-y-auto">
                 {loading ? (
-                  <div className="flex items-center justify-center h-64">
+                  <div className="flex items-center justify-center h-full">
                     <div className="text-center">
                       <motion.div
                         animate={{ rotate: 360 }}
                         transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
-                        className="w-16 h-16 border-4 border-cyan-400/30 border-t-cyan-400 rounded-full mx-auto mb-4"
+                        className="w-8 h-8 border-2 border-cyan-400/30 border-t-cyan-400 rounded-full mx-auto mb-4"
                       />
-                      <p className="text-cyan-400 font-mono">LOADING RECIPES...</p>
+                      <p className="text-cyan-400 font-mono text-sm">LOADING RECIPES...</p>
                     </div>
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {filteredRecipes.map((recipe) => {
-                      const isSelected = selectedRecipe?.ID_CID === recipe.ID_CID
-                      const CategoryIcon = getCategoryIcon(recipe.CATEGORY_CID || '')
-                      const TypeIcon = getTypeIcon(recipe.TYPE_CID || '')
-                      
-
-                      
-                      return (
+                    {viewMode === 'list' ? (
+                      // List View
+                      filteredRecipes.map((recipe) => (
                         <motion.div
                           key={recipe._id}
-                          whileHover={{ scale: 1.02 }}
-                          onClick={() => setSelectedRecipe(recipe)}
+                          whileHover={{ scale: recipe.unlocked ? 1.01 : 1 }}
+                          onClick={() => recipe.unlocked && setSelectedRecipe(recipe)}
                           className={`
-                            p-4 border-2 bg-black/40 backdrop-blur-sm cursor-pointer transition-all duration-300 rounded
-                            ${isSelected 
-                              ? 'border-cyan-400 bg-cyan-400/10 shadow-lg shadow-cyan-400/20' 
-                              : 'border-gray-600 hover:border-cyan-400/50'
+                            p-4 rounded-lg transition-all duration-200 border relative
+                            ${!recipe.unlocked 
+                              ? 'bg-gray-800/30 border-gray-700/50 opacity-60 cursor-not-allowed' 
+                              : selectedRecipe?._id === recipe._id
+                                ? 'bg-cyan-400/10 border-cyan-400/50 shadow-lg cursor-pointer'
+                                : 'bg-gray-900/30 border-gray-600/30 hover:bg-gray-900/50 hover:border-cyan-400/30 cursor-pointer'
                             }
                           `}
-                          style={{
-                            clipPath: 'polygon(10px 0%, 100% 0%, calc(100% - 10px) 100%, 0% 100%)'
-                          }}
                         >
-                          <div className="flex items-center space-x-4">
-                            <div className="flex items-center space-x-2">
-                              <div className="p-2 bg-cyan-400/20 border border-cyan-400/50 rounded">
-                                <CategoryIcon className="w-5 h-5 text-cyan-400" />
+                          {/* Lock/Unlock Indicator */}
+                          <div className="absolute top-2 right-2">
+                            {recipe.unlocked ? (
+                              <motion.div
+                                initial={{ scale: 0 }}
+                                animate={{ scale: 1 }}
+                                className="w-6 h-6 bg-green-400/20 rounded-full flex items-center justify-center"
+                              >
+                                <CheckCircle className="w-4 h-4 text-green-400" />
+                              </motion.div>
+                            ) : (
+                              <motion.div
+                                initial={{ scale: 0 }}
+                                animate={{ scale: 1 }}
+                                className="w-6 h-6 bg-red-400/20 rounded-full flex items-center justify-center"
+                              >
+                                <X className="w-4 h-4 text-red-400" />
+                              </motion.div>
+                            )}
+                          </div>
+
+                          <div className="flex items-center justify-between pr-8">
+                            <div className="flex items-center space-x-4">
+                              <div className={`p-2 rounded ${recipe.unlocked ? 'bg-cyan-400/20' : 'bg-gray-600/20'}`}>
+                                {getCraftedItemId(recipe) ? (
+                                  <ItemIcon 
+                                    itemId={getCraftedItemId(recipe)!} 
+                                    size="small" 
+                                    showRarity={false}
+                                  />
+                                ) : (
+                                  <Package className={`w-5 h-5 ${recipe.unlocked ? 'text-cyan-400' : 'text-gray-500'}`} />
+                                )}
                               </div>
-                              <div className="p-2 bg-gray-400/20 border border-gray-400/50 rounded">
-                                <TypeIcon className="w-4 h-4 text-gray-400" />
-                              </div>
-                            </div>
-                            
-                            <div className="flex-1">
-                              <div className="flex items-center space-x-3 mb-2">
-                                <h4 className="font-bold font-mono text-cyan-400">
-                                  {recipe.NAME_CID || `Recipe ${recipe._id}` || 'Unknown Recipe'}
-                                </h4>
-                                <span className={`px-2 py-1 text-xs font-mono border rounded ${getRarityColor(recipe.RARITY_CID || 0)}`}>
-                                  {getRarityName(recipe.RARITY_CID || 0)}
-                                </span>
-                                {recipe.CATEGORY_CID && (
-                                  <span className="px-2 py-1 text-xs font-mono bg-gray-400/20 border border-gray-400/50 rounded text-gray-300">
-                                    {recipe.CATEGORY_CID}
+                              <div>
+                                <h3 className={`font-bold ${recipe.unlocked ? 'text-white' : 'text-gray-400'}`}>
+                                  {getCleanRecipeName(recipe.NAME_CID)}
+                                </h3>
+                                <div className="flex items-center space-x-4 mt-2">
+                                  <span className={`text-sm ${recipe.unlocked ? 'text-cyan-400' : 'text-gray-500'}`}>
+                                    Energy: {recipe.ENERGY_CID}
                                   </span>
-                                )}
-                              </div>
-                              
-                              <div className="flex items-center space-x-4 text-sm font-mono text-gray-400">
-                                <div className="flex items-center space-x-1">
-                                  <CheckCircle className="w-3 h-3 text-green-400" />
-                                  <span className="text-green-400">INSTANT</span>
+                                  <span className={`text-sm ${recipe.unlocked ? 'text-green-400' : 'text-gray-500'}`}>
+                                    {recipe.SUCCESS_RATE_CID || 100}%
+                                  </span>
                                 </div>
-                                {recipe.SUCCESS_RATE_CID && (
-                                  <div className="flex items-center space-x-1">
-                                    <Star className="w-3 h-3" />
-                                    <span>{recipe.SUCCESS_RATE_CID}%</span>
-                                  </div>
-                                )}
-                                {recipe.LEVEL_REQUIRED_CID && (
-                                  <div className="flex items-center space-x-1">
-                                    <Zap className="w-3 h-3" />
-                                    <span>Lv.{recipe.LEVEL_REQUIRED_CID}</span>
-                                  </div>
-                                )}
                               </div>
-                              
-                              {recipe.DESCRIPTION_CID && (
-                                <p className="text-xs text-gray-500 font-mono mt-1 line-clamp-1">
-                                  {recipe.DESCRIPTION_CID}
-                                </p>
-                              )}
                             </div>
-                            
-                            <div className="text-right">
-                              <div className="text-green-400 font-mono text-sm">
-                                <CheckCircle className="w-4 h-4 inline mr-1" />
-                                READY
+                            <div className="text-center">
+                              <div className={`font-mono text-xs uppercase ${recipe.unlocked ? 'text-green-400' : 'text-red-400'}`}>
+                                {recipe.unlocked ? 'UNLOCKED' : 'LOCKED'}
                               </div>
+                              {recipe.unlocked ? (
+                                <CheckCircle className="w-4 h-4 text-green-400 mx-auto mt-1" />
+                              ) : (
+                                <X className="w-4 h-4 text-red-400 mx-auto mt-1" />
+                              )}
                             </div>
                           </div>
                         </motion.div>
-                      )
-                    })}
+                      ))
+                    ) : (
+                      // Grid View
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {filteredRecipes.map((recipe) => (
+                          <motion.div
+                            key={recipe._id}
+                            whileHover={{ scale: recipe.unlocked ? 1.02 : 1 }}
+                            onClick={() => recipe.unlocked && setSelectedRecipe(recipe)}
+                            className={`
+                              p-4 rounded-lg transition-all duration-200 border relative h-48 flex flex-col
+                              ${!recipe.unlocked 
+                                ? 'bg-gray-800/30 border-gray-700/50 opacity-60 cursor-not-allowed' 
+                                : selectedRecipe?._id === recipe._id
+                                  ? 'bg-cyan-400/10 border-cyan-400/50 shadow-lg cursor-pointer'
+                                  : 'bg-gray-900/30 border-gray-600/30 hover:bg-gray-900/50 hover:border-cyan-400/30 cursor-pointer'
+                              }
+                            `}
+                          >
+                            {/* Lock/Unlock Indicator */}
+                            <div className="absolute top-2 right-2">
+                              {recipe.unlocked ? (
+                                <motion.div
+                                  initial={{ scale: 0 }}
+                                  animate={{ scale: 1 }}
+                                  className="w-5 h-5 bg-green-400/20 rounded-full flex items-center justify-center"
+                                >
+                                  <CheckCircle className="w-3 h-3 text-green-400" />
+                                </motion.div>
+                              ) : (
+                                <motion.div
+                                  initial={{ scale: 0 }}
+                                  animate={{ scale: 1 }}
+                                  className="w-5 h-5 bg-red-400/20 rounded-full flex items-center justify-center"
+                                >
+                                  <X className="w-3 h-3 text-red-400" />
+                                </motion.div>
+                              )}
+                            </div>
+
+                            {/* Recipe Icon */}
+                            <div className="flex justify-center mb-3">
+                              <div className={`p-3 rounded-lg ${recipe.unlocked ? 'bg-cyan-400/20' : 'bg-gray-600/20'}`}>
+                                {getCraftedItemId(recipe) ? (
+                                  <ItemIcon 
+                                    itemId={getCraftedItemId(recipe)!} 
+                                    size="medium" 
+                                    showRarity={false}
+                                  />
+                                ) : (
+                                  <Package className={`w-8 h-8 ${recipe.unlocked ? 'text-cyan-400' : 'text-gray-500'}`} />
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Recipe Info */}
+                            <div className="flex-1 text-center">
+                              <h3 className={`font-bold text-sm mb-2 truncate ${recipe.unlocked ? 'text-cyan-400' : 'text-gray-500'}`}>
+                                {getCleanRecipeName(recipe.NAME_CID)}
+                              </h3>
+                              
+                              <div className="flex justify-center items-center space-x-3 text-xs">
+                                <div className="flex items-center space-x-1">
+                                  <Zap className={`w-3 h-3 ${recipe.unlocked ? 'text-yellow-400' : 'text-gray-500'}`} />
+                                  <span className={`${recipe.unlocked ? 'text-yellow-400' : 'text-gray-500'}`}>
+                                    {recipe.ENERGY_CID || 0}
+                                  </span>
+                                </div>
+                                <div className="flex items-center space-x-1">
+                                  <Star className={`w-3 h-3 ${recipe.unlocked ? 'text-green-400' : 'text-gray-500'}`} />
+                                  <span className={`${recipe.unlocked ? 'text-green-400' : 'text-gray-500'}`}>
+                                    {recipe.SUCCESS_RATE_CID || 100}%
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Status */}
+                            <div className="text-center">
+                              <div className={`font-mono text-xs uppercase ${recipe.unlocked ? 'text-green-400' : 'text-red-400'}`}>
+                                {recipe.unlocked ? 'UNLOCKED' : 'LOCKED'}
+                              </div>
+                            </div>
+                          </motion.div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
 
               {/* Crafting Panel */}
-              <div className="space-y-6">
+              <div className="w-96 border-l border-cyan-400/20 p-6 overflow-y-auto">
                 {selectedRecipe ? (
-                  <>
-                    {/* Selected Recipe Details */}
-                    <div className="bg-black/60 border border-cyan-400/30 p-4 rounded">
-                      <h4 className="text-cyan-400 font-mono font-bold mb-4 flex items-center space-x-2">
-                        <Package className="w-4 h-4" />
-                        <span>RECIPE DETAILS</span>
-                      </h4>
+                  <div className="space-y-6">
+                    {/* Recipe Header */}
+                    <div className="text-center">
+                      <motion.div
+                        animate={{ scale: [1, 1.1, 1] }}
+                        transition={{ duration: 2, repeat: Infinity }}
+                        className={`inline-flex items-center justify-center w-16 h-16 rounded-full mb-4 ${
+                          selectedRecipe.unlocked ? 'bg-cyan-400/20' : 'bg-gray-600/20'
+                        }`}
+                      >
+                        {getCraftedItemId(selectedRecipe) ? (
+                          <ItemIcon 
+                            itemId={getCraftedItemId(selectedRecipe)!} 
+                            size="large" 
+                            showRarity={false}
+                          />
+                        ) : (
+                          <Sparkles className={`w-8 h-8 ${selectedRecipe.unlocked ? 'text-cyan-400' : 'text-gray-500'}`} />
+                        )}
+                      </motion.div>
+                      <h3 className={`text-xl font-bold font-mono mb-2 ${selectedRecipe.unlocked ? 'text-cyan-400' : 'text-gray-500'}`}>
+                        {getCleanRecipeName(selectedRecipe.NAME_CID)}
+                      </h3>
                       
-                      <div className="space-y-3 text-sm font-mono">
-                        <div className="flex justify-between">
-                          <span className="text-gray-400">Name:</span>
-                          <span className="text-white">{selectedRecipe.NAME_CID}</span>
+                      {/* Lock Status */}
+                      {!selectedRecipe.unlocked && (
+                        <div className="mt-4 p-3 bg-red-400/10 rounded-lg border border-red-400/30">
+                          <div className="flex items-center justify-center space-x-2">
+                            <X className="w-4 h-4 text-red-400" />
+                            <span className="text-red-400 font-mono text-sm">RECIPE LOCKED</span>
+                          </div>
+                          <p className="text-red-400 font-mono text-xs mt-1">
+                            Complete requirements to unlock this recipe
+                          </p>
                         </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-400">Type:</span>
-                          <span className="text-white">{selectedRecipe.TYPE_CID || 'Unknown'}</span>
+                      )}
+                    </div>
+
+                    {/* Recipe Stats */}
+                    <div className="bg-gray-900/50 rounded-lg p-4 border border-cyan-400/20">
+                      <div className="grid grid-cols-2 gap-4 text-center">
+                        <div>
+                          <div className="text-cyan-400 font-mono text-xs uppercase">Energy Cost</div>
+                          <div className="text-yellow-400 font-mono text-lg font-bold">
+                            {(selectedRecipe.ENERGY_CID || 0) * craftingQuantity}
+                          </div>
                         </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-400">Category:</span>
-                          <span className="text-white">{selectedRecipe.CATEGORY_CID || 'General'}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-400">Crafting:</span>
-                          <span className="text-green-400">INSTANT</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-400">Success Rate:</span>
-                          <span className="text-green-400">{selectedRecipe.SUCCESS_RATE_CID || 100}%</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-400">Energy Cost:</span>
-                          <span className="text-orange-400">{selectedRecipe.ENERGY_CID || 0} ⚡</span>
+                        <div>
+                          <div className="text-cyan-400 font-mono text-xs uppercase">Success Rate</div>
+                          <div className="text-green-400 font-mono text-lg font-bold">
+                            {selectedRecipe.SUCCESS_RATE_CID || 100}%
+                          </div>
                         </div>
                       </div>
                     </div>
 
-                    {/* Requirements */}
+                    {/* Enhanced Materials Required */}
                     {selectedRecipe.REQUIREMENTS_CID && selectedRecipe.REQUIREMENTS_CID.length > 0 && (
-                      <div className="bg-black/60 border border-yellow-400/30 p-4 rounded">
-                        <h4 className="text-yellow-400 font-mono font-bold mb-4 flex items-center space-x-2">
-                          <AlertCircle className="w-4 h-4" />
-                          <span>MATERIALS REQUIRED</span>
-                        </h4>
+                      <div>
+                        <h4 className="text-cyan-400 font-mono text-sm font-bold mb-3 uppercase">Materials Required</h4>
                         <div className="space-y-3">
-                          {selectedRecipe.REQUIREMENTS_CID.map((req: any, index: number) => {
+                          {selectedRecipe.REQUIREMENTS_CID.map((req, index) => {
                             const available = getPlayerBalance(req.itemId)
-                            const needed = req.amount || 1
+                            const needed = req.amount * craftingQuantity
                             const hasEnough = available >= needed
                             
                             return (
-                              <div key={index} className="flex items-center justify-between">
-                                <span className="text-gray-300 font-mono text-sm">{req.name || `Item #${req.itemId}`}</span>
-                                <div className="flex items-center space-x-2">
-                                  <span className="text-gray-400 font-mono text-xs">
-                                    need {needed}
-                                  </span>
-                                  <span className={`font-mono text-sm ${hasEnough ? 'text-green-400' : 'text-red-400'}`}>
-                                    have {available.toLocaleString()}
-                                  </span>
-                                  {hasEnough ? (
-                                    <span className="text-green-400">✓</span>
-                                  ) : (
-                                    <span className="text-red-400">✗</span>
-                                  )}
+                              <div key={index} className={`
+                                p-3 rounded-lg border transition-all duration-200
+                                ${hasEnough ? 'bg-green-400/10 border-green-400/30' : 'bg-red-400/10 border-red-400/30'}
+                              `}>
+                                <div className="flex items-center space-x-3">
+                                  <ItemTooltip itemId={req.itemId} position="right">
+                                    <ItemIcon 
+                                      itemId={req.itemId} 
+                                      size="small" 
+                                      showRarity
+                                      className="flex-shrink-0"
+                                    />
+                                  </ItemTooltip>
+                                  
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-white font-mono text-sm truncate">{req.name}</span>
+                                      {hasEnough ? (
+                                        <CheckCircle className="w-4 h-4 text-green-400 flex-shrink-0 ml-2" />
+                                      ) : (
+                                        <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 ml-2" />
+                                      )}
+                                    </div>
+                                    <div className="flex items-center justify-between mt-1">
+                                      <div className={`text-xs font-mono ${hasEnough ? 'text-green-400' : 'text-red-400'}`}>
+                                        {available.toLocaleString()} / {needed.toLocaleString()}
+                                      </div>
+                                      <div className="text-xs font-mono text-cyan-400">
+                                        x{needed.toLocaleString()}
+                                      </div>
+                                    </div>
+                                  </div>
                                 </div>
                               </div>
                             )
@@ -905,20 +857,40 @@ const CraftingStation: React.FC<CraftingStationProps> = ({ isOpen, onClose }) =>
                       </div>
                     )}
 
-                    {/* Rewards */}
+                    {/* Enhanced Rewards */}
                     {selectedRecipe.REWARDS_CID && selectedRecipe.REWARDS_CID.length > 0 && (
-                      <div className="bg-black/60 border border-green-400/30 p-4 rounded">
-                        <h4 className="text-green-400 font-mono font-bold mb-4 flex items-center space-x-2">
-                          <Star className="w-4 h-4" />
-                          <span>REWARDS</span>
-                        </h4>
-                        <div className="space-y-2">
-                          {selectedRecipe.REWARDS_CID.map((reward: any, index: number) => (
-                            <div key={index} className="flex items-center justify-between">
-                              <span className="text-gray-300 font-mono text-sm">{reward.name || `Item #${reward.itemId}`}</span>
-                              <span className="text-green-400 font-mono text-sm">
-                                x{reward.amount}
-                              </span>
+                      <div>
+                        <h4 className="text-cyan-400 font-mono text-sm font-bold mb-3 uppercase">Rewards</h4>
+                        <div className="space-y-3">
+                          {selectedRecipe.REWARDS_CID.map((reward, index) => (
+                            <div key={index} className="p-3 bg-gray-900/50 rounded-lg border border-cyan-400/20 hover:border-cyan-400/40 transition-all duration-200">
+                              <div className="flex items-center space-x-3">
+                                <ItemTooltip itemId={reward.itemId} position="right">
+                                  <ItemIcon 
+                                    itemId={reward.itemId} 
+                                    size="small" 
+                                    showRarity
+                                    className="flex-shrink-0"
+                                  />
+                                </ItemTooltip>
+                                
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-white font-mono text-sm truncate">{reward.name}</span>
+                                    <span className="text-cyan-400 font-mono text-sm font-bold flex-shrink-0 ml-2">
+                                      x{reward.amount * craftingQuantity}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center justify-between mt-1">
+                                    <div className="text-xs font-mono text-gray-400">
+                                      Item ID: {reward.itemId}
+                                    </div>
+                                    <div className="text-xs font-mono text-green-400">
+                                      +{(reward.amount * craftingQuantity).toLocaleString()}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
                             </div>
                           ))}
                         </div>
@@ -926,215 +898,137 @@ const CraftingStation: React.FC<CraftingStationProps> = ({ isOpen, onClose }) =>
                     )}
 
                     {/* Quantity Selector */}
-                    <div className="bg-black/60 border border-cyan-400/30 p-4 rounded">
-                      <h4 className="text-cyan-400 font-mono font-bold mb-4 flex items-center justify-between">
-                        <div className="flex items-center space-x-2">
-                          <Package className="w-4 h-4" />
-                          <span>QUANTITY</span>
-                        </div>
-                        <span className="text-xs text-gray-400">
-                          Max: {getMaxCraftableQuantity(selectedRecipe)}
+                    <div>
+                      <div className="flex justify-between items-center mb-3">
+                        <h4 className="text-cyan-400 font-mono text-sm font-bold uppercase">Quantity</h4>
+                        <span className="text-yellow-400 font-mono text-lg font-bold">
+                          x{craftingQuantity}
                         </span>
-                      </h4>
-                      <div className="flex items-center space-x-4">
-                        <button
-                          onClick={() => setCraftingQuantity(Math.max(1, craftingQuantity - 1))}
-                          disabled={crafting}
-                          className="w-8 h-8 bg-gray-700 border border-gray-600 rounded text-white hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          -
-                        </button>
-                        <div className="flex-1 text-center">
-                          <input
-                            type="number"
-                            min="1"
-                            max={getMaxCraftableQuantity(selectedRecipe)}
-                            value={craftingQuantity}
-                            onChange={(e) => {
-                              const maxCraftable = getMaxCraftableQuantity(selectedRecipe)
-                              setCraftingQuantity(Math.max(1, Math.min(maxCraftable, parseInt(e.target.value) || 1)))
-                            }}
-                            disabled={crafting}
-                            className="w-16 px-2 py-1 bg-black/60 border border-gray-600 rounded font-mono text-center text-white focus:border-cyan-400 focus:outline-none disabled:opacity-50"
-                          />
-                        </div>
-                        <button
-                          onClick={() => {
-                            const maxCraftable = getMaxCraftableQuantity(selectedRecipe)
-                            setCraftingQuantity(Math.min(maxCraftable, craftingQuantity + 1))
-                          }}
-                          disabled={crafting}
-                          className="w-8 h-8 bg-gray-700 border border-gray-600 rounded text-white hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          +
-                        </button>
-                        <button
-                          onClick={() => setCraftingQuantity(getMaxCraftableQuantity(selectedRecipe))}
-                          disabled={crafting || getMaxCraftableQuantity(selectedRecipe) === 0}
-                          className="px-3 py-1 bg-cyan-400/20 border border-cyan-400/50 rounded text-cyan-400 hover:bg-cyan-400/30 transition-colors font-mono text-xs disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          MAX
-                        </button>
                       </div>
                       
-                      {/* Batch crafting warning */}
-                      {craftingQuantity > 1 && (
-                        <div className="mt-4 p-3 bg-yellow-900/30 border border-yellow-600/50 rounded">
-                          <p className="text-yellow-400 font-mono text-xs flex items-center space-x-2">
-                            <AlertCircle className="w-3 h-3" />
-                            <span>
-                              ⚠️ Batch crafting will stop automatically if you run out of materials. 
-                              Each item costs {selectedRecipe.ENERGY_CID || 3} energy.
-                            </span>
-                          </p>
-                        </div>
-                      )}
+                      <div className="relative mb-4">
+                        <input
+                          type="range"
+                          min="1"
+                          max={getMaxCraftableQuantity(selectedRecipe)}
+                          step="1"
+                          value={craftingQuantity}
+                          onChange={(e) => setCraftingQuantity(Number(e.target.value))}
+                          className="w-full h-2 bg-gray-800 rounded-lg appearance-none cursor-pointer slider-cyan"
+                          disabled={crafting}
+                        />
+                        
+                        <div className="absolute top-1/2 left-0 w-full h-1 bg-gradient-to-r from-cyan-600/30 to-yellow-400/30 rounded-full pointer-events-none transform -translate-y-1/2" />
+                        
+                        <motion.div
+                          className="absolute top-1/2 left-0 h-1 bg-gradient-to-r from-cyan-400 to-yellow-400 rounded-full pointer-events-none transform -translate-y-1/2"
+                          animate={{
+                            width: `${((craftingQuantity - 1) / (getMaxCraftableQuantity(selectedRecipe) - 1)) * 100}%`
+                          }}
+                        />
+                      </div>
+                      
+                      <div className="flex justify-between text-xs font-mono text-gray-400">
+                        <span>1</span>
+                        <span className="text-cyan-400">Crafting quantity</span>
+                        <span>{getMaxCraftableQuantity(selectedRecipe)}</span>
+                      </div>
                     </div>
 
                     {/* Crafting Progress */}
                     {crafting && (
-                      <div className="bg-black/60 border border-orange-400/30 p-4 rounded">
-                        <h4 className="text-orange-400 font-mono font-bold mb-4 flex items-center space-x-2">
-                          <Flame className="w-4 h-4 animate-pulse" />
-                          <span>CRAFTING IN PROGRESS</span>
-                        </h4>
-                        <div className="relative h-4 bg-gray-800 rounded-full overflow-hidden mb-4">
+                      <div className="bg-gray-900/50 rounded-lg p-4 border border-cyan-400/20">
+                        <div className="text-center mb-3">
+                          <div className="text-cyan-400 font-mono text-xs uppercase">Crafting Progress</div>
+                          <div className="text-white font-mono text-lg font-bold">
+                            {craftingQuantity === 1 ? `${Math.round(craftingProgress)}%` : `${currentCraftIndex}/${craftingQuantity}`}
+                          </div>
+                        </div>
+                        
+                        <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
                           <motion.div
-                            className="absolute inset-y-0 left-0 bg-gradient-to-r from-orange-600 to-orange-400 rounded-full"
+                            className="h-full bg-gradient-to-r from-cyan-500 to-cyan-300"
                             initial={{ width: 0 }}
                             animate={{ width: `${craftingProgress}%` }}
                             transition={{ duration: 0.3 }}
                           />
                         </div>
-                        <div className="flex items-center justify-center space-x-2">
-                          <Timer className="w-4 h-4 text-orange-400" />
-                          <span className="text-orange-400 font-mono text-sm">
-                            {craftingQuantity === 1 
-                              ? `${Math.round(craftingProgress)}% COMPLETE`
-                              : `${currentCraftIndex}/${craftingQuantity} ITEMS (${Math.round(craftingProgress)}%)`
-                            }
-                          </span>
+                      </div>
+                    )}
+
+                    {/* Messages */}
+                    {errorMessage && (
+                      <div className="bg-red-400/10 rounded-lg p-3 border border-red-400/30">
+                        <div className="flex items-center space-x-2">
+                          <AlertCircle className="w-4 h-4 text-red-400" />
+                          <span className="text-red-400 font-mono text-sm">{errorMessage}</span>
                         </div>
                       </div>
                     )}
 
-                    {/* Error Message */}
-                    {errorMessage && (
-                      <motion.div
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        className="bg-red-900/30 border border-red-400/50 p-4 rounded"
-                      >
-                        <h4 className="text-red-400 font-mono font-bold mb-2 flex items-center space-x-2">
-                          <AlertCircle className="w-4 h-4" />
-                          <span>CRAFTING ERROR</span>
-                        </h4>
-                        <p className="text-red-300 font-mono text-sm whitespace-pre-line">
-                          {errorMessage}
-                        </p>
-                        <button
-                          onClick={() => setErrorMessage(null)}
-                          className="mt-3 px-3 py-1 bg-red-400/20 border border-red-400/50 rounded text-red-400 hover:bg-red-400/30 transition-colors font-mono text-xs"
-                        >
-                          DISMISS
-                        </button>
-                      </motion.div>
-                    )}
-
-                    {/* Success Message */}
                     {successMessage && (
-                      <motion.div
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        className="bg-green-900/30 border border-green-400/50 p-4 rounded"
-                      >
-                        <h4 className="text-green-400 font-mono font-bold mb-2 flex items-center space-x-2">
-                          <CheckCircle className="w-4 h-4" />
-                          <span>CRAFTING SUCCESS</span>
-                        </h4>
-                        <p className="text-green-300 font-mono text-sm">
-                          {successMessage}
-                        </p>
-                      </motion.div>
+                      <div className="bg-green-400/10 rounded-lg p-3 border border-green-400/30">
+                        <div className="flex items-center space-x-2">
+                          <CheckCircle className="w-4 h-4 text-green-400" />
+                          <span className="text-green-400 font-mono text-sm">{successMessage}</span>
+                        </div>
+                      </div>
                     )}
 
                     {/* Craft Button */}
-                    {(() => {
-                      const craftCheck = canCraftQuantity(selectedRecipe, craftingQuantity)
-                      const canCraft = craftCheck.canCraft
-                      
-                      return (
-                        <button
-                          onClick={startCrafting}
-                          disabled={crafting || !canCraft}
-                          className={`
-                            w-full p-4 border-2 font-mono font-bold tracking-wider transition-all duration-300 rounded
-                            ${crafting 
-                              ? 'border-orange-400 text-orange-400 bg-orange-400/10' 
-                              : canCraft
-                                ? 'border-green-400 text-green-400 hover:bg-green-400/10 hover:shadow-lg hover:shadow-green-400/20'
-                                : 'border-red-400 text-red-400 bg-red-400/10'
-                            }
-                            disabled:opacity-50 disabled:cursor-not-allowed
-                          `}
-                          style={{
-                            clipPath: 'polygon(10px 0%, 100% 0%, calc(100% - 10px) 100%, 0% 100%)'
-                          }}
-                        >
-                          {crafting ? (
-                            <div className="flex items-center justify-center space-x-2">
-                              <Flame className="w-5 h-5 animate-pulse" />
-                              <span>
-                                {craftingQuantity === 1 ? 'CRAFTING...' : `CRAFTING ${craftingQuantity} ITEMS...`}
-                              </span>
-                            </div>
-                          ) : !canCraft ? (
-                            <div className="flex items-center justify-center space-x-2">
-                              <AlertCircle className="w-5 h-5" />
-                              <span>INSUFFICIENT MATERIALS</span>
-                            </div>
-                          ) : (
-                            <div className="flex items-center justify-center space-x-2">
-                              <Play className="w-5 h-5" />
-                              <span>
-                                {craftingQuantity === 1 ? 'START CRAFTING' : `CRAFT ${craftingQuantity} ITEMS`}
-                              </span>
-                              <ArrowRight className="w-5 h-5" />
-                            </div>
-                          )}
-                        </button>
-                      )
-                    })()}
-                  </>
+                    <button
+                      onClick={startCrafting}
+                      disabled={crafting || !selectedRecipe.unlocked || !canCraftQuantity(selectedRecipe, craftingQuantity).canCraft}
+                      className={`
+                        w-full py-3 px-4 rounded-lg font-mono font-bold transition-all duration-200 border-2
+                        ${crafting
+                          ? 'bg-yellow-400/10 text-yellow-400 border-yellow-400/50'
+                          : !selectedRecipe.unlocked
+                            ? 'bg-gray-800/50 text-gray-400 border-gray-600/30 cursor-not-allowed'
+                            : canCraftQuantity(selectedRecipe, craftingQuantity).canCraft
+                              ? 'bg-cyan-400/10 text-cyan-400 border-cyan-400/50 hover:bg-cyan-400/20 hover:border-cyan-400'
+                              : 'bg-gray-800/50 text-gray-400 border-gray-600/30 cursor-not-allowed'
+                        }
+                      `}
+                    >
+                      {!selectedRecipe.unlocked ? (
+                        <div className="flex items-center justify-center space-x-2">
+                          <X className="w-4 h-4" />
+                          <span>RECIPE LOCKED</span>
+                        </div>
+                      ) : crafting ? (
+                        <div className="flex items-center justify-center space-x-2">
+                          <motion.div
+                            animate={{ rotate: 360 }}
+                            transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                            className="w-4 h-4 border-2 border-yellow-400 border-t-transparent rounded-full"
+                          />
+                          <span>CRAFTING...</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-center space-x-2">
+                          <span>CRAFT {craftingQuantity > 1 ? `${craftingQuantity}x ` : ''}{selectedRecipe.NAME_CID}</span>
+                          <motion.div
+                            animate={{ scale: [1, 1.2, 1] }}
+                            transition={{ duration: 1, repeat: Infinity }}
+                          >
+                            ⚡
+                          </motion.div>
+                        </div>
+                      )}
+                    </button>
+                  </div>
                 ) : (
-                  <div className="bg-black/60 border border-gray-600 p-8 rounded text-center">
-                    <Wrench className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-                    <p className="text-gray-400 font-mono">SELECT A RECIPE TO BEGIN</p>
-                    <p className="text-gray-500 font-mono text-sm mt-2">
-                      Choose from {filteredRecipes.length} available recipes
+                  <div className="flex flex-col items-center justify-center h-full text-center">
+                    <div className="p-4 bg-cyan-400/20 rounded-full mb-4">
+                      <Package className="w-8 h-8 text-cyan-400" />
+                    </div>
+                    <h3 className="text-lg font-bold font-mono text-cyan-400 mb-2">SELECT RECIPE</h3>
+                    <p className="text-gray-400 font-mono text-sm">
+                      Choose a recipe to begin crafting
                     </p>
                   </div>
                 )}
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="border-t border-cyan-400/20 p-4 bg-black/40">
-              <div className="flex items-center justify-between text-sm font-mono">
-                <div className="flex items-center space-x-4">
-                  <span className="text-gray-400">
-                    Wallet: <span className="text-cyan-400">{WALLET_ADDRESS.slice(0, 6)}...{WALLET_ADDRESS.slice(-4)}</span>
-                  </span>
-                  <span className="text-gray-400">
-                    Noob ID: <span className="text-cyan-400">{NOOB_ID}</span>
-                  </span>
-                </div>
-                <div className="flex items-center space-x-1">
-                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                  <span className="text-green-400">LIVE BLOCKCHAIN DATA</span>
-                </div>
               </div>
             </div>
           </motion.div>
