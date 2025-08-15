@@ -6,24 +6,12 @@ import {
   X, 
   Package, 
   Search,
-  Sword,
-  Shield,
-  Beaker,
-  Gem,
-  Wrench,
-  Scroll,
-  Zap,
-  Star,
-  AlertCircle,
-  CheckCircle,
-  Filter,
   RefreshCw,
   Maximize2,
   Minimize2,
-  Coins,
-  Lock
+  Coins
 } from 'lucide-react'
-import ItemCard from './ItemCard'
+// import ItemCard from './ItemCard'
 import ItemIcon from './ItemIcon'
 import ItemTooltip from './ItemTooltip'
 import { itemMetadataService } from '../services/itemMetadata'
