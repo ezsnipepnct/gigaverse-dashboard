@@ -7,6 +7,14 @@ import ItemTooltip from '../components/ItemTooltip';
 const ItemsDemo = () => {
   // Sample item IDs for demonstration
   const sampleItems = [1, 50, 100, 131, 150, 200, 250];
+  const regularCardItems = sampleItems.slice(0, 3).map((itemId, index) => ({
+    itemId,
+    quantity: [48, 27, 13][index] ?? 1,
+  }));
+  const compactCardItems = sampleItems.slice(3, 7).map((itemId, index) => ({
+    itemId,
+    quantity: [6, 9, 4, 11][index] ?? 1,
+  }));
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 p-8">
@@ -73,11 +81,11 @@ const ItemsDemo = () => {
             {/* Regular cards */}
             <div className="space-y-4">
               <h3 className="text-lg font-bold text-white font-mono">Regular Cards</h3>
-              {sampleItems.slice(0, 3).map(itemId => (
+              {regularCardItems.map(({ itemId, quantity }) => (
                 <ItemCard 
                   key={itemId} 
                   itemId={itemId} 
-                  quantity={Math.floor(Math.random() * 50) + 1}
+                  quantity={quantity}
                   showDescription
                 />
               ))}
@@ -86,11 +94,11 @@ const ItemsDemo = () => {
             {/* Compact cards */}
             <div className="space-y-2">
               <h3 className="text-lg font-bold text-white font-mono">Compact Cards</h3>
-              {sampleItems.slice(3, 7).map(itemId => (
+              {compactCardItems.map(({ itemId, quantity }) => (
                 <ItemCard 
                   key={itemId} 
                   itemId={itemId} 
-                  quantity={Math.floor(Math.random() * 10) + 1}
+                  quantity={quantity}
                   compact
                 />
               ))}

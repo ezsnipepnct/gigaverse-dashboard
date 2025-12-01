@@ -6,16 +6,20 @@ import ItemTooltip from '../components/ItemTooltip';
 import { itemMetadataService } from '../services/itemMetadata';
 
 const DebugComponentsPage: React.FC = () => {
-  const [logs, setLogs] = useState<string[]>([]);
+  const isProd = process.env.NODE_ENV === 'production'
+  const formatLog = (message: string) => `${new Date().toLocaleTimeString()}: ${message}`
+  const [logs, setLogs] = useState<string[]>(() => (
+    isProd ? [] : [formatLog('Component mounted')]
+  ));
   const testItemId = 131;
 
   const addLog = (message: string) => {
     console.log(message);
-    setLogs(prev => [...prev, `${new Date().toLocaleTimeString()}: ${message}`]);
+    setLogs(prev => [...prev, formatLog(message)]);
   };
 
   useEffect(() => {
-    addLog('Component mounted');
+    if (isProd) return
     
     // Test direct API call
     const testAPI = async () => {
@@ -42,7 +46,18 @@ const DebugComponentsPage: React.FC = () => {
 
     testAPI();
     testService();
-  }, []);
+  }, [isProd]);
+
+  if (isProd) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-black text-white">
+        <div className="text-center">
+          <div className="text-2xl font-bold text-cyan-400 mb-2">Not Found</div>
+          <div className="text-gray-400">This page is disabled in production.</div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-black text-white p-8">

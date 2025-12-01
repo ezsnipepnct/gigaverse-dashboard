@@ -9,9 +9,6 @@ const nextConfig: NextConfig = {
       { protocol: 'https', hostname: 'gigaverse.io' },
     ],
   },
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
 };
 
 export default nextConfig;
